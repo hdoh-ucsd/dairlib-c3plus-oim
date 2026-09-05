@@ -75,7 +75,7 @@ class CostLogger {
   }
   bool active() const { return active_; }
   std::ofstream cyc, cand, qp, qpv, innerobs, pushfilt, swept, obslcs, gaptrace,
-      routecsv;
+      routecsv, routeprog;
   int event_id = 0;
 
  private:
@@ -93,6 +93,9 @@ class CostLogger {
     pushfilt << std::setprecision(9)
              << "time,event_id,candidate_id,ee_x,ee_y,ee_z,closest_obstacle_x,"
                 "closest_obstacle_y,pusher_signed_distance,margin,rejection_reason\n";
+    routeprog.open(d + "/candidate_route_progress.csv");
+    routeprog << std::setprecision(6)
+              << "event_id,candidate_id,delta_V,V_pred,V_current,pred_x,pred_y,reject\n";
     routecsv.open(d + "/route_state.csv");
     routecsv << std::setprecision(6)
              << "event_id,mode,active_channel,channels(name:feas:V:C)...,"
@@ -198,6 +201,14 @@ struct ObsExtConfig {
   bool route_channel = false;
   double route_margin = 0.01;
   double route_lookahead = 0.15;
+  double route_dv_weight = 20000.0;  // (weighted pilot only; not spec default)
+  // SAMPLING_C3_ROUTE_SELECTION_MODE: 0 current, 1 shadow_delta_v,
+  // 2 delta_v_lexicographic, 3 delta_v_weighted (stage-2 pilot).
+  int route_sel_mode = 0;
+  double route_min_progress = 0.002;   // m, reject new contacts below this dV
+  double route_score_tol = 0.05;       // lexicographic tie-break band (5%)
+  double route_max_jump = 0.30;        // m, max projection progress per step
+  double route_backtrack_tol = 0.05;   // m, allowed backtracking
   double channel_hysteresis = 0.15;   // normalized cost
   int channel_switch_hold = 10;       // planning cycles
   bool pusher_filter = false;   // Stage 2.2: pusher-obstacle candidate rejection
@@ -256,6 +267,7 @@ struct RouteChannel {
 };
 struct RouteSupervisorState {
   int mode = 0;  // 0 NORMAL_DIRECT, 1 CHANNEL_SELECT, 2 CHANNEL_FOLLOW, 3 REJOIN_CHECK
+  int seg_confirmed = 0;  // max confirmed route segment (safe-projection window)
   bool have_frame = false;
   Eigen::Vector2d p_hit{0, 0}, e_fwd{0, -1}, e_left{1, 0};
   double hit_goal_dist = 0;
@@ -343,6 +355,46 @@ inline double RoutePolyRemaining(const std::vector<Eigen::Vector2d>& poly,
     V += (poly[i + 1] - poly[i]).norm();
   return V + best_d;  // lateral offset counts as remaining work
 }
+
+// Route value with SAFE segment-window projection (spec §2-3): remaining arc
+// length + k_cross_track * d_perp, projecting only onto segments
+// [seg_lo, seg_hi] — a candidate cannot grab a low value by projecting onto a
+// far-side segment across the obstacle. Returns 1e18 on invalid projection.
+inline double RouteValueWindow(const std::vector<Eigen::Vector2d>& poly,
+                               const Eigen::Vector2d& p, int seg_lo,
+                               int seg_hi, int* seg_out) {
+  if (poly.size() < 2) return 1e18;
+  seg_lo = std::max(0, seg_lo);
+  seg_hi = std::min((int)poly.size() - 2, seg_hi);
+  if (seg_lo > seg_hi) return 1e18;
+  int best_seg = -1; double best_d = 1e18, best_t = 0;
+  for (int i = seg_lo; i <= seg_hi; ++i) {
+    const Eigen::Vector2d d = poly[i + 1] - poly[i];
+    const double L2 = d.squaredNorm();
+    double t = L2 > 1e-12 ? (p - poly[i]).dot(d) / L2 : 0.0;
+    t = std::min(1.0, std::max(0.0, t));
+    const double dist = (poly[i] + t * d - p).norm();
+    if (dist < best_d) { best_d = dist; best_seg = i; best_t = t; }
+  }
+  if (best_seg < 0) return 1e18;
+  if (seg_out) *seg_out = best_seg;
+  double V = (poly[best_seg] + best_t * (poly[best_seg + 1] - poly[best_seg]) -
+              poly[best_seg + 1]).norm();
+  for (int i = best_seg + 1; i + 1 < (int)poly.size(); ++i)
+    V += (poly[i + 1] - poly[i]).norm();
+  return V + 1.0 * best_d;  // k_cross_track = 1.0
+}
+
+// Shared route-selection scratch for the current control cycle (single
+// controller instance per process, mirrors the CostLogger pattern).
+struct RouteSelScratch {
+  bool active = false;      // lexicographic selection engaged this cycle
+  double R_cur = 0;         // route progress rate of staying (candidate 0)
+  double R_best = -1e18;    // best new candidate's rate
+  double dV_best = -1e18;
+  int best_idx = -1;
+};
+inline RouteSelScratch& RouteSel() { static RouteSelScratch s; return s; }
 
 // Point route_lookahead ahead along the polyline from p.
 inline Eigen::Vector2d RoutePolyLookahead(
@@ -690,6 +742,17 @@ inline ObsExtConfig& ObsCfg() {
     if (rm2 && std::string(rm2) == "channel_v1") c.route_channel = true;
     const char* rla = std::getenv("SAMPLING_C3_ROUTE_LOOKAHEAD");
     if (rla) c.route_lookahead = std::atof(rla);
+    const char* rdw = std::getenv("SAMPLING_C3_ROUTE_DV_WEIGHT");
+    if (rdw) c.route_dv_weight = std::atof(rdw);
+    const char* rsm = std::getenv("SAMPLING_C3_ROUTE_SELECTION_MODE");
+    if (rsm) {
+      std::string s(rsm);
+      if (s == "shadow_delta_v") c.route_sel_mode = 1;
+      else if (s == "delta_v_lexicographic") c.route_sel_mode = 2;
+      else if (s == "delta_v_weighted") c.route_sel_mode = 3;
+    }
+    const char* rmp = std::getenv("SAMPLING_C3_ROUTE_MIN_PROGRESS");
+    if (rmp) c.route_min_progress = std::atof(rmp);
     const char* rh = std::getenv("SAMPLING_C3_REPOS_PUSH_HORIZON_S");
     if (rh) c.repos_push_horizon_s = std::atof(rh);
     const char* ob = std::getenv("SAMPLING_C3_OBS_BOXES");
@@ -1721,6 +1784,12 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
   // ---- channel_v1 route supervisor (reference shaping only; LCS untouched) --
   bool route_override = false;
   Eigen::Vector2d route_sub(0, 0);
+  std::vector<Eigen::Vector2d> route_poly;  // active-channel polyline
+  double route_V_cur = 0;                   // remaining route value now
+  int route_seg_lo = 0, route_seg_hi = 2;   // safe projection window
+  bool route_nondirect = false;             // bypass/corridor channel active
+  std::vector<double> route_dv;             // per-candidate predicted Delta_V
+  RouteSel().active = false;
   if (ObsCfg().route_channel &&
       !controller_params_.scenario_params.obstacles.empty()) {
     static RouteSupervisorState rst;
@@ -1784,6 +1853,7 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
         rst.pending = -1; rst.switch_hold = 0;
         if (best >= 0) {
           rst.mode = 2;  // CHANNEL_FOLLOW
+          rst.seg_confirmed = 0;
           rst.exit_lon = rst.e_fwd.dot(
               rst.channels[best].poly[2] - rst.p_hit);
           std::cout << "[ROUTE] latched channel "
@@ -1802,6 +1872,7 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
                       << rst.channels[active_idx].name << " -> "
                       << rst.channels[best].name << std::endl;
             rst.active = best;
+            rst.seg_confirmed = 0;
             rst.exit_lon = rst.e_fwd.dot(rst.channels[best].poly[2] - rst.p_hit);
             rst.pending = -1; rst.switch_hold = 0;
           }
@@ -1813,7 +1884,7 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
           (goal - cur).norm() < rst.hit_goal_dist - 0.02 &&
           lon_now > rst.exit_lon) {
         std::cout << "[ROUTE] rejoining direct goal tracking" << std::endl;
-        rst.have_frame = false; rst.active = -1; rst.mode = 0;
+        rst.have_frame = false; rst.active = -1; rst.mode = 0; rst.seg_confirmed = 0;
       } else if (rst.active >= 0) {
         // CHANNEL_APPROACH: reach the lane laterally FIRST. A projection-based
         // carrot pulls diagonally forward while the object is still off-lane,
@@ -1833,6 +1904,18 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
                                          ObsCfg().route_lookahead);
         }
         route_override = true;
+        route_poly = ac.poly;
+        // maintain the confirmed segment (monotone, +1 max per cycle)
+        int seg_cur = 0;
+        RouteValueWindow(route_poly, cur, 0, (int)route_poly.size() - 2,
+                         &seg_cur);
+        if (seg_cur > rst.seg_confirmed)
+          rst.seg_confirmed = std::min(rst.seg_confirmed + 1, seg_cur);
+        route_seg_lo = rst.seg_confirmed;
+        route_seg_hi = rst.seg_confirmed + 2;
+        route_V_cur = RouteValueWindow(route_poly, cur, route_seg_lo,
+                                       route_seg_hi, nullptr);
+        route_nondirect = (ac.name != "DIRECT");
       }
       if (CostLogger::Get().active()) {
         auto& rs = CostLogger::Get().routecsv;
@@ -1846,6 +1929,8 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
       }
     }
   }
+
+  route_dv.assign(num_total_samples, std::numeric_limits<double>::quiet_NaN());
 
   // Parallelize over computing C3 costs for each sample.
   auto c3_start = std::chrono::high_resolution_clock::now();
@@ -2109,6 +2194,41 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     all_sample_costs_[i] =
         c3_cost + progress_params_.travel_cost_per_meter * xy_travel_distance;
 
+    // Route-progress computation (spec §4): Delta_V from the ranking rollout's
+    // terminal object pose against the LATCHED route, with the safe projection
+    // window. Selection-mode semantics:
+    //   shadow_delta_v (1): log only, never alter costs/selection.
+    //   delta_v_lexicographic (2): logged here; selection applied post-loop.
+    //   delta_v_weighted (3): stage-2 pilot — additive ranking credit.
+    if (route_override && ObsCfg().route_sel_mode != 0 &&
+        i < (int)route_dv.size() &&
+        !all_sample_dynamically_feasible_plans_.at(i).empty()) {
+      const Eigen::VectorXd& xT =
+          all_sample_dynamically_feasible_plans_.at(i).back();
+      const double V_pred =
+          RouteValueWindow(route_poly, Eigen::Vector2d(xT(7), xT(8)),
+                           route_seg_lo, route_seg_hi, nullptr);
+      double dV = std::numeric_limits<double>::quiet_NaN();
+      const char* rej = "";
+      if (V_pred > 1e17) rej = "invalid_projection";
+      else {
+        dV = route_V_cur - V_pred;
+        if (dV > ObsCfg().route_max_jump) { rej = "jump_exceeds_max"; dV = std::numeric_limits<double>::quiet_NaN(); }
+      }
+      route_dv[i] = dV;
+      if (ObsCfg().route_sel_mode == 3 && !std::isnan(dV))
+        all_sample_costs_[i] += ObsCfg().route_dv_weight * (-dV);
+      if (CostLogger::Get().active()) {
+#pragma omp critical
+        {
+          CostLogger::Get().routeprog
+              << CostLogger::Get().event_id << "," << i << "," << dV << ","
+              << V_pred << "," << route_V_cur << "," << xT(7) << "," << xT(8)
+              << "," << rej << "\n";
+        }
+      }
+    }
+
     // Scenario obstacle shaping: exponential proximity penalty over the
     // predicted object path for every scenario obstacle disc [x, y, r]
     // (scenario_params.yaml; scenarios without obstacles pay nothing).
@@ -2223,6 +2343,50 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     force_c3_mode = true;
   }
 
+  // ---- delta_v_lexicographic candidate selection (route-active only) ----
+  // PRIMARY: route progress per expected transaction time
+  //   R_i = dV_i / (T_repos_i + T_push + eps), current contact at T_repos=0.
+  // New contacts with dV <= min_progress are rejected. SECONDARY: within a 5%
+  // R band, lowest existing J_rank wins. DIRECT mode / no route: untouched.
+  if (ObsCfg().route_sel_mode == 2 && route_override && route_nondirect &&
+      num_total_samples > 1) {
+    const double Tpush = ObsCfg().repos_push_horizon_s, eps = 1e-3;
+    auto Rof = [&](int i) -> double {
+      if (i >= (int)route_dv.size() || std::isnan(route_dv[i])) return -1e18;
+      const double Tr = (i == 0) ? 0.0
+          : ReposTimePredict(all_sample_locations_, i, x_lcs_curr);
+      return route_dv[i] / (Tr + Tpush + eps);
+    };
+    const double R_cur = Rof(0);
+    int best = -1; double R_best = -1e18;
+    for (int i = 1; i < num_total_samples && i < (int)route_dv.size(); ++i) {
+      if (std::isnan(route_dv[i]) ||
+          route_dv[i] <= ObsCfg().route_min_progress) continue;
+      if (all_sample_costs_[i] > 1e11) continue;  // hard-filtered (collision)
+      const double R = Rof(i);
+      if (R > R_best) { R_best = R; best = i; }
+    }
+    if (best >= 0) {
+      // secondary tie-break: lowest J_rank within 5% of R_best
+      const double band = ObsCfg().route_score_tol *
+                          std::max(std::abs(R_best), 1e-4);
+      for (int i = 1; i < num_total_samples && i < (int)route_dv.size(); ++i) {
+        if (std::isnan(route_dv[i]) ||
+            route_dv[i] <= ObsCfg().route_min_progress) continue;
+        if (all_sample_costs_[i] > 1e11) continue;
+        if (Rof(i) >= R_best - band &&
+            all_sample_costs_[i] < all_sample_costs_[best]) best = i;
+      }
+      best_sample_index_ = (SampleIndex)best;
+      best_other_cost = all_sample_costs_[best];
+    }
+    RouteSel().active = true;
+    RouteSel().R_cur = R_cur;
+    RouteSel().R_best = (best >= 0) ? Rof(best) : -1e18;
+    RouteSel().dV_best = (best >= 0) ? route_dv[best] : -1e18;
+    RouteSel().best_idx = best;
+  }
+
   // ---- lcs_contact mode: per-cycle obstacle-contact logging (§14) ----
   // Recompute the (deterministic) witness data and read lambda/eta from the
   // best candidate's solution at knot 0 (unscaled units).
@@ -2331,7 +2495,12 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     else if (!met_minimum_progress && !force_c3_mode &&
              (sampling_params_.num_additional_samples_c3 > 0) &&
              (!ObsCfg().repos_transaction ||
-              best_other_cost < curr_cost)) {
+              best_other_cost < curr_cost) &&
+             // route-lexicographic: unproductive push justifies reposition
+             // only toward a contact with real route-progress rate advantage
+             (!RouteSel().active ||
+              (RouteSel().best_idx >= 0 &&
+               RouteSel().R_best > RouteSel().R_cur + 0.002))) {
       // transaction_v1: an unproductive push only justifies repositioning if
       // some candidate actually predicts improvement — otherwise repositioning
       // is pure churn (no candidate is better than where we already are).
@@ -2342,19 +2511,24 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
 
     // Switch to repositioning if one of the other samples is better, with
     // hysteresis.
-    else if (((!progress_params_.use_relative_hysteresis &&
-               curr_cost > best_other_cost + hyst_c3_to_repos) ||
-              (progress_params_.use_relative_hysteresis &&
-               curr_cost >
-                   best_other_cost +
-                       hyst_c3_to_repos_frac * curr_cost *
-                           (ObsCfg().repos_transaction
-                                ? (1.0 +
-                                   ReposTimePredict(
-                                       all_sample_locations_, best_sample_index_,
-                                       x_lcs_curr) /
-                                       ObsCfg().repos_push_horizon_s)
-                                : 1.0))) &&
+    else if ((RouteSel().active
+                  // route-lexicographic transaction rule (spec §6-7)
+                  ? (RouteSel().best_idx >= 0 &&
+                     RouteSel().R_best > RouteSel().R_cur + 0.002 &&
+                     RouteSel().dV_best > ObsCfg().route_min_progress)
+                  : ((!progress_params_.use_relative_hysteresis &&
+                      curr_cost > best_other_cost + hyst_c3_to_repos) ||
+                     (progress_params_.use_relative_hysteresis &&
+                      curr_cost >
+                          best_other_cost +
+                              hyst_c3_to_repos_frac * curr_cost *
+                                  (ObsCfg().repos_transaction
+                                       ? (1.0 +
+                                          ReposTimePredict(
+                                              all_sample_locations_,
+                                              best_sample_index_, x_lcs_curr) /
+                                              ObsCfg().repos_push_horizon_s)
+                                       : 1.0)))) &&
              !force_c3_mode) {
       // transaction_v1: the switching hysteresis scales with the predicted
       // reposition time of the winning candidate (full-transaction value:
@@ -2472,7 +2646,9 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     //     return to C3 immediately instead of waiting on the 0.9 hysteresis.
     else if (ObsCfg().repos_v11 &&
              (++repos_loop_count_ > ObsCfg().repos_timeout_loops ||
-              best_other_cost >= curr_cost)) {
+              (RouteSel().active
+                   ? (RouteSel().R_cur >= RouteSel().R_best - 0.002)
+                   : (best_other_cost >= curr_cost)))) {
       is_doing_c3_ = true;
       finished_reposition_flag_ = false;
       mode_switch_reason_ = ModeSwitchReason::kToC3Cost;
