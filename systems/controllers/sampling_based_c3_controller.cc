@@ -139,6 +139,20 @@ class CostLogger {
   }
 };
 
+// Predicted reposition duration for a candidate EE target, from the actual
+// piecewise-linear generator geometry: lift to waypoint height, lateral leg,
+// descend; at the configured reposition speed. Conservative constants match
+// reposition_params (speed 0.18 m/s, pwl_waypoint_height 0.06 m).
+inline double ReposTimePredict(
+    const std::vector<Eigen::Vector3d>& sample_locations, int best_index,
+    const Eigen::VectorXd& x_lcs_curr) {
+  if (best_index < 0 || best_index >= (int)sample_locations.size()) return 0.0;
+  const double xy = (sample_locations[best_index].head(2) -
+                     x_lcs_curr.head(2)).norm();
+  const double path = 2.0 * 0.06 + xy;  // lift + lateral + descend
+  return path / 0.18;
+}
+
 // Yaw (rad) from a [w,x,y,z] quaternion slice.
 inline double YawWXYZ(double w, double x, double y, double z) {
   return std::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z));
@@ -169,6 +183,10 @@ struct ObsExtConfig {
   // obstacle, ';'-separated) via SAMPLING_C3_OBS_BOXES. Empty -> disc model.
   std::vector<std::array<double, 4>> obs_boxes;
   double nonpen_margin = 0.01;  // object_obstacle.margin (obs_margin)
+  // Reposition transaction_v1 scoring (SAMPLING_C3_REPOSITION_SCORE_MODE):
+  // gate C3->repos exits on the value of the full reposition transaction.
+  bool repos_transaction = false;
+  double repos_push_horizon_s = 5.0;  // T_push in the efficiency denominator
   bool pusher_filter = false;   // Stage 2.2: pusher-obstacle candidate rejection
   double pusher_margin = 0.01;  // pusher_obstacle.margin
   double pusher_radius = 0.025; // conservative pusher-tip sphere radius (m)
@@ -423,6 +441,10 @@ inline ObsExtConfig& ObsCfg() {
     if (np && std::string(np) == "1") c.nonpen = true;
     const char* ns = std::getenv("SAMPLING_C3_OBS_SLOTS");
     if (ns) c.n_obs_slots = std::max(1, std::atoi(ns));
+    const char* rt = std::getenv("SAMPLING_C3_REPOSITION_SCORE_MODE");
+    if (rt && std::string(rt) == "transaction_v1") c.repos_transaction = true;
+    const char* rh = std::getenv("SAMPLING_C3_REPOS_PUSH_HORIZON_S");
+    if (rh) c.repos_push_horizon_s = std::atof(rh);
     const char* ob = std::getenv("SAMPLING_C3_OBS_BOXES");
     if (ob) {
       std::stringstream ss(ob);
@@ -1741,7 +1763,13 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
   MaintainSampleBuffers(x_lcs_curr);
 
   // Augment the considered samples with the best from the buffer, if eligible.
-  AugmentSamplesWithBuffer(c3_objects);
+  // transaction_v1: skip — the buffer candidate carries a STALE C3 cost from
+  // the loop it was first sampled (no fresh solve), which was measured to win
+  // the argmin and drive reposition ping-pong (trial1: 49% of cycles in
+  // reposition, 0 realized gain after the stall). Fresh candidates only.
+  if (!ObsCfg().repos_transaction) {
+    AugmentSamplesWithBuffer(c3_objects);
+  }
 
   // Set up hysteresis values based on if the cost switching threshold has been
   // crossed.
@@ -1914,7 +1942,12 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     }
     // Switch to repositioning if progress was insufficient.
     else if (!met_minimum_progress && !force_c3_mode &&
-             (sampling_params_.num_additional_samples_c3 > 0)) {
+             (sampling_params_.num_additional_samples_c3 > 0) &&
+             (!ObsCfg().repos_transaction ||
+              best_other_cost < curr_cost)) {
+      // transaction_v1: an unproductive push only justifies repositioning if
+      // some candidate actually predicts improvement — otherwise repositioning
+      // is pure churn (no candidate is better than where we already are).
       is_doing_c3_ = false;
       mode_switch_reason_ = ModeSwitchReason::kToReposUnproductive;
       std::cout << "Repositioning after not making progress in C3" << std::endl;
@@ -1926,8 +1959,20 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
                curr_cost > best_other_cost + hyst_c3_to_repos) ||
               (progress_params_.use_relative_hysteresis &&
                curr_cost >
-                   best_other_cost + hyst_c3_to_repos_frac * curr_cost)) &&
+                   best_other_cost +
+                       hyst_c3_to_repos_frac * curr_cost *
+                           (ObsCfg().repos_transaction
+                                ? (1.0 +
+                                   ReposTimePredict(
+                                       all_sample_locations_, best_sample_index_,
+                                       x_lcs_curr) /
+                                       ObsCfg().repos_push_horizon_s)
+                                : 1.0))) &&
              !force_c3_mode) {
+      // transaction_v1: the switching hysteresis scales with the predicted
+      // reposition time of the winning candidate (full-transaction value:
+      // Delta_J must exceed hyst_frac*curr*(1 + T_repos/T_push)). With
+      // travel_cost_per_meter=0 this is the only place reposition time enters.
       is_doing_c3_ = false;
       mode_switch_reason_ = ModeSwitchReason::kToReposCost;
       std::cout << "Repositioning because found good sample" << std::endl;
