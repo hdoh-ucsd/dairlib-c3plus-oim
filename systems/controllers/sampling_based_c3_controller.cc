@@ -209,6 +209,11 @@ struct ObsExtConfig {
   double route_score_tol = 0.05;       // lexicographic tie-break band (5%)
   double route_max_jump = 0.30;        // m, max projection progress per step
   double route_backtrack_tol = 0.05;   // m, allowed backtracking
+  // SAMPLING_C3_ROUTE_PREDICTION_MODE: raw | calibrated_v1
+  bool route_calibrated = false;
+  double route_fidelity = 0.61;        // measured realized/predicted, in-contact
+  double yaw_regression_allow = 0.15;  // rad, secondary-objective bound
+  double route_near_best_eta = 0.20;   // near-best route set width
   double channel_hysteresis = 0.15;   // normalized cost
   int channel_switch_hold = 10;       // planning cycles
   bool pusher_filter = false;   // Stage 2.2: pusher-obstacle candidate rejection
@@ -753,6 +758,8 @@ inline ObsExtConfig& ObsCfg() {
     }
     const char* rmp = std::getenv("SAMPLING_C3_ROUTE_MIN_PROGRESS");
     if (rmp) c.route_min_progress = std::atof(rmp);
+    const char* rpm = std::getenv("SAMPLING_C3_ROUTE_PREDICTION_MODE");
+    if (rpm && std::string(rpm) == "calibrated_v1") c.route_calibrated = true;
     const char* rh = std::getenv("SAMPLING_C3_REPOS_PUSH_HORIZON_S");
     if (rh) c.repos_push_horizon_s = std::atof(rh);
     const char* ob = std::getenv("SAMPLING_C3_OBS_BOXES");
@@ -2348,8 +2355,14 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
   //   R_i = dV_i / (T_repos_i + T_push + eps), current contact at T_repos=0.
   // New contacts with dV <= min_progress are rejected. SECONDARY: within a 5%
   // R band, lowest existing J_rank wins. DIRECT mode / no route: untouched.
+  // Fidelity fixes (route-prediction forensics 2026-09-05): (a) run the
+  // lexicographic re-selection ONLY while pushing — during reposition the
+  // measured realized displacement of freshly-promised candidates is zero
+  // (pusher is traveling; retargeting every cycle was pure churn), so commit
+  // to the pursued target until arrival; (b) calibrated eligibility uses the
+  // measured in-contact fidelity (realized/predicted ~= 0.61).
   if (ObsCfg().route_sel_mode == 2 && route_override && route_nondirect &&
-      num_total_samples > 1) {
+      is_doing_c3_ && num_total_samples > 1) {
     const double Tpush = ObsCfg().repos_push_horizon_s, eps = 1e-3;
     auto Rof = [&](int i) -> double {
       if (i >= (int)route_dv.size() || std::isnan(route_dv[i])) return -1e18;
@@ -2357,33 +2370,51 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
           : ReposTimePredict(all_sample_locations_, i, x_lcs_curr);
       return route_dv[i] / (Tr + Tpush + eps);
     };
-    const double R_cur = Rof(0);
-    int best = -1; double R_best = -1e18;
+    const double cal = ObsCfg().route_calibrated ? ObsCfg().route_fidelity : 1.0;
+    // final-goal yaw for the regression bound (secondary objective, spec §16)
+    const double goal_yaw = YawWXYZ(
+        x_lcs_final_des.get_value()(3), x_lcs_final_des.get_value()(4),
+        x_lcs_final_des.get_value()(5), x_lcs_final_des.get_value()(6));
+    const double cur_yaw_err = std::abs(std::remainder(
+        YawWXYZ(x_lcs_curr(3), x_lcs_curr(4), x_lcs_curr(5), x_lcs_curr(6)) -
+            goal_yaw, 2 * M_PI));
+    auto yaw_ok = [&](int i) -> bool {
+      const auto& plan = all_sample_dynamically_feasible_plans_.at(i);
+      if (plan.empty()) return true;
+      const Eigen::VectorXd& xT = plan.back();
+      const double e = std::abs(std::remainder(
+          YawWXYZ(xT(3), xT(4), xT(5), xT(6)) - goal_yaw, 2 * M_PI));
+      return e <= cur_yaw_err + ObsCfg().yaw_regression_allow;
+    };
+    const double R_cur = cal * Rof(0);
+    // STEP 1+2: route eligibility (calibrated) + yaw regression bound
+    std::vector<int> elig;
+    double dv_max = -1e18;
     for (int i = 1; i < num_total_samples && i < (int)route_dv.size(); ++i) {
-      if (std::isnan(route_dv[i]) ||
-          route_dv[i] <= ObsCfg().route_min_progress) continue;
+      if (std::isnan(route_dv[i])) continue;
+      const double dvc = cal * route_dv[i];
+      if (dvc <= ObsCfg().route_min_progress) continue;
       if (all_sample_costs_[i] > 1e11) continue;  // hard-filtered (collision)
-      const double R = Rof(i);
-      if (R > R_best) { R_best = R; best = i; }
+      if (!yaw_ok(i)) continue;
+      elig.push_back(i);
+      dv_max = std::max(dv_max, dvc);
     }
-    if (best >= 0) {
-      // secondary tie-break: lowest J_rank within 5% of R_best
-      const double band = ObsCfg().route_score_tol *
-                          std::max(std::abs(R_best), 1e-4);
-      for (int i = 1; i < num_total_samples && i < (int)route_dv.size(); ++i) {
-        if (std::isnan(route_dv[i]) ||
-            route_dv[i] <= ObsCfg().route_min_progress) continue;
-        if (all_sample_costs_[i] > 1e11) continue;
-        if (Rof(i) >= R_best - band &&
-            all_sample_costs_[i] < all_sample_costs_[best]) best = i;
+    int best = -1;
+    if (!elig.empty()) {
+      // STEP 3: near-best route set; STEP 4: lowest tracking cost within it
+      for (int i : elig) {
+        if (cal * route_dv[i] <
+            (1.0 - ObsCfg().route_near_best_eta) * dv_max) continue;
+        if (best < 0 || all_sample_costs_[i] < all_sample_costs_[best])
+          best = i;
       }
       best_sample_index_ = (SampleIndex)best;
       best_other_cost = all_sample_costs_[best];
     }
     RouteSel().active = true;
     RouteSel().R_cur = R_cur;
-    RouteSel().R_best = (best >= 0) ? Rof(best) : -1e18;
-    RouteSel().dV_best = (best >= 0) ? route_dv[best] : -1e18;
+    RouteSel().R_best = (best >= 0) ? cal * Rof(best) : -1e18;
+    RouteSel().dV_best = (best >= 0) ? cal * route_dv[best] : -1e18;
     RouteSel().best_idx = best;
   }
 
