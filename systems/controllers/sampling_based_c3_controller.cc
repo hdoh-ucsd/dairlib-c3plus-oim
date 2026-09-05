@@ -1815,8 +1815,23 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
         std::cout << "[ROUTE] rejoining direct goal tracking" << std::endl;
         rst.have_frame = false; rst.active = -1; rst.mode = 0;
       } else if (rst.active >= 0) {
-        route_sub = RoutePolyLookahead(rst.channels[rst.active].poly, cur,
+        // CHANNEL_APPROACH: reach the lane laterally FIRST. A projection-based
+        // carrot pulls diagonally forward while the object is still off-lane,
+        // which measured as pushing the object straight back into the blockage
+        // (group-D regression). Only once within lane tolerance does the
+        // carrot advance along the route.
+        const auto& ac = rst.channels[rst.active];
+        const double lat_cur = rst.e_left.dot(cur - rst.p_hit);
+        const double lat_err = ac.lat_center - lat_cur;
+        const double lon_cur = rst.e_fwd.dot(cur - rst.p_hit);
+        if (std::abs(lat_err) > 0.05 && lon_cur < rst.exit_lon) {
+          const double step = std::min(std::abs(lat_err),
                                        ObsCfg().route_lookahead);
+          route_sub = cur + rst.e_left * (lat_err > 0 ? step : -step);
+        } else {
+          route_sub = RoutePolyLookahead(ac.poly, cur,
+                                         ObsCfg().route_lookahead);
+        }
         route_override = true;
       }
       if (CostLogger::Get().active()) {
