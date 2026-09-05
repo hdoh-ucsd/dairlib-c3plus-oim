@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <array>
 #include <thread>
 #include <utility>
 
@@ -73,7 +74,7 @@ class CostLogger {
     return inst;
   }
   bool active() const { return active_; }
-  std::ofstream cyc, cand, qp, qpv, innerobs, pushfilt, swept, obslcs;
+  std::ofstream cyc, cand, qp, qpv, innerobs, pushfilt, swept, obslcs, gaptrace;
   int event_id = 0;
 
  private:
@@ -91,6 +92,10 @@ class CostLogger {
     pushfilt << std::setprecision(9)
              << "time,event_id,candidate_id,ee_x,ee_y,ee_z,closest_obstacle_x,"
                 "closest_obstacle_y,pusher_signed_distance,margin,rejection_reason\n";
+    gaptrace.open(d + "/gap_state_trace.csv");
+    gaptrace << std::setprecision(9)
+             << "event_id,slot,knot,eta_obs_k,g_pred_k,lambda_obs_k,"
+                "g_geom_now\n";
     obslcs.open(d + "/obstacle_lcs_contacts.csv");
     obslcs << std::setprecision(9)
            << "time,event_id,slot,obstacle_id,active,d_raw,phi,witness_obj_x,"
@@ -160,6 +165,9 @@ struct ObsExtConfig {
   bool nonpen = false;          // legacy QP-halfspace nonpen (qp_halfspace_legacy)
   bool lcs_contact = false;     // obstacle as frictionless LCS contact (lcs_contact)
   int n_obs_slots = 2;          // N_closest fixed obstacle-contact slots
+  // Optional exact-geometry obstacle SDF: axis-aligned boxes (cx,cy,hx,hy per
+  // obstacle, ';'-separated) via SAMPLING_C3_OBS_BOXES. Empty -> disc model.
+  std::vector<std::array<double, 4>> obs_boxes;
   double nonpen_margin = 0.01;  // object_obstacle.margin (obs_margin)
   bool pusher_filter = false;   // Stage 2.2: pusher-obstacle candidate rejection
   double pusher_margin = 0.01;  // pusher_obstacle.margin
@@ -197,6 +205,8 @@ inline const std::vector<std::pair<double, double>>& TFootprint() {
 // Fixed n_obs_slots contact slots (N_closest); inactive slots are padded with a
 // zero Jacobian and a large positive gap so lambda is forced to 0.
 // ---------------------------------------------------------------------------
+inline ObsExtConfig& ObsCfg();  // defined below
+
 struct ObsLcsContact {
   int obstacle_id = -1;    // -1 = inactive padding slot
   double d_raw = 1e9;      // closest-footprint signed distance (pre-margin)
@@ -224,20 +234,45 @@ inline std::vector<ObsLcsContact> ComputeObstacleLcsContacts(
     const auto& o = obstacles[oi];
     ObsLcsContact ct;
     ct.obstacle_id = oi;
+    const bool use_box = oi < (int)ObsCfg().obs_boxes.size();
     for (const auto& b : TFootprint()) {
       const double wx = ox + cs * b.first - sn * b.second;
       const double wy = oy + sn * b.first + cs * b.second;
-      const double dd = std::hypot(wx - o[0], wy - o[1]);
-      if (dd < 1e-9) continue;
-      const double d = dd - o[2];
+      double d, nx, ny, owx, owy;
+      if (use_box) {
+        // Exact axis-aligned box SDF (cx, cy, hx, hy).
+        const auto& bx = ObsCfg().obs_boxes[oi];
+        const double px = wx - bx[0], py = wy - bx[1];
+        const double qx = std::abs(px) - bx[2], qy = std::abs(py) - bx[3];
+        if (qx > 0.0 || qy > 0.0) {  // outside
+          const double ex = std::max(qx, 0.0), ey = std::max(qy, 0.0);
+          d = std::hypot(ex, ey);
+          if (d < 1e-9) continue;
+          nx = (px >= 0 ? 1.0 : -1.0) * ex / d;
+          ny = (py >= 0 ? 1.0 : -1.0) * ey / d;
+        } else {  // inside: nearest face
+          if (qx > qy) {
+            d = qx; nx = (px >= 0 ? 1.0 : -1.0); ny = 0.0;
+          } else {
+            d = qy; nx = 0.0; ny = (py >= 0 ? 1.0 : -1.0);
+          }
+        }
+        owx = wx - d * nx;
+        owy = wy - d * ny;
+      } else {
+        const double dd = std::hypot(wx - o[0], wy - o[1]);
+        if (dd < 1e-9) continue;
+        d = dd - o[2];
+        nx = (wx - o[0]) / dd;
+        ny = (wy - o[1]) / dd;
+        owx = o[0] + nx * o[2];
+        owy = o[1] + ny * o[2];
+      }
       if (d < ct.d_raw) {
         ct.d_raw = d;
-        ct.nx = (wx - o[0]) / dd;
-        ct.ny = (wy - o[1]) / dd;
-        ct.wx = wx;
-        ct.wy = wy;
-        ct.owx = o[0] + ct.nx * o[2];
-        ct.owy = o[1] + ct.ny * o[2];
+        ct.nx = nx; ct.ny = ny;
+        ct.wx = wx; ct.wy = wy;
+        ct.owx = owx; ct.owy = owy;
       }
     }
     ct.phi = ct.d_raw - margin;
@@ -388,6 +423,26 @@ inline ObsExtConfig& ObsCfg() {
     if (np && std::string(np) == "1") c.nonpen = true;
     const char* ns = std::getenv("SAMPLING_C3_OBS_SLOTS");
     if (ns) c.n_obs_slots = std::max(1, std::atoi(ns));
+    const char* ob = std::getenv("SAMPLING_C3_OBS_BOXES");
+    if (ob) {
+      std::stringstream ss(ob);
+      std::string tok;
+      while (std::getline(ss, tok, ';')) {
+        std::array<double, 4> b{};
+        if (sscanf(tok.c_str(), "%lf,%lf,%lf,%lf", &b[0], &b[1], &b[2],
+                   &b[3]) == 4)
+          c.obs_boxes.push_back(b);
+      }
+    }
+    // Fail loudly on conflicting obstacle mechanisms: lcs_contact must be the
+    // ONLY active obstacle handling (no soft potential, no legacy halfspace).
+    if (c.lcs_contact && (c.inner != ObsInner::kNone || c.nonpen)) {
+      throw std::runtime_error(
+          "SAMPLING_C3_OBSTACLE_MODE=lcs_contact conflicts with "
+          "SAMPLING_C3_INNER_OBS_MODE / SAMPLING_C3_OBJ_NONPEN: soft obstacle "
+          "potentials and the legacy halfspace must be OFF in lcs_contact "
+          "mode.");
+    }
     const char* nm = std::getenv("SAMPLING_C3_OBJ_MARGIN");
     if (nm) c.nonpen_margin = std::atof(nm);
     const char* pf = std::getenv("SAMPLING_C3_PUSHER_FILTER");
@@ -1781,6 +1836,26 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
                            lcs_sel.H()[0] * u0 + lcs_sel.c()[0];
     const double wz = x_lcs_curr(15), vx = x_lcs_curr(16), vy = x_lcs_curr(17);
     const int nlam_old = n_lambda_ - n_obs_slots_lcs_;
+    // Horizon gap trace: eta_obs at every knot of the selected plan (unscaled
+    // augmented LCS), plus the time-scaled predicted gap g_pred = eta*dt.
+    {
+      auto xs = c3obj->GetStateSolution();
+      auto us = c3obj->GetInputSolution();
+      auto ls = c3obj->GetForceSolution();
+      const double dtk = lcs_sel.dt();
+      for (int k = 0; k < N_ && k < (int)xs.size(); ++k) {
+        Eigen::VectorXd etak = lcs_sel.E()[0] * xs[k] +
+                               lcs_sel.F()[0] * ls[k] +
+                               lcs_sel.H()[0] * us[k] + lcs_sel.c()[0];
+        for (int s = 0; s < n_obs_slots_lcs_; ++s) {
+          CostLogger::Get().gaptrace
+              << CostLogger::Get().event_id << "," << s << "," << k << ","
+              << etak(nlam_old + s) << "," << etak(nlam_old + s) * dtk << ","
+              << ls[k](nlam_old + s) << "," << contacts[s].phi << "\n";
+        }
+      }
+      CostLogger::Get().gaptrace.flush();
+    }
     for (int s = 0; s < n_obs_slots_lcs_; ++s) {
       const auto& ct = contacts[s];
       const double lam_s = lam0(nlam_old + s);
