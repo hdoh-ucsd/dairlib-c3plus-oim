@@ -74,7 +74,8 @@ class CostLogger {
     return inst;
   }
   bool active() const { return active_; }
-  std::ofstream cyc, cand, qp, qpv, innerobs, pushfilt, swept, obslcs, gaptrace;
+  std::ofstream cyc, cand, qp, qpv, innerobs, pushfilt, swept, obslcs, gaptrace,
+      routecsv;
   int event_id = 0;
 
  private:
@@ -92,6 +93,10 @@ class CostLogger {
     pushfilt << std::setprecision(9)
              << "time,event_id,candidate_id,ee_x,ee_y,ee_z,closest_obstacle_x,"
                 "closest_obstacle_y,pusher_signed_distance,margin,rejection_reason\n";
+    routecsv.open(d + "/route_state.csv");
+    routecsv << std::setprecision(6)
+             << "event_id,mode,active_channel,channels(name:feas:V:C)...,"
+                "subgoal,direct_ok\n";
     gaptrace.open(d + "/gap_state_trace.csv");
     gaptrace << std::setprecision(9)
              << "event_id,slot,knot,eta_obs_k,g_pred_k,lambda_obs_k,"
@@ -186,7 +191,15 @@ struct ObsExtConfig {
   // Reposition transaction_v1 scoring (SAMPLING_C3_REPOSITION_SCORE_MODE):
   // gate C3->repos exits on the value of the full reposition transaction.
   bool repos_transaction = false;
+  bool repos_v11 = false;             // transaction_v1_1: + timeout + symmetric gate
+  int repos_timeout_loops = 1100;     // ~10 s sim at observed loop rate
   double repos_push_horizon_s = 5.0;  // T_push in the efficiency denominator
+  // channel_v1 route supervisor (SAMPLING_C3_ROUTE_MODE)
+  bool route_channel = false;
+  double route_margin = 0.01;
+  double route_lookahead = 0.15;
+  double channel_hysteresis = 0.15;   // normalized cost
+  int channel_switch_hold = 10;       // planning cycles
   bool pusher_filter = false;   // Stage 2.2: pusher-obstacle candidate rejection
   double pusher_margin = 0.01;  // pusher_obstacle.margin
   double pusher_radius = 0.025; // conservative pusher-tip sphere radius (m)
@@ -224,6 +237,230 @@ inline const std::vector<std::pair<double, double>>& TFootprint() {
 // zero Jacobian and a large positive gap so lambda is forced to 0.
 // ---------------------------------------------------------------------------
 inline ObsExtConfig& ObsCfg();  // defined below
+
+// ===========================================================================
+// channel_v1 route supervisor (SAMPLING_C3_ROUTE_MODE=channel_v1).
+// Selects a free-space channel (DIRECT / CW / CCW / OUTER_* / CENTER_GAP) in a
+// task-relative frame latched at the first blockage, and supplies a short
+// route-lookahead position sub-goal to C3+. It NEVER touches the LCS obstacle
+// contact, Q/R, or candidate ranking — reference shaping only.
+// ===========================================================================
+struct RouteChannel {
+  std::string name;
+  double lat_center = 0;         // task-frame lateral coordinate of the lane
+  bool feasible = false;
+  double V = 1e18;               // remaining route length [m]
+  double C = 1e18;               // normalized channel cost
+  double yaw_corridor = 0;       // width-minimizing yaw (feasibility only)
+  std::vector<Eigen::Vector2d> poly;  // world waypoints current->...->goal
+};
+struct RouteSupervisorState {
+  int mode = 0;  // 0 NORMAL_DIRECT, 1 CHANNEL_SELECT, 2 CHANNEL_FOLLOW, 3 REJOIN_CHECK
+  bool have_frame = false;
+  Eigen::Vector2d p_hit{0, 0}, e_fwd{0, -1}, e_left{1, 0};
+  double hit_goal_dist = 0;
+  int active = -1;
+  int switch_hold = 0;           // cycles the pending switch has persisted
+  int pending = -1;
+  double exit_lon = 0;           // longitudinal coord of the active channel exit
+  std::vector<RouteChannel> channels;
+};
+
+// Signed distance from a world point to obstacle oi (disc, or exact AABB when
+// SAMPLING_C3_OBS_BOXES supplies one) — identical formulas to the LCS-contact
+// witness computation, so route and collision use one obstacle representation.
+inline double ObsSdfPoint(double wx, double wy,
+                          const std::vector<double>& o, int oi) {
+  if (oi < (int)ObsCfg().obs_boxes.size()) {
+    const auto& b = ObsCfg().obs_boxes[oi];
+    const double qx = std::abs(wx - b[0]) - b[2], qy = std::abs(wy - b[1]) - b[3];
+    if (qx > 0 || qy > 0)
+      return std::hypot(std::max(qx, 0.0), std::max(qy, 0.0));
+    return std::max(qx, qy);
+  }
+  return std::hypot(wx - o[0], wy - o[1]) - o[2];
+}
+
+// Min signed distance of the full T footprint at (x, y, yaw) to all obstacles.
+inline double RouteFootprintSdf(double x, double y, double yaw,
+                                const std::vector<std::vector<double>>& obs) {
+  const double cs = std::cos(yaw), sn = std::sin(yaw);
+  double m = 1e18;
+  for (int oi = 0; oi < (int)obs.size(); ++oi)
+    for (const auto& b : TFootprint())
+      m = std::min(m, ObsSdfPoint(x + cs * b.first - sn * b.second,
+                                  y + sn * b.first + cs * b.second, obs[oi], oi));
+  return m;
+}
+
+// Swept-segment feasibility: full footprint sampled every <= 2 cm, yaw
+// interpolated, min sdf must clear route_margin.
+inline bool RouteSweptFeasible(const Eigen::Vector2d& a, double yaw_a,
+                               const Eigen::Vector2d& b, double yaw_b,
+                               const std::vector<std::vector<double>>& obs,
+                               double margin) {
+  const int n = std::max(2, (int)std::ceil((b - a).norm() / 0.02));
+  for (int i = 0; i <= n; ++i) {
+    const double t = (double)i / n;
+    const Eigen::Vector2d p = a + t * (b - a);
+    const double yw = yaw_a + t * (yaw_b - yaw_a);
+    if (RouteFootprintSdf(p.x(), p.y(), yw, obs) < margin) return false;
+  }
+  return true;
+}
+
+// Support width of the T footprint along a unit axis at yaw theta.
+inline double RouteWidthT(double theta, const Eigen::Vector2d& axis) {
+  const double cs = std::cos(theta), sn = std::sin(theta);
+  double lo = 1e18, hi = -1e18;
+  for (const auto& b : TFootprint()) {
+    const double v = axis.x() * (cs * b.first - sn * b.second) +
+                     axis.y() * (sn * b.first + cs * b.second);
+    lo = std::min(lo, v);
+    hi = std::max(hi, v);
+  }
+  return hi - lo;
+}
+
+// Remaining length of a polyline from point p (skips passed nodes).
+inline double RoutePolyRemaining(const std::vector<Eigen::Vector2d>& poly,
+                                 const Eigen::Vector2d& p, int* seg_out) {
+  if (poly.size() < 2) return 1e18;
+  // find closest segment
+  int best_seg = 0; double best_d = 1e18; double best_t = 0;
+  for (int i = 0; i + 1 < (int)poly.size(); ++i) {
+    const Eigen::Vector2d d = poly[i + 1] - poly[i];
+    const double L2 = d.squaredNorm();
+    double t = L2 > 1e-12 ? (p - poly[i]).dot(d) / L2 : 0.0;
+    t = std::min(1.0, std::max(0.0, t));
+    const double dist = (poly[i] + t * d - p).norm();
+    if (dist < best_d) { best_d = dist; best_seg = i; best_t = t; }
+  }
+  if (seg_out) *seg_out = best_seg;
+  double V = (poly[best_seg] + best_t * (poly[best_seg + 1] - poly[best_seg]) -
+              poly[best_seg + 1]).norm();
+  for (int i = best_seg + 1; i + 1 < (int)poly.size(); ++i)
+    V += (poly[i + 1] - poly[i]).norm();
+  return V + best_d;  // lateral offset counts as remaining work
+}
+
+// Point route_lookahead ahead along the polyline from p.
+inline Eigen::Vector2d RoutePolyLookahead(
+    const std::vector<Eigen::Vector2d>& poly, const Eigen::Vector2d& p,
+    double ahead) {
+  int seg = 0;
+  RoutePolyRemaining(poly, p, &seg);
+  Eigen::Vector2d cur = p;
+  for (int i = seg; i + 1 < (int)poly.size(); ++i) {
+    const Eigen::Vector2d tgt = poly[i + 1];
+    const double L = (tgt - cur).norm();
+    if (L >= ahead) return cur + (tgt - cur) * (ahead / std::max(L, 1e-9));
+    ahead -= L;
+    cur = tgt;
+  }
+  return poly.back();
+}
+
+// Build the channel set in the task frame latched at p_hit. Obstacles are
+// clustered by merged inflated lateral intervals; every free lateral interval
+// wide enough for the yaw-optimized T width becomes a channel.
+inline std::vector<RouteChannel> RouteBuildChannels(
+    const RouteSupervisorState& st, const Eigen::Vector2d& cur, double cur_yaw,
+    const Eigen::Vector2d& goal,
+    const std::vector<std::vector<double>>& obs, double margin,
+    double ws_lat_lo, double ws_lat_hi) {
+  std::vector<RouteChannel> out;
+  // DIRECT
+  {
+    RouteChannel d; d.name = "DIRECT"; d.lat_center = 0;
+    d.feasible = RouteSweptFeasible(cur, cur_yaw, goal, cur_yaw, obs, margin);
+    if (d.feasible) { d.poly = {cur, goal}; d.V = (goal - cur).norm(); }
+    out.push_back(d);
+  }
+  // Obstacle lateral intervals (inflated by half the min T width + margin),
+  // longitudinal extents; only clusters inside the current->goal band matter.
+  const double goal_lon = st.e_fwd.dot(goal - st.p_hit);
+  struct Iv { double lo, hi, lon_lo, lon_hi; };
+  std::vector<Iv> ivs;
+  double th_star = 0, wmin = 1e18;
+  for (int k = 0; k < 8; ++k) {
+    const double th = k * M_PI / 8;
+    const double w = RouteWidthT(th, st.e_left);
+    if (w < wmin) { wmin = w; th_star = th; }
+  }
+  const double infl = wmin / 2 + margin;
+  for (int oi = 0; oi < (int)obs.size(); ++oi) {
+    double lat_c, lat_r, lon_lo, lon_hi;
+    if (oi < (int)ObsCfg().obs_boxes.size()) {
+      const auto& b = ObsCfg().obs_boxes[oi];
+      // project 4 corners
+      double llo = 1e18, lhi = -1e18, nlo = 1e18, nhi = -1e18;
+      for (int cx = -1; cx <= 1; cx += 2)
+        for (int cy = -1; cy <= 1; cy += 2) {
+          Eigen::Vector2d c(b[0] + cx * b[2], b[1] + cy * b[3]);
+          const double la = st.e_left.dot(c - st.p_hit);
+          const double lo_ = st.e_fwd.dot(c - st.p_hit);
+          llo = std::min(llo, la); lhi = std::max(lhi, la);
+          nlo = std::min(nlo, lo_); nhi = std::max(nhi, lo_);
+        }
+      lat_c = (llo + lhi) / 2; lat_r = (lhi - llo) / 2;
+      lon_lo = nlo; lon_hi = nhi;
+    } else {
+      const Eigen::Vector2d c(obs[oi][0], obs[oi][1]);
+      lat_c = st.e_left.dot(c - st.p_hit);
+      lat_r = obs[oi][2];
+      const double lon_c = st.e_fwd.dot(c - st.p_hit);
+      lon_lo = lon_c - obs[oi][2]; lon_hi = lon_c + obs[oi][2];
+    }
+    if (lon_hi < -0.05 || lon_lo > goal_lon + 0.05) continue;  // not blocking band
+    ivs.push_back({lat_c - lat_r - infl, lat_c + lat_r + infl, lon_lo, lon_hi});
+  }
+  // merge overlapping lateral intervals into clusters
+  std::sort(ivs.begin(), ivs.end(), [](const Iv& a, const Iv& b) { return a.lo < b.lo; });
+  std::vector<Iv> cl;
+  for (const auto& iv : ivs) {
+    if (!cl.empty() && iv.lo <= cl.back().hi) {
+      cl.back().hi = std::max(cl.back().hi, iv.hi);
+      cl.back().lon_lo = std::min(cl.back().lon_lo, iv.lon_lo);
+      cl.back().lon_hi = std::max(cl.back().lon_hi, iv.lon_hi);
+    } else cl.push_back(iv);
+  }
+  // free lateral gaps: [ws_lat_lo, cl0.lo], between clusters, [clN.hi, ws_lat_hi]
+  struct Gap { double lo, hi, lon_lo, lon_hi; };
+  std::vector<Gap> gaps;
+  if (cl.empty()) return out;
+  gaps.push_back({ws_lat_lo, cl.front().lo, cl.front().lon_lo, cl.front().lon_hi});
+  for (size_t i = 0; i + 1 < cl.size(); ++i)
+    gaps.push_back({cl[i].hi, cl[i + 1].lo,
+                    std::min(cl[i].lon_lo, cl[i + 1].lon_lo),
+                    std::max(cl[i].lon_hi, cl[i + 1].lon_hi)});
+  gaps.push_back({cl.back().hi, ws_lat_hi, cl.back().lon_lo, cl.back().lon_hi});
+  const double need = 2 * margin;  // intervals already inflated by wmin/2+margin
+  for (size_t g = 0; g < gaps.size(); ++g) {
+    if (gaps[g].hi - gaps[g].lo < need) continue;
+    RouteChannel c;
+    c.lat_center = (gaps[g].lo + gaps[g].hi) / 2;
+    c.yaw_corridor = th_star;
+    // task-relative naming: sign of lateral center => CCW(left)/CW(right);
+    // 3+ channels get corridor names.
+    if (gaps.size() >= 3 && g > 0 && g + 1 < gaps.size()) c.name = "CENTER_GAP";
+    else if (c.lat_center > 0) c.name = (gaps.size() >= 3 ? "OUTER_LEFT" : "CCW");
+    else c.name = (gaps.size() >= 3 ? "OUTER_RIGHT" : "CW");
+    const double standoff = 0.08;
+    const Eigen::Vector2d entry = st.p_hit +
+        st.e_left * c.lat_center + st.e_fwd * (gaps[g].lon_lo - standoff);
+    const Eigen::Vector2d exitp = st.p_hit +
+        st.e_left * c.lat_center + st.e_fwd * (gaps[g].lon_hi + standoff);
+    c.poly = {cur, entry, exitp, goal};
+    // feasibility: every leg swept-checked with the full footprint
+    c.feasible = RouteSweptFeasible(cur, cur_yaw, entry, cur_yaw, obs, margin) &&
+                 RouteSweptFeasible(entry, cur_yaw, exitp, cur_yaw, obs, margin) &&
+                 RouteSweptFeasible(exitp, cur_yaw, goal, cur_yaw, obs, margin);
+    if (c.feasible) c.V = RoutePolyRemaining(c.poly, cur, nullptr);
+    out.push_back(c);
+  }
+  return out;
+}
 
 struct ObsLcsContact {
   int obstacle_id = -1;    // -1 = inactive padding slot
@@ -442,7 +679,17 @@ inline ObsExtConfig& ObsCfg() {
     const char* ns = std::getenv("SAMPLING_C3_OBS_SLOTS");
     if (ns) c.n_obs_slots = std::max(1, std::atoi(ns));
     const char* rt = std::getenv("SAMPLING_C3_REPOSITION_SCORE_MODE");
-    if (rt && std::string(rt) == "transaction_v1") c.repos_transaction = true;
+    if (rt) {
+      std::string s(rt);
+      if (s == "transaction_v1") c.repos_transaction = true;
+      else if (s == "transaction_v1_1") { c.repos_transaction = true; c.repos_v11 = true; }
+    }
+    const char* rto = std::getenv("SAMPLING_C3_REPOS_TIMEOUT_LOOPS");
+    if (rto) c.repos_timeout_loops = std::atoi(rto);
+    const char* rm2 = std::getenv("SAMPLING_C3_ROUTE_MODE");
+    if (rm2 && std::string(rm2) == "channel_v1") c.route_channel = true;
+    const char* rla = std::getenv("SAMPLING_C3_ROUTE_LOOKAHEAD");
+    if (rla) c.route_lookahead = std::atof(rla);
     const char* rh = std::getenv("SAMPLING_C3_REPOS_PUSH_HORIZON_S");
     if (rh) c.repos_push_horizon_s = std::atof(rh);
     const char* ob = std::getenv("SAMPLING_C3_OBS_BOXES");
@@ -1471,6 +1718,120 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     cost_type = progress_params_.cost_type_position;
   }
 
+  // ---- channel_v1 route supervisor (reference shaping only; LCS untouched) --
+  bool route_override = false;
+  Eigen::Vector2d route_sub(0, 0);
+  if (ObsCfg().route_channel &&
+      !controller_params_.scenario_params.obstacles.empty()) {
+    static RouteSupervisorState rst;
+    const auto& robs = controller_params_.scenario_params.obstacles;
+    const Eigen::Vector2d cur(x_lcs_curr(7), x_lcs_curr(8));
+    const Eigen::Vector2d goal(x_lcs_final_des.get_value()(7),
+                               x_lcs_final_des.get_value()(8));
+    const double cyaw = YawWXYZ(x_lcs_curr(3), x_lcs_curr(4), x_lcs_curr(5),
+                                x_lcs_curr(6));
+    const double margin = ObsCfg().route_margin;
+    const bool direct_ok =
+        RouteSweptFeasible(cur, cyaw, goal, cyaw, robs, margin);
+    if (!rst.have_frame) {
+      if (!direct_ok) {  // first blockage: latch the task-relative frame
+        rst.have_frame = true;
+        rst.p_hit = cur;
+        rst.e_fwd = (goal - cur).normalized();
+        rst.e_left = Eigen::Vector2d(-rst.e_fwd.y(), rst.e_fwd.x());
+        rst.hit_goal_dist = (goal - cur).norm();
+        rst.active = -1;
+        rst.mode = 1;  // CHANNEL_SELECT
+      } else {
+        rst.mode = 0;  // NORMAL_DIRECT
+      }
+    }
+    if (rst.have_frame) {
+      // workspace lateral bounds from the object workspace box, task frame
+      double wl = 1e18, wh = -1e18;
+      const double xlo = 0.15 + 0.03, xhi = 0.75 - 0.03;
+      const double ylo = -0.6 + 0.03, yhi = 0.6 - 0.03;
+      for (double wx : {xlo, xhi})
+        for (double wy : {ylo, yhi}) {
+          const double la =
+              rst.e_left.dot(Eigen::Vector2d(wx, wy) - rst.p_hit);
+          wl = std::min(wl, la); wh = std::max(wh, la);
+        }
+      rst.channels =
+          RouteBuildChannels(rst, cur, cyaw, goal, robs, margin, wl, wh);
+      // channel costs
+      const double Vref = std::max(rst.hit_goal_dist, 0.1);
+      std::string active_name =
+          (rst.active >= 0 && rst.active < (int)rst.channels.size())
+              ? rst.channels[rst.active].name : "";
+      int best = -1, active_idx = -1;
+      for (int h = 0; h < (int)rst.channels.size(); ++h) {
+        auto& c = rst.channels[h];
+        if (c.name == "DIRECT") { c.C = 1e18; continue; }  // handled by rejoin
+        if (!c.feasible) { c.C = 1e18; continue; }
+        const double A = (c.name == "CENTER_GAP")
+            ? std::abs(std::remainder(c.yaw_corridor - cyaw, M_PI)) : 0.0;
+        const bool is_active = (c.name == active_name);
+        const double Trep = is_active ? 0.0 : 2.0;
+        c.C = 1.0 * c.V / Vref + 0.1 * A / 1.5708 + 0.1 * Trep / 5.0 +
+              0.25 * (is_active ? 0.0 : 1.0);
+        if (is_active) active_idx = h;
+        if (best < 0 || c.C < rst.channels[best].C) best = h;
+      }
+      // (re)selection & latching
+      if (active_idx < 0) {
+        rst.active = best;
+        rst.pending = -1; rst.switch_hold = 0;
+        if (best >= 0) {
+          rst.mode = 2;  // CHANNEL_FOLLOW
+          rst.exit_lon = rst.e_fwd.dot(
+              rst.channels[best].poly[2] - rst.p_hit);
+          std::cout << "[ROUTE] latched channel "
+                    << rst.channels[best].name
+                    << " V=" << rst.channels[best].V << std::endl;
+        }
+      } else {
+        rst.active = active_idx;
+        if (best >= 0 && best != active_idx &&
+            rst.channels[best].C + ObsCfg().channel_hysteresis <
+                rst.channels[active_idx].C) {
+          if (rst.pending == best) rst.switch_hold++;
+          else { rst.pending = best; rst.switch_hold = 1; }
+          if (rst.switch_hold >= ObsCfg().channel_switch_hold) {
+            std::cout << "[ROUTE] switching channel "
+                      << rst.channels[active_idx].name << " -> "
+                      << rst.channels[best].name << std::endl;
+            rst.active = best;
+            rst.exit_lon = rst.e_fwd.dot(rst.channels[best].poly[2] - rst.p_hit);
+            rst.pending = -1; rst.switch_hold = 0;
+          }
+        } else { rst.pending = -1; rst.switch_hold = 0; }
+      }
+      // rejoin check (full condition set)
+      const double lon_now = rst.e_fwd.dot(cur - rst.p_hit);
+      if (direct_ok &&
+          (goal - cur).norm() < rst.hit_goal_dist - 0.02 &&
+          lon_now > rst.exit_lon) {
+        std::cout << "[ROUTE] rejoining direct goal tracking" << std::endl;
+        rst.have_frame = false; rst.active = -1; rst.mode = 0;
+      } else if (rst.active >= 0) {
+        route_sub = RoutePolyLookahead(rst.channels[rst.active].poly, cur,
+                                       ObsCfg().route_lookahead);
+        route_override = true;
+      }
+      if (CostLogger::Get().active()) {
+        auto& rs = CostLogger::Get().routecsv;
+        rs << CostLogger::Get().event_id << "," << rst.mode << ","
+           << (rst.active >= 0 ? rst.channels[rst.active].name : "none");
+        for (const auto& c : rst.channels)
+          rs << "," << c.name << ":" << (c.feasible ? 1 : 0) << ":"
+             << (c.V < 1e17 ? c.V : -1) << ":" << (c.C < 1e17 ? c.C : -1);
+        rs << ",sub:" << route_sub.x() << ":" << route_sub.y() << ","
+           << direct_ok << "\n";
+      }
+    }
+  }
+
   // Parallelize over computing C3 costs for each sample.
   auto c3_start = std::chrono::high_resolution_clock::now();
 #pragma omp parallel for num_threads(num_threads_to_use_)
@@ -1503,6 +1864,16 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
         ty = -0.30;
       }
       for (auto& xd : x_desired) { xd(7) = tx; xd(8) = ty; }
+    }
+
+    // channel_v1: track the route sub-goal instead of the straight-line
+    // lookahead target (positions only; yaw reference untouched; ranking and
+    // solve both inherit this per-candidate desired state).
+    if (route_override && ObsCfg().oracle == 0) {
+      for (auto& xd : x_desired) {
+        xd(7) = route_sub.x();
+        xd(8) = route_sub.y();
+      }
     }
 
     C3::CostMatrices c3_costmat(Q_, R_, G_, U_);
@@ -1926,6 +2297,7 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
   double repos_target_cost =
       all_sample_costs_[SampleIndex::kCurrentReposTarget];
   if (is_doing_c3_ == true) {  // Currently doing C3.
+    repos_loop_count_ = 0;  // transaction_v1_1 timeout counter
     pursued_target_source_ = PursuedTargetSource::kNoTarget;
 
     // Keep track of progress while in C3 mode.
@@ -2075,6 +2447,27 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
       finished_reposition_flag_ = false;
       std::cout << "All objects at fixed goals; stay out of the way."
                 << std::endl;
+    }
+    // transaction_v1_1: reposition timeout + symmetric transaction gate.
+    // (a) If reposition mode persists past the timeout, abandon the target,
+    //     mark the spot unsuccessful, and force a return to C3 — repositioning
+    //     must never be an absorbing state (measured livelock in v1 draw0).
+    // (b) Symmetric gate: if no candidate is better than the current position
+    //     (best_other >= curr), the reposition has no transaction value —
+    //     return to C3 immediately instead of waiting on the 0.9 hysteresis.
+    else if (ObsCfg().repos_v11 &&
+             (++repos_loop_count_ > ObsCfg().repos_timeout_loops ||
+              best_other_cost >= curr_cost)) {
+      is_doing_c3_ = true;
+      finished_reposition_flag_ = false;
+      mode_switch_reason_ = ModeSwitchReason::kToC3Cost;
+      std::cout << (repos_loop_count_ > ObsCfg().repos_timeout_loops
+                        ? "[REPOS-V1.1] reposition timeout -> back to C3"
+                        : "[REPOS-V1.1] no better candidate -> back to C3")
+                << std::endl;
+      repos_loop_count_ = 0;
+      pursued_target_source_ = PursuedTargetSource::kNoTarget;
+      AddToUnsuccessfulBuffer(candidate_states[0]);
     }
     // Switch to C3 if the current sample is better, with hysteresis.
     else if (((!progress_params_.use_relative_hysteresis &&
