@@ -34,7 +34,16 @@ The ranking rollout (`kSimImpedanceObjectCostOnly` → `SimulatePDControlWithLCS
 
 - Time-scale (§12): predicted 2–3 cm/0.5 s ⇒ 3–7 cm/s implied transport; realized campaign medians ≈ 0.001 cm/s equivalent — but normalized per *active productive push window*, realized reaches 0.94 cm/s vs 1.5 cm/s predicted (the ρ≈0.61). **The headline mismatch is duty cycle, not in-contact physics.**
 - Contact-mode (§13): the rollout's promise implicitly assumes contact from t=0 (sticking-capable); reality spends most windows unengaged. In-contact windows realize the right *direction* with ~0.6 gain (class D calibration, not class E dynamics error, as the primary in-contact story).
-- Deterministic micro-tests (§10) and state-restore single-candidate replay (§11) were **not built** — the sim stack has no state save/restore; documented as the main gap. The matched-window population analysis (thousands of natural "replays") substitutes for the A-variant; B (ideal Cartesian pusher) and C (forced contact) remain future work.
+- **Deterministic micro-tests (§10) — BUILT AND RUN** (`route_value_audit/micro_push_test.py`, pydrake, same object SDF and ground/pusher friction constants as the campaign sim; scripted kinematic 12.5 mm pusher, contact confirmed by construction, 2.0 s pushes at 0.05 m/s, 5 reps each, bit-identical results):
+
+  | Metric | Normal push (behind T, −y) | Lateral push (side of T, +x) |
+  |---|---:|---:|
+  | object displacement per 10 cm pusher travel | 3.84 cm | **5.15 cm** |
+  | perpendicular drift | 0.0 mm | 1.2 mm |
+  | determinism | 5/5 identical | 5/5 identical |
+
+  **Lateral push production is not weaker — with maintained contact it is *more* effective than the normal push** (crossbar-face contact). This excludes hypothesis E (lateral sticking/sliding mis-modeled) and the "lateral-specific physics" concern entirely: sustained-contact transport at ~0.4–0.5× pusher speed is available in any direction, matching both the successful runs' 0.5 m/min regime and the in-contact fidelity ρ≈0.61. The campaign's lateral failure is therefore wholly an acquisition/duty-cycle phenomenon.
+- State-restore single-candidate replay (§11) was **not built** — the sim stack has no state save/restore; the matched-window population analysis (thousands of natural "replays") substitutes for variant A, and the §10 forced-contact micro-test now covers variant C's question (contact-confirmed execution works). Variant B (ideal Cartesian pusher) is likewise answered by §10's scripted pusher. The formal restore-based protocol remains future work.
 - Reference regime measurement: the two historical successful runs sustained **≈0.5 m/min** realized transport (natural rear-contact forward pushing) — 10× the all-arm median — proving the plant/controller *can* transport at prediction-consistent rates when contact is continuous and aligned.
 
 ## 14–16. Corrections implemented (smallest set, per §17)
@@ -63,8 +72,8 @@ The ranking rollout (`kSimImpedanceObjectCostOnly` → `SimulatePDControlWithLCS
 6. **Maintained for the predicted duration?** No — this is the dominant loss.
 7. **Predicted tangential force realized?** Partially (0.61 in contact); mostly never applied (no contact).
 8. **Where does progress disappear?** Between selection and physical contact (74% of promises), then a 0.61 haircut in contact.
-9. **Lateral-specific?** Partially — forward rear-contact pushing reaches 0.5 m/min; lateral legs never sustain contact long enough to measure a clean lateral ρ.
-10/11. **Forced-contact / ideal-pusher replay?** Not built (no sim state restore) — the top remaining instrumentation gap.
+9. **Lateral-specific?** **No** — the §10 micro-test shows lateral sustained-contact pushing is *more* productive than normal pushing (5.15 vs 3.84 cm per 10 cm travel). The failure is direction-independent contact scarcity.
+10/11. **Forced-contact / ideal-pusher execution?** **Yes, both eliminate the mismatch** — the §10 scripted-pusher tests (which are simultaneously the ideal-Cartesian and contact-confirmed variants) deliver deterministic, prediction-scale transport in both directions. Full state-restore replay of specific live candidates remains unbuilt.
 12. **Corrected rollout improves correlation?** The commitment fix removes the zero-realization promise class by construction (predictions are now only issued when realizable), but did not raise transport.
 13. **Calibrated ΔV improves realized progress?** No (0.055 vs 0.058).
 14. **Yaw bound prevents regression?** Partially — two of six corrected draws still ended with large yaw (2.6–2.9), from pre-existing rotation drift, not selection.
