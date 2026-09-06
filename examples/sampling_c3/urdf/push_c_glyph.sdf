@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!-- Faithful OIM icra_sign pushed C: block capital-C from three boxes, exactly
+     icra_sign.xml's c_spine/c_top_bar/c_bot_bar (half-sizes doubled), 0.1 kg.
+     Simulation model. -->
+<sdf version="1.7">
+  <model name="push_c_glyph">
+    <link name="c_glyph_base">
+      <inertial><pose>-0.011240 0 0 0 0 0</pose><mass>0.09999999999999998</mass>
+        <inertia><ixx>0.000123706</ixx><iyy>0.000082551</iyy><izz>0.000195841</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia></inertial>
+      <visual name="spine_visual"><pose>-0.0323 0.0 0.0 0 0 0</pose>
+        <geometry><box><size>0.032 0.103 0.025</size></box></geometry>
+      </visual>
+      <collision name="spine_collision"><pose>-0.0323 0.0 0.0 0 0 0</pose>
+        <geometry><box><size>0.032 0.103 0.025</size></box></geometry>
+        <surface><friction><ode><mu>0.3</mu><mu2>0.3</mu2></ode></friction></surface>
+        <drake:proximity_properties><drake:mu_static>0.3</drake:mu_static><drake:mu_dynamic>0.3</drake:mu_dynamic></drake:proximity_properties>
+      </collision>
+      <visual name="top_bar_visual"><pose>0.0 0.0355 0.0 0 0 0</pose>
+        <geometry><box><size>0.0966 0.032 0.025</size></box></geometry>
+      </visual>
+      <collision name="top_bar_collision"><pose>0.0 0.0355 0.0 0 0 0</pose>
+        <geometry><box><size>0.0966 0.032 0.025</size></box></geometry>
+        <surface><friction><ode><mu>0.3</mu><mu2>0.3</mu2></ode></friction></surface>
+        <drake:proximity_properties><drake:mu_static>0.3</drake:mu_static><drake:mu_dynamic>0.3</drake:mu_dynamic></drake:proximity_properties>
+      </collision>
+      <visual name="bot_bar_visual"><pose>0.0 -0.0355 0.0 0 0 0</pose>
+        <geometry><box><size>0.0966 0.032 0.025</size></box></geometry>
+      </visual>
+      <collision name="bot_bar_collision"><pose>0.0 -0.0355 0.0 0 0 0</pose>
+        <geometry><box><size>0.0966 0.032 0.025</size></box></geometry>
+        <surface><friction><ode><mu>0.3</mu><mu2>0.3</mu2></ode></friction></surface>
+        <drake:proximity_properties><drake:mu_static>0.3</drake:mu_static><drake:mu_dynamic>0.3</drake:mu_dynamic></drake:proximity_properties>
+      </collision>
+    </link>
+  </model>
+</sdf>
