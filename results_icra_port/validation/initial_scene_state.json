@@ -1,0 +1,39 @@
+{
+ "object": "push_c_glyph",
+ "q_init_object": [
+  1.0,
+  0,
+  0,
+  0,
+  0.3,
+  0.4,
+  -0.016
+ ],
+ "q_init_franka": [
+  2.191,
+  1.1,
+  -1.33,
+  -2.22,
+  1.3,
+  2.02,
+  0.08
+ ],
+ "glyphs": {
+  "I": true,
+  "R": true,
+  "A": true,
+  "2": true,
+  "0": true,
+  "2b": true,
+  "6": true
+ },
+ "planner_obstacles": 8,
+ "static_glyphs": true,
+ "dynamic_c": true,
+ "goal": [
+  0.5,
+  -0.4,
+  "pi/2"
+ ],
+ "penetrations": 0
+}
