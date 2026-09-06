@@ -4,6 +4,7 @@
 #include "common/find_resource.h"
 #include "drake/multibody/parsing/parser.h"
 #include "drake/multibody/tree/revolute_joint.h"
+#include "drake/multibody/tree/revolute_spring.h"
 
 namespace dairlib {
 
@@ -73,15 +74,18 @@ ModelInstanceIndex AddXarm6ToPlant(MultibodyPlant<double>* plant,
   ModelInstanceIndex xarm6_index =
       parser.AddModels(FindResourceOrThrow(kXarm6Model))[0];
 
-  // Drake's MJCF parser does not import MuJoCo velocity actuators. Recreate
-  // one torque input per revolute joint with the vendor effort limits, and
-  // set uniform velocity limits. (No joint-4 spring for the policy port.)
-  const std::array<const char*, 6> xarm6_joints = {
+  // Faithful MJX plant: 5 actuated joints (joint6 welded out in the MJCF).
+  // Drake's MJCF parser does not import MuJoCo velocity actuators, so
+  // recreate one torque input per revolute joint with the vendor effort
+  // limits; velocity limits match the MuJoCo ctrlrange +-0.5 rad/s. The
+  // parser also ignores the joint-4 stiffness/springref attributes, so add
+  // the passive spring (k = 175 N*m/rad about 0) as a Drake force element.
+  const std::array<const char*, 5> xarm6_joints = {
       "xarm6_joint1", "xarm6_joint2", "xarm6_joint3",
-      "xarm6_joint4", "xarm6_joint5", "xarm6_joint6"};
-  const std::array<double, 6> xarm6_effort_limits = {50, 50, 32, 32, 32, 20};
-  const double kXarm6VelocityLimit = 3.1416;
-  for (int i = 0; i < 6; ++i) {
+      "xarm6_joint4", "xarm6_joint5"};
+  const std::array<double, 5> xarm6_effort_limits = {50, 50, 32, 32, 32};
+  const double kXarm6VelocityLimit = 0.5;
+  for (int i = 0; i < 5; ++i) {
     auto& joint = plant->GetMutableJointByName<
         drake::multibody::RevoluteJoint>(xarm6_joints[i]);
     joint.set_velocity_limits(
@@ -90,6 +94,9 @@ ModelInstanceIndex AddXarm6ToPlant(MultibodyPlant<double>* plant,
     plant->AddJointActuator(std::string(xarm6_joints[i]) + "_actuator", joint,
                             xarm6_effort_limits[i]);
   }
+  plant->AddForceElement<drake::multibody::RevoluteSpring>(
+      plant->GetJointByName<drake::multibody::RevoluteJoint>("xarm6_joint4"),
+      0.0, 175.0);
 
   if (include_ee) {
     parser.AddModels(FindResourceOrThrow(kEndEffectorModel));

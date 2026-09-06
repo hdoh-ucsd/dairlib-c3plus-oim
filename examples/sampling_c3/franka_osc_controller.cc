@@ -3,7 +3,12 @@
 #include <dairlib/lcmt_radio_out.hpp>
 #include <dairlib/lcmt_timestamped_saved_traj.hpp>
 
+#include <algorithm>
+#include <array>
+#include <limits>
+
 #include "systems/framework/output_vector.h"
+#include "systems/framework/timestamped_vector.h"
 #include <gflags/gflags.h>
 
 #include "common/eigen_utils.h"
@@ -66,6 +71,11 @@ DEFINE_string(demo_name, "jacktoy",
               "Demo within sampling_c3; used to find controller params file");
 DEFINE_string(robot_model, "franka",
               "Robot arm model: 'franka' (default) or 'xarm6'.");
+DEFINE_bool(xarm6_five_joint, true,
+            "xArm6 only: use the faithful 5-joint velocity-control execution "
+            "adapter (damped 5x5 task Jacobian -> joint velocity commands -> "
+            "per-joint velocity servos + gravity compensation) instead of the "
+            "torque OSC. Matches the intended MJX execution architecture.");
 DEFINE_bool(prelift_release, true,
             "xArm6 only: insert a contact-release phase that retreats the tip "
             "planarly away from the object before a commanded lift, avoiding "
@@ -230,6 +240,161 @@ class PreliftReleaseSystem : public drake::systems::LeafSystem<double> {
   mutable bool retreat_active_ = false;
 };
 
+// Faithful xArm6 execution adapter (--xarm6_five_joint): replaces the torque
+// OSC with the intended MJX architecture. The plant has 5 velocity-servo
+// joints (joint6 welded). Each tick:
+//   v_task[0:3] = v_des + Kc*(p_des - p_tip)               (Cartesian loop)
+//   v_task[3]   = wx-regulation of the tool tilt            (see below)
+//   v_task[4]   = wy-regulation of the tool tilt
+//   qdot_cmd = (J^T J + lambda^2 I)^{-1} J^T v_task, clamp +-0.5 rad/s
+//   tau_i = clamp(kv_i*(qdot_cmd_i - qdot_i), +-effort_i) + tau_gravity_i
+// This is the same damped square 5x5 inversion (task rows [vx,vy,vz,wx,wy],
+// stick yaw dropped) the MJX harness uses, on top of the same software
+// velocity servo + gravcomp substrate the oim_t bridge validated.
+class Xarm6FiveJointVelocityExecutor
+    : public drake::systems::LeafSystem<double> {
+ public:
+  Xarm6FiveJointVelocityExecutor(
+      const drake::multibody::MultibodyPlant<double>& plant,
+      std::string end_effector_name)
+      : plant_(plant),
+        context_(plant.CreateDefaultContext()),
+        end_effector_name_(std::move(end_effector_name)) {
+    this->set_name("xarm6_five_joint_velocity_executor");
+    DRAKE_DEMAND(plant.num_positions() == 5);
+    DRAKE_DEMAND(plant.num_velocities() == 5);
+    DRAKE_DEMAND(plant.num_actuators() == 5);
+    state_port_ =
+        this->DeclareVectorInputPort(
+                "x, u, t",
+                systems::OutputVector<double>(plant.num_positions(),
+                                              plant.num_velocities(),
+                                              plant.num_actuators()))
+            .get_index();
+    drake::trajectories::PiecewisePolynomial<double> pp(
+        Eigen::Vector3d::Zero());
+    trajectory_port_ =
+        this->DeclareAbstractInputPort(
+                "end_effector_trajectory",
+                drake::Value<drake::trajectories::Trajectory<double>>(pp))
+            .get_index();
+    this->DeclareVectorOutputPort(
+        "xarm_torque",
+        systems::TimestampedVector<double>(plant.num_actuators()),
+        &Xarm6FiveJointVelocityExecutor::CalcTorque);
+  }
+
+  const drake::systems::InputPort<double>& get_input_port_state() const {
+    return this->get_input_port(state_port_);
+  }
+  const drake::systems::InputPort<double>& get_input_port_trajectory() const {
+    return this->get_input_port(trajectory_port_);
+  }
+
+ private:
+  // Cartesian feedback gain (1/s), tilt regulation gain (1/s), Jacobian
+  // damping, servo gains/limits (from the MJX velocity actuators).
+  static constexpr double kKc = 4.0;
+  static constexpr double kAlpha = 2.0;
+  static constexpr double kLambda = 0.05;
+  static constexpr double kQdotLimit = 0.5;  // rad/s (MuJoCo ctrlrange)
+  static constexpr std::array<double, 5> kKv = {300, 300, 200, 200, 200};
+  static constexpr std::array<double, 5> kEffort = {50, 50, 32, 32, 32};
+
+  void CalcTorque(const drake::systems::Context<double>& context,
+                  systems::TimestampedVector<double>* output) const {
+    const auto* robot_output =
+        dynamic_cast<const systems::OutputVector<double>*>(
+            this->EvalVectorInput(context, state_port_));
+    const auto& traj =
+        this->EvalAbstractInput(context, trajectory_port_)
+            ->get_value<drake::trajectories::Trajectory<double>>();
+    const double timestamp = robot_output->get_timestamp();
+
+    plant_.SetPositionsAndVelocities(context_.get(),
+                                     robot_output->GetState());
+    const auto& tip_frame =
+        plant_.GetBodyByName(end_effector_name_).body_frame();
+    const drake::math::RigidTransform<double> X_W_tip =
+        plant_.CalcRelativeTransform(*context_, plant_.world_frame(),
+                                     tip_frame);
+    const Eigen::Vector3d p_tip = X_W_tip.translation();
+
+    // Desired position/velocity from the (FirstOrderHold) trajectory,
+    // clamped into its time range.
+    const double t = std::clamp(timestamp, traj.start_time(),
+                                traj.end_time());
+    const Eigen::Vector3d p_des = traj.value(t);
+    const Eigen::Vector3d v_des = traj.EvalDerivative(t, 1);
+
+    // 6x5 spatial Jacobian of the tip; rows [angular(3); translational(3)].
+    Eigen::MatrixXd J_full(6, plant_.num_velocities());
+    plant_.CalcJacobianSpatialVelocity(
+        *context_, drake::multibody::JacobianWrtVariable::kV, tip_frame,
+        Eigen::Vector3d::Zero(), plant_.world_frame(), plant_.world_frame(),
+        &J_full);
+    // Square 5x5 task Jacobian: rows [vx, vy, vz, wx, wy] (stick yaw wz
+    // dropped -- axisymmetric tool, exactly the MJX construction).
+    Eigen::Matrix<double, 5, 5> J;
+    J.topRows<3>() = J_full.bottomRows<3>();
+    J.bottomRows<2>() = J_full.topRows<2>();
+
+    // Tool tilt regulation. a = R_tip * ez is the tool axis in world; at the
+    // welded orientation the tool is vertical with a = +ez (verified
+    // numerically at q_init). For a generally signed axis s = sign(a_z),
+    // driving a -> s*ez requires wx = s*alpha*a_y, wy = -s*alpha*a_x
+    // (from da = omega x a with a ~ s*ez).
+    const Eigen::Vector3d a =
+        X_W_tip.rotation().matrix() * Eigen::Vector3d::UnitZ();
+    const double s = (a.z() >= 0.0) ? 1.0 : -1.0;
+
+    Eigen::Matrix<double, 5, 1> v_task;
+    v_task.head<3>() = v_des + kKc * (p_des - p_tip);
+    v_task(3) = s * kAlpha * a.y();
+    v_task(4) = -s * kAlpha * a.x();
+
+    // Damped square solve, then clamp to the MuJoCo ctrlrange.
+    const Eigen::Matrix<double, 5, 5> JtJ =
+        J.transpose() * J +
+        kLambda * kLambda * Eigen::Matrix<double, 5, 5>::Identity();
+    Eigen::Matrix<double, 5, 1> qdot_cmd =
+        JtJ.ldlt().solve(J.transpose() * v_task);
+    for (int i = 0; i < 5; ++i) {
+      qdot_cmd(i) = std::clamp(qdot_cmd(i), -kQdotLimit, kQdotLimit);
+    }
+
+    // Velocity servo + gravity compensation (MuJoCo gravcomp ordering: the
+    // gravity term sits outside the actuator force clamp).
+    const Eigen::VectorXd gravity_compensation =
+        -plant_.MakeActuationMatrix().transpose() *
+        plant_.CalcGravityGeneralizedForces(*context_);
+    const Eigen::VectorXd qdot = robot_output->GetVelocities();
+    Eigen::VectorXd tau(5);
+    for (int i = 0; i < 5; ++i) {
+      tau(i) = std::clamp(kKv[i] * (qdot_cmd(i) - qdot(i)), -kEffort[i],
+                          kEffort[i]) +
+               gravity_compensation(i);
+    }
+    output->SetDataVector(tau);
+    output->set_timestamp(timestamp);
+
+    if (timestamp >= last_print_time_ + 1.0) {
+      last_print_time_ = timestamp;
+      std::cout << "XARM6_5J t=" << timestamp
+                << " p_des=" << p_des.transpose()
+                << " p_tip=" << p_tip.transpose()
+                << " |qdot_cmd|=" << qdot_cmd.norm() << std::endl;
+    }
+  }
+
+  drake::systems::InputPortIndex state_port_;
+  drake::systems::InputPortIndex trajectory_port_;
+  const drake::multibody::MultibodyPlant<double>& plant_;
+  std::unique_ptr<drake::systems::Context<double>> context_;
+  std::string end_effector_name_;
+  mutable double last_print_time_{-std::numeric_limits<double>::infinity()};
+};
+
 }  // namespace
 
 int DoMain(int argc, char* argv[]) {
@@ -264,6 +429,94 @@ int DoMain(int argc, char* argv[]) {
   }
   plant.Finalize();
   auto plant_context = plant.CreateDefaultContext();
+
+  // Faithful xArm6 5-joint velocity-control execution path: bypass the OSC
+  // diagram entirely. The Cartesian trajectory contract (subscriber,
+  // prelift-release filter, position receiver, trajectory generator) is
+  // preserved; the executor maps it to joint velocity servo torques.
+  if (FLAGS_robot_model == "xarm6" && FLAGS_xarm6_five_joint) {
+    DiagramBuilder<double> builder;
+    auto state_receiver =
+        builder.AddSystem<systems::RobotOutputReceiver>(plant);
+    auto end_effector_trajectory_sub = builder.AddSystem(
+        LcmSubscriberSystem::Make<dairlib::lcmt_timestamped_saved_traj>(
+            lcm_channel_params.tracking_trajectory_actor_channel, &lcm));
+    auto end_effector_position_receiver =
+        builder.AddSystem<systems::LcmTrajectoryReceiver>(
+            "end_effector_position_target");
+    auto radio_sub =
+        builder.AddSystem(LcmSubscriberSystem::Make<dairlib::lcmt_radio_out>(
+            lcm_channel_params.radio_channel, &lcm));
+    auto end_effector_trajectory =
+        builder.AddSystem<EndEffectorPositionTrajectoryGenerator>(
+            plant, plant_context.get(), osc_params.neutral_position,
+            osc_params.teleop_neutral_position, kEndEffectorName);
+    end_effector_trajectory->SetRemoteControlParameters(
+        osc_params.neutral_position, osc_params.x_scale, osc_params.y_scale,
+        osc_params.z_scale);
+    auto executor = builder.AddSystem<Xarm6FiveJointVelocityExecutor>(
+        plant, kEndEffectorName);
+    auto franka_command_sender =
+        builder.AddSystem<systems::RobotCommandSender>(plant);
+    auto franka_command_pub =
+        builder.AddSystem(LcmPublisherSystem::Make<dairlib::lcmt_robot_input>(
+            lcm_channel_params.franka_input_channel, &lcm,
+            TriggerTypeSet({TriggerType::kForced})));
+
+    // Optional prelift-release filter between subscriber and receiver.
+    PreliftReleaseSystem* prelift_release = nullptr;
+    if (FLAGS_prelift_release) {
+      auto object_state_sub = builder.AddSystem(
+          LcmSubscriberSystem::Make<dairlib::lcmt_object_state>(
+              lcm_channel_params.object_state_channels.at(0), &lcm));
+      prelift_release = builder.AddSystem<PreliftReleaseSystem>(
+          plant, plant_context.get(), kEndEffectorName);
+      std::cout << "PRELIFT_RELEASE system enabled (channel "
+                << lcm_channel_params.object_state_channels.at(0) << ")"
+                << std::endl;
+      builder.Connect(end_effector_trajectory_sub->get_output_port(),
+                      prelift_release->get_input_port_trajectory());
+      builder.Connect(state_receiver->get_output_port(0),
+                      prelift_release->get_input_port_state());
+      builder.Connect(object_state_sub->get_output_port(),
+                      prelift_release->get_input_port_object_state());
+    }
+    const auto& actor_traj_port =
+        (prelift_release != nullptr)
+            ? prelift_release->get_output_port()
+            : end_effector_trajectory_sub->get_output_port();
+    builder.Connect(
+        actor_traj_port,
+        end_effector_position_receiver->get_input_port_trajectory());
+    builder.Connect(end_effector_position_receiver->get_output_port(0),
+                    end_effector_trajectory->get_input_port_trajectory());
+    builder.Connect(state_receiver->get_output_port(0),
+                    end_effector_trajectory->get_input_port_state());
+    builder.Connect(radio_sub->get_output_port(0),
+                    end_effector_trajectory->get_input_port_radio());
+    builder.Connect(state_receiver->get_output_port(0),
+                    executor->get_input_port_state());
+    builder.Connect(end_effector_trajectory->get_output_port(0),
+                    executor->get_input_port_trajectory());
+    builder.Connect(executor->get_output_port(0),
+                    franka_command_sender->get_input_port(0));
+    builder.Connect(franka_command_sender->get_output_port(),
+                    franka_command_pub->get_input_port());
+
+    auto owned_diagram = builder.Build();
+    std::shared_ptr<Diagram<double>> shared_diagram =
+        std::move(owned_diagram);
+    shared_diagram->set_name("sampling_c3_xarm6_five_joint_controller");
+    DrawAndSaveDiagramGraph(*shared_diagram);
+    std::cout << "XARM6_5J executor active: Kc=4.0 alpha=2.0 lambda=0.05 "
+              << "kv=[300,300,200,200,200] efforts=[50,50,32,32,32] "
+              << "qdot_limit=0.5" << std::endl;
+    systems::LcmDrivenLoop<dairlib::lcmt_robot_output> loop(
+        &lcm, shared_diagram, state_receiver,
+        lcm_channel_params.franka_state_channel, true);
+    loop.Simulate();
+    return 0;
+  }
 
   // Piece together the diagram.
   DiagramBuilder<double> builder;
