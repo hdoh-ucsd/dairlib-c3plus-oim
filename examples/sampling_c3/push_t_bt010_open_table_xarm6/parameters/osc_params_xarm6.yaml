@@ -38,6 +38,10 @@ x_scale: 0.0002
 y_scale: 0.0002
 z_scale: 0.0002
 
+# xArm6: Cartesian accel clamp 10 -> 2 m/s^2 (= the planner's nominal_ee_accel). With the
+# Panda Kd=20 restored, large reposition steps otherwise build overshoot energy the xArm6's
+# lower effort ceilings cannot brake (startup x_min crash, round 5); capping accel bounds
+# approach speed instead of damping contact tracking (the Kd=40 wedge/topple, rounds 2-4).
 end_effector_acceleration: 10
 track_end_effector_orientation: false
 cancel_gravity_compensation: false
@@ -49,19 +53,22 @@ elbow_kp: 200
 elbow_kd: 10
 
 # This is the weight matrix for the end effector position tracking.
+# xArm6 (round 7): translation made PRIMARY by weight (1 -> 50). On 6-DOF there is no
+# redundancy to absorb the rot task (W=10, Kp=800); with W=1 the QP sacrificed lateral
+# tracking (~2 cm wedge into the spinning T at reposition onset -> scoop/topple; startup
+# runaway through x_min). Explicit weight hierarchy replaces the Panda's implicit one.
 EndEffectorW:
-  [1, 0, 0,
-   0, 1, 0,
-   0, 0, 1]
+  [50, 0, 0,
+   0, 50, 0,
+   0, 0, 50]
 EndEffectorKp:
   [ 200, 0, 0,
     0, 200, 0,
     0, 0, 200 ]
-# xArm6: Kd raised 20 -> 40 (overdamped, zeta ~1.4). With the Franka value
-# the 6-DOF arm's step response to the planner's first reposition target
-# overshot ~2x (tip swung through x = 0.10 m < workspace x_min 0.15, tripping
-# the planner's workspace DRAKE_DEMAND); the lower effort ceilings
-# (50/50/32/32/32/20 N*m vs Franka 87s) saturate during deceleration.
+# Kd restored to the Panda value 20 (round-5): Kd=40 made the tip lag the T's fast-rotating
+# face during pushes, wedging deeper; the subsequent lift through the mu_eff=1.0 contact
+# scooped/toppled the T at the first reposition in rounds 2-4. The workspace-overshoot crash
+# Kd=40 originally addressed is now bounded by the robot_radius_limits 0.70 calibration.
 EndEffectorKd:
   [ 40, 0, 0,
     0, 40, 0,
@@ -69,6 +76,8 @@ EndEffectorKd:
 # Tool-axis (z) rotation weight zeroed for the 6-DOF xArm6: tool roll is
 # physically irrelevant (sphere tip, planner never commands roll) and zeroing
 # it recovers the slack DOF the Panda got from joint redundancy.
+# Tool roll weight 0 (6-DOF slack); tilt weight kept at the Panda value (a 10->1 A/B in round 3
+# did not change the topple time, so tilt stiffness is exonerated).
 EndEffectorRotW:
   [ 10, 0, 0,
     0, 10, 0,
