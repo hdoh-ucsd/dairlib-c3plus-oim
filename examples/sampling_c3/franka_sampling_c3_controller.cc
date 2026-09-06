@@ -62,6 +62,8 @@ DEFINE_string(lcm_url, "udpm://239.255.76.67:7667?ttl=0",
               "LCM URL with IP, port, and TTL settings");
 DEFINE_string(demo_name, "jacktoy",
               "Demo within sampling_c3; used to find controller params file");
+DEFINE_string(robot_model, "franka",
+              "Robot arm model: 'franka' (default) or 'xarm6'.");
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -85,7 +87,11 @@ int DoMain(int argc, char* argv[]) {
 
   // Create a Franka-only plant (no need to add walls to this).
   MultibodyPlant<double> plant_franka(0.0);
-  AddFrankaToPlant(&plant_franka, nullptr, true, true, false);
+  if (FLAGS_robot_model == "xarm6") {
+    AddXarm6ToPlant(&plant_franka, nullptr, true, true, false);
+  } else {
+    AddFrankaToPlant(&plant_franka, nullptr, true, true, false);
+  }
   plant_franka.Finalize();
   auto franka_context = plant_franka.CreateDefaultContext();
 

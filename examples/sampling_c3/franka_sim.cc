@@ -55,6 +55,8 @@ DEFINE_string(lcm_url, "udpm://239.255.76.67:7667?ttl=0",
               "LCM URL with IP, port, and TTL settings");
 DEFINE_string(demo_name, "jacktoy",
               "Name for the demo, used when building filepaths for output.");
+DEFINE_string(robot_model, "franka",
+              "Robot arm model: 'franka' (default) or 'xarm6'.");
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -78,8 +80,12 @@ int DoMain(int argc, char* argv[]) {
   DiagramBuilder<double> builder;
   double sim_dt = sim_params.dt;
   auto [plant, scene_graph] = AddMultibodyPlantSceneGraph(&builder, sim_dt);
-  ModelInstanceIndex franka_index = AddFrankaToPlant(
-    &plant, &scene_graph, true, true, sampling_c3_options.include_walls);
+  ModelInstanceIndex franka_index =
+      (FLAGS_robot_model == "xarm6")
+          ? AddXarm6ToPlant(&plant, &scene_graph, true, true,
+                            sampling_c3_options.include_walls)
+          : AddFrankaToPlant(&plant, &scene_graph, true, true,
+                             sampling_c3_options.include_walls);
 
   int num_objects = sim_params.object_models.size();
   std::vector<ModelInstanceIndex> object_indices = AddObjectsToPlant(
@@ -151,9 +157,10 @@ int DoMain(int argc, char* argv[]) {
 
   VectorXd q = VectorXd::Zero(nq);
 
-  q.head(plant.num_positions(franka_index)) = sim_params.q_init_franka;
+  const int n_arm = plant.num_positions(franka_index);
+  q.head(n_arm) = sim_params.q_init_franka;
   for (int i = 0; i < num_objects; i++) {
-      q.segment(7 * (i+1), 7) = sim_params.q_init_objects.at(i);
+      q.segment(n_arm + 7 * i, 7) = sim_params.q_init_objects.at(i);
   }
   q.tail(7) = sim_params.q_init_objects.at(num_objects - 1);
 

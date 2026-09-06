@@ -11,6 +11,8 @@ namespace dairlib {
 /// Constants for the Franka and end effector.
 static constexpr const char* kFrankaModel =
   "package://drake_models/franka_description/urdf/panda_arm.urdf";
+static constexpr const char* kXarm6Model =
+  "examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml";
 static constexpr const char* kEndEffectorModel =
   "examples/sampling_c3/urdf/end_effector_full.urdf";
 static constexpr const char* kEndEffectorSimpleModel =
@@ -61,6 +63,19 @@ static const Eigen::Vector3d kGroundToBackWallOffset = {
 /// added.
 /// @return the ModelInstanceIndex of the Franka in the plant
 drake::multibody::ModelInstanceIndex AddFrankaToPlant(
+    drake::multibody::MultibodyPlant<double>* plant,
+    drake::geometry::SceneGraph<double>* scene_graph = nullptr,
+    const bool& include_ee = true,
+    const bool& include_ground_and_platform = true,
+    const bool& include_walls = false);
+
+/// Add the xArm6 (policy-port model, tool stick removed) to a given plant and
+/// scene graph, mirroring AddFrankaToPlant: same end-effector weld transform,
+/// same ground/platform/wall scene. Drake's MJCF parser does not import
+/// MuJoCo actuators, so one JointActuator per revolute joint is added with
+/// the vendor effort limits {50,50,32,32,32,20} N*m and velocity limits
+/// +-3.1416 rad/s.
+drake::multibody::ModelInstanceIndex AddXarm6ToPlant(
     drake::multibody::MultibodyPlant<double>* plant,
     drake::geometry::SceneGraph<double>* scene_graph = nullptr,
     const bool& include_ee = true,
