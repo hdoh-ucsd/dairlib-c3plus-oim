@@ -1,6 +1,9 @@
 
+#include <dairlib/lcmt_object_state.hpp>
 #include <dairlib/lcmt_radio_out.hpp>
 #include <dairlib/lcmt_timestamped_saved_traj.hpp>
+
+#include "systems/framework/output_vector.h"
 #include <gflags/gflags.h>
 
 #include "common/eigen_utils.h"
@@ -63,6 +66,171 @@ DEFINE_string(demo_name, "jacktoy",
               "Demo within sampling_c3; used to find controller params file");
 DEFINE_string(robot_model, "franka",
               "Robot arm model: 'franka' (default) or 'xarm6'.");
+DEFINE_bool(prelift_release, true,
+            "xArm6 only: insert a contact-release phase that retreats the tip "
+            "planarly away from the object before a commanded lift, avoiding "
+            "scooping the object while wedged against it.");
+
+namespace {
+
+// Execution-layer contact-release filter (xArm6 only). Sits between the LCM
+// trajectory subscriber and the OSC trajectory receivers. When the incoming
+// end_effector_position_target commands a rising z (lift signature) while the
+// tip is still wedged against the object, it substitutes a planar retreat
+// target (holding current z) until the tip clears release_distance, then
+// passes the original trajectory through unchanged. No planner state or
+// policy message is modified upstream.
+class PreliftReleaseSystem : public drake::systems::LeafSystem<double> {
+ public:
+  PreliftReleaseSystem(const drake::multibody::MultibodyPlant<double>& plant,
+                       drake::systems::Context<double>* context,
+                       std::string end_effector_name)
+      : plant_(plant),
+        context_(context),
+        end_effector_name_(std::move(end_effector_name)) {
+    this->set_name("prelift_release");
+    traj_port_ =
+        this->DeclareAbstractInputPort(
+                "lcmt_timestamped_saved_traj",
+                drake::Value<dairlib::lcmt_timestamped_saved_traj>{})
+            .get_index();
+    state_port_ =
+        this->DeclareVectorInputPort(
+                "x, u, t",
+                systems::OutputVector<double>(plant.num_positions(),
+                                              plant.num_velocities(),
+                                              plant.num_actuators()))
+            .get_index();
+    object_state_port_ =
+        this->DeclareAbstractInputPort(
+                "lcmt_object_state", drake::Value<dairlib::lcmt_object_state>{})
+            .get_index();
+    this->DeclareAbstractOutputPort("filtered_traj",
+                                    &PreliftReleaseSystem::CalcOutput);
+  }
+
+  const drake::systems::InputPort<double>& get_input_port_trajectory() const {
+    return this->get_input_port(traj_port_);
+  }
+  const drake::systems::InputPort<double>& get_input_port_state() const {
+    return this->get_input_port(state_port_);
+  }
+  const drake::systems::InputPort<double>& get_input_port_object_state() const {
+    return this->get_input_port(object_state_port_);
+  }
+
+ private:
+  static constexpr double kLiftSignatureDz = 0.02;    // m
+  static constexpr double kWedgeRadius = 0.085;       // m
+  static constexpr double kReleaseDistance = 0.095;   // m
+  static constexpr double kMaxRetreatStep = 0.01;     // m per command
+
+  void CalcOutput(const drake::systems::Context<double>& context,
+                  dairlib::lcmt_timestamped_saved_traj* output) const {
+    const auto& msg =
+        this->EvalInputValue<dairlib::lcmt_timestamped_saved_traj>(context,
+                                                                   traj_port_);
+    *output = *msg;
+    if (msg->utime <= 1e-3) return;
+
+    // Locate the position target block.
+    int block_i = -1;
+    for (int i = 0; i < msg->saved_traj.num_trajectories; ++i) {
+      if (msg->saved_traj.trajectory_names[i] ==
+          "end_effector_position_target") {
+        block_i = i;
+        break;
+      }
+    }
+    if (block_i < 0) return;
+    auto& block = output->saved_traj.trajectories[block_i];
+    if (block.num_datatypes < 3 || block.num_points < 1) return;
+
+    // Lift signature: last knot z minus first knot z.
+    const int n = block.num_points;
+    const bool lift_commanded =
+        (block.datapoints[2][n - 1] - block.datapoints[2][0]) >
+        kLiftSignatureDz;
+    if (!lift_commanded) {
+      // New pushing/repositioning segment: re-arm for the next lift.
+      released_ = false;
+      retreat_active_ = false;
+      return;
+    }
+
+    const systems::OutputVector<double>* robot_output =
+        (systems::OutputVector<double>*)this->EvalVectorInput(context,
+                                                              state_port_);
+    const auto& object_msg =
+        this->EvalInputValue<dairlib::lcmt_object_state>(context,
+                                                         object_state_port_);
+    if (object_msg->num_positions < 7) return;  // No object state yet.
+    const double t = robot_output->get_timestamp();
+
+    // FK of the tip.
+    plant_.SetPositions(context_, robot_output->GetPositions());
+    const Eigen::Vector3d tip =
+        plant_
+            .EvalBodyPoseInWorld(*context_,
+                                 plant_.GetBodyByName(end_effector_name_))
+            .translation();
+    // Object state layout: quaternion (4) then xyz (3).
+    const Eigen::Vector3d object_center(object_msg->position[4],
+                                        object_msg->position[5],
+                                        object_msg->position[6]);
+    const Eigen::Vector2d planar = tip.head<2>() - object_center.head<2>();
+    const double distance = planar.norm();
+
+    if (released_) return;
+    if (distance >= kReleaseDistance) {
+      if (retreat_active_) {
+        std::cout << "PRELIFT_RELEASE=DONE t=" << t
+                  << " tip=" << tip.transpose()
+                  << " object=" << object_center.transpose()
+                  << " dist=" << distance << std::endl;
+      }
+      released_ = true;
+      retreat_active_ = false;
+      return;
+    }
+    if (!retreat_active_) {
+      if (distance >= kWedgeRadius) {
+        // Not wedged; let the lift proceed as commanded.
+        released_ = true;
+        return;
+      }
+      retreat_active_ = true;
+      std::cout << "PRELIFT_RELEASE=START t=" << t
+                << " tip=" << tip.transpose()
+                << " object=" << object_center.transpose()
+                << " dist=" << distance << std::endl;
+    }
+
+    // Retreat: planar step away from the object center, holding current z.
+    Eigen::Vector2d dir =
+        (distance > 1e-6) ? Eigen::Vector2d(planar / distance)
+                          : Eigen::Vector2d(1.0, 0.0);
+    Eigen::Vector3d retreat_target = tip;
+    retreat_target.head<2>() +=
+        dir * std::min(kMaxRetreatStep, kReleaseDistance - distance + 0.002);
+    for (int col = 0; col < n; ++col) {
+      for (int row = 0; row < block.num_datatypes; ++row) {
+        block.datapoints[row][col] = (row < 3) ? retreat_target[row] : 0.0;
+      }
+    }
+  }
+
+  drake::systems::InputPortIndex traj_port_;
+  drake::systems::InputPortIndex state_port_;
+  drake::systems::InputPortIndex object_state_port_;
+  const drake::multibody::MultibodyPlant<double>& plant_;
+  drake::systems::Context<double>* context_;
+  std::string end_effector_name_;
+  mutable bool released_ = false;
+  mutable bool retreat_active_ = false;
+};
+
+}  // namespace
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -250,12 +418,35 @@ int DoMain(int argc, char* argv[]) {
 
   builder.Connect(state_receiver->get_output_port(0),
                   osc->get_input_port_robot_output());
-  builder.Connect(end_effector_trajectory_sub->get_output_port(),
+  // xArm6 execution-layer contact-release phase: filter the incoming
+  // trajectory before it reaches the OSC trajectory receivers.
+  PreliftReleaseSystem* prelift_release = nullptr;
+  if (FLAGS_robot_model == "xarm6" && FLAGS_prelift_release) {
+    auto object_state_sub =
+        builder.AddSystem(LcmSubscriberSystem::Make<dairlib::lcmt_object_state>(
+            lcm_channel_params.object_state_channels.at(0), &lcm));
+    prelift_release = builder.AddSystem<PreliftReleaseSystem>(
+        plant, plant_context.get(), kEndEffectorName);
+    std::cout << "PRELIFT_RELEASE system enabled (channel "
+              << lcm_channel_params.object_state_channels.at(0) << ")"
+              << std::endl;
+    builder.Connect(end_effector_trajectory_sub->get_output_port(),
+                    prelift_release->get_input_port_trajectory());
+    builder.Connect(state_receiver->get_output_port(0),
+                    prelift_release->get_input_port_state());
+    builder.Connect(object_state_sub->get_output_port(),
+                    prelift_release->get_input_port_object_state());
+  }
+  const auto& actor_traj_port =
+      (prelift_release != nullptr)
+          ? prelift_release->get_output_port()
+          : end_effector_trajectory_sub->get_output_port();
+  builder.Connect(actor_traj_port,
                   end_effector_position_receiver->get_input_port_trajectory());
-  builder.Connect(end_effector_trajectory_sub->get_output_port(),
+  builder.Connect(actor_traj_port,
                   end_effector_force_receiver->get_input_port_trajectory());
   builder.Connect(
-      end_effector_trajectory_sub->get_output_port(),
+      actor_traj_port,
       end_effector_orientation_receiver->get_input_port_trajectory());
   builder.Connect(end_effector_position_receiver->get_output_port(0),
                   end_effector_trajectory->get_input_port_trajectory());

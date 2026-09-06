@@ -20,6 +20,17 @@ using Eigen::VectorXd;
 namespace dairlib {
 namespace systems {
 
+namespace {
+// Finite cap on otherwise-unbounded rejection-sampling loops. Healthy runs
+// take a handful of draws per sample; 10000 is far above normal.
+constexpr int kMaxSampleAttempts = 10000;
+[[noreturn]] void ThrowSamplerExhausted() {
+  std::cout << "SAMPLING_C3_SAMPLER_EXHAUSTED attempts=" << kMaxSampleAttempts
+            << std::endl;
+  throw std::runtime_error("SAMPLING_C3_SAMPLER_EXHAUSTED");
+}
+}  // namespace
+
 // Public call for generating samples.
 std::vector<Eigen::VectorXd> GenerateSampleStates(
     const int& n_q, const int& n_v, const int& n_u,
@@ -77,7 +88,9 @@ std::vector<Eigen::VectorXd> GenerateSampleStates(
     }
   } else if (strategy == SamplingStrategy::kRandomOnCircle) {
     for (int i = 0; i < num_samples; i++) {
+      int attempts = 0;
       do {
+        if (++attempts > kMaxSampleAttempts) ThrowSamplerExhausted();
         candidate_states[i].head(3) = RandomOnCircleSampling(
           n_q, n_v, x_lcs, sampling_params.sampling_radius,
           sampling_params.sampling_height);
@@ -87,7 +100,9 @@ std::vector<Eigen::VectorXd> GenerateSampleStates(
     }
   } else if (strategy == SamplingStrategy::kRandomOnSphere) {
     for (int i = 0; i < num_samples; i++) {
+      int attempts = 0;
       do {
+        if (++attempts > kMaxSampleAttempts) ThrowSamplerExhausted();
         candidate_states[i].head(3) = RandomOnSphereSampling(
           n_q, n_v, x_lcs, sampling_params.sampling_radius,
           sampling_params.min_angle_from_vertical,
@@ -116,7 +131,9 @@ std::vector<Eigen::VectorXd> GenerateSampleStates(
     }
   } else if (strategy == SamplingStrategy::kRandomOnPerimeter) {
     for (int i = 0; i < num_samples; i++) {
+      int attempts = 0;
       do {
+        if (++attempts > kMaxSampleAttempts) ThrowSamplerExhausted();
         candidate_states[i].head(3) = PerimeterSampling(
           n_q, n_v, n_u, x_lcs, plant, context, plant_ad, context_ad,
           contact_geoms, sampling_params, sampling_c3_options);
@@ -126,7 +143,9 @@ std::vector<Eigen::VectorXd> GenerateSampleStates(
     }
   } else if (strategy == SamplingStrategy::kRandomOnShell) {
     for (int i = 0; i < num_samples; i++) {
+      int attempts = 0;
       do {
+        if (++attempts > kMaxSampleAttempts) ThrowSamplerExhausted();
         candidate_states[i].head(3) = ShellSampling(
           n_q, n_v, n_u, x_lcs, plant, context, plant_ad, context_ad,
           contact_geoms, sampling_params, sampling_c3_options);
@@ -136,7 +155,9 @@ std::vector<Eigen::VectorXd> GenerateSampleStates(
     }
   } else if (strategy == SamplingStrategy::kMeshNormal) {
     for (int i = 0; i < num_samples; i++){
+      int attempts = 0;
       do{
+        if (++attempts > kMaxSampleAttempts) ThrowSamplerExhausted();
         candidate_states[i] = MeshNormalSampling(
           n_q, n_v, n_u, x_lcs, plant, context, plant_ad, context_ad,
           sampling_params, query_object, faces, face_bins);
@@ -146,7 +167,9 @@ std::vector<Eigen::VectorXd> GenerateSampleStates(
     }
   } else if (strategy == SamplingStrategy::kMeshNormalMultiObject) {
     for (int i = 0; i < num_samples; i++) {
+      int attempts = 0;
       do {
+        if (++attempts > kMaxSampleAttempts) ThrowSamplerExhausted();
         candidate_states[i] = MeshNormalSamplingMultiObject(
           n_q, n_v, n_u, x_lcs, plant, context, plant_ad, context_ad,
           contact_geoms, sampling_params, sampling_c3_options, query_object,
@@ -306,8 +329,10 @@ Eigen::Vector3d PerimeterSampling(
 
   // Try projecting colliding samples until one is near desired sampling height
   // and maintains the desired clearance.
+  int attempts = 0;
   while (true) {
     do {
+      if (++attempts > kMaxSampleAttempts) ThrowSamplerExhausted();
       // These are in body frame.
       double x_sample = RandomUniform(sampling_params.grid_x_limits[0],
                                       sampling_params.grid_x_limits[1]);
@@ -385,8 +410,10 @@ Eigen::Vector3d ShellSampling(
 
   // Try projecting colliding samples until one is above minimum EE height and
   // maintains the desired clearance.
+  int attempts = 0;
   while (true) {
     do {
+      if (++attempts > kMaxSampleAttempts) ThrowSamplerExhausted();
       // Center the sampling sphere on the current object location.
       Vector3d object_xyz = x_lcs.segment(7, 3);
       double x_samplec = object_xyz[0];
