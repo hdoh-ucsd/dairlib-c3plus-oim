@@ -1,0 +1,11 @@
+{
+  "status": "NOT_RE_MEASURED_THIS_AUDIT",
+  "provenance": "Jack time-to-tight-goal campaign 2026-08-21 (Python port, franka jacktoy stack) — the only runs exhibiting the chase-object-out-of-reach abort. The C3+ shelf/obstacle campaign audited here (Franka sampling-C3 stack, branch c3plus-channel-route-v1) recorded planner_abort=false on all 2026-09-06 comparison draws and all p5-fix validation draws.",
+  "known_facts": {
+    "abort_geometry": "two chase-out-of-reach aborts at near-identical object radius r > 0.750 m from robot base",
+    "abort_rate": "4 workspace aborts / 12 draws in the jack campaign; uncorrelated with goal demand",
+    "candidate_rollout_predicts_recoverability_loss": "NO - the ranking rollout teleports the pusher to the candidate contact and contains no arm kinematics or reach model, so future unreachability is structurally invisible to it (see plant_model_comparison and command_pipeline docs)"
+  },
+  "shelf_campaign_workspace_findings": "No aborts in the audited shelf/obstacle draws; workspace limiting was not the plateau mechanism (see shelf_plateau_divergence.md).",
+  "recommended_follow_up": "If the abort class is to be closed, add a reach-feasibility check (IK or radius bound on the candidate contact pose AND its rollout terminal pusher pose) to candidate admission - this is an outer-loop change and belongs to Agent A/C scope."
+}

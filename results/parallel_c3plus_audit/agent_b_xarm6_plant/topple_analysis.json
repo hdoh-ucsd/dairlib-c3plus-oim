@@ -1,0 +1,7 @@
+{
+  "status": "NOT_RE_MEASURED_THIS_AUDIT",
+  "provenance": "Topple events belong to the jack (jacktoy) lineage, where topple is a desired mechanism (flip chains), and to fig8 low-CoM objects. The audited C3+ shelf/obstacle campaign pushes a planar T (block T on a table); no topple event appears in any audited draw: object roll/pitch stays at resting values throughout (state traces show quaternion w~=1 components consistent with planar motion; box_penetration_samples=0; metrics record no tilt anomaly).",
+  "audited_draws_roll_pitch": "planar within noise on shelf_gap and single_obstacle draws (2026-09-06 comparison + p5-fix validation)",
+  "verdict": "B8 (object stability failure) is NOT a contributing mechanism in the shelf plateau. No cost-ranking implication.",
+  "recommended_follow_up": "None for this arc. For jack/fig8 topple physics, use the existing jack arc memory (BlueDown->AllUp roll preference) rather than re-deriving here."
+}
