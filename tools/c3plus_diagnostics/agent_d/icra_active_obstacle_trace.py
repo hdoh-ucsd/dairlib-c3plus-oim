@@ -13,7 +13,7 @@ for line in open(f"{draw}/state_trace.jsonl"):
         pass
 by_t = {}
 for r in rows:
-    t = float(r["time"])
+    t = float(r["event_id"])
     by_t.setdefault(t, {})[int(r["slot"])] = r
 out = []
 prev_ids = None

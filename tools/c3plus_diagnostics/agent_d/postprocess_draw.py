@@ -53,8 +53,35 @@ def foot_gap(ex, ey, ox, oy, yaw):
 OBS = {"ycb_clutter": [(0.5, 0.0, 0.05, 0.05), (0.37, 0.2, 0.0875, 0.0475)],
        "single_obstacle": [(0.45, 0.0, 0.05, 0.05)], "icra_sign": [], "open_table": []}
 obs = OBS.get(scene, [])
+POLYS = []
+if scene.startswith("icra_faithful"):
+    envf = WT + "/results_icra_port/obstacles/obs_polys_env.txt"
+    for entry in open(envf).read().strip().split(";"):
+        parts = entry.split("|")
+        POLYS.append([tuple(map(float, q.split(","))) for q in parts[1:]])
+    # C footprint replaces the T footprint for gap/clearance math
+    FOOT_C = []
+    for (cx, cy, hx, hy) in [(-0.0323, 0.0, 0.016, 0.0515), (0.0, 0.0355, 0.0483, 0.016), (0.0, -0.0355, 0.0483, 0.016)]:
+        for i in range(11):
+            a = i / 10.0
+            FOOT_C += [(cx-hx+2*hx*a, cy-hy), (cx-hx+2*hx*a, cy+hy), (cx-hx, cy-hy+2*hy*a), (cx+hx, cy-hy+2*hy*a)]
+
+def poly_sdf(px, py, verts):
+    n = len(verts); best = 1e18; inside = True
+    a2 = sum(verts[i][0]*verts[(i+1)%n][1]-verts[(i+1)%n][0]*verts[i][1] for i in range(n))
+    vv = verts if a2 > 0 else verts[::-1]
+    for i in range(n):
+        ax, ay = vv[i]; bx, by = vv[(i+1)%n]
+        ex, ey = bx-ax, by-ay
+        if ex*(py-ay)-ey*(px-ax) < 0: inside = False
+        L2 = ex*ex+ey*ey
+        t = max(0.0, min(1.0, ((px-ax)*ex+(py-ay)*ey)/L2)) if L2 > 0 else 0
+        best = min(best, math.hypot(px-(ax+t*ex), py-(ay+t*ey)))
+    return -best if inside else best
 
 def obs_clear(x, y):
+    if POLYS:
+        return min(poly_sdf(x, y, v) for v in POLYS)
     best = float("nan")
     for (cx, cy, hx, hy) in obs:
         qx, qy = abs(x-cx)-hx, abs(y-cy)-hy
@@ -71,6 +98,9 @@ for line in open(f"{draw}/state_trace.jsonl"):
             recs.append(r)
     except json.JSONDecodeError:
         pass
+if scene.startswith("icra_faithful"):
+    FOOT = FOOT_C
+    obs = POLYS  # truthy so clearances are computed
 ts, gaps, objs, tilts = [], [], [], []
 min_pusher_obs, min_obj_obs = float("nan"), float("nan")
 for r in recs:
