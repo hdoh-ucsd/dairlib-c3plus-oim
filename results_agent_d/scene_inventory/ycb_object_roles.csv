@@ -1,0 +1,6 @@
+model,role,dynamic,included_in_sim_collision,included_in_planner_obstacle_model,included_in_LCS,notes
+push_t_oimscale_m01,TARGET,yes,yes,n/a,yes,0.1 kg OIM-scale T; the C3 manipulation object
+scene_ycb_clutter::clutter_cube,static_obstacle,no,yes,yes (disc r=0.0707 at 0.5 0.0),yes (lcs_contact slot),stands in for OIM obs_box cube; PORT POSITION (0.5 0.0) != OIM (0.35 0.0)
+scene_ycb_clutter::sugar_box,static_obstacle,no,yes,yes (disc r=0.0996 at 0.37 0.2),yes (lcs_contact slot),stands in for OIM domino_sugar box; PORT POSITION (0.37 0.20) != OIM (0.22 0.20)
+OIM spam_can (mesh),ABSENT_FROM_PORT,no,no,no,no,exists only in OIM MJCF at (0.60 -0.16); dropped by the C++ scene mapping
+OIM mustard_bottle (mesh),ABSENT_FROM_PORT,no,no,no,no,tallest OIM obstacle at (0.15 -0.18); dropped by the C++ scene mapping

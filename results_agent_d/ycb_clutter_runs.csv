@@ -1,0 +1,4 @@
+scene,draw,success,first_success_t,end_t,final_xy_err,final_yaw_err,best_xy_err,best_yaw_err,repositions,no_progress_transitions,timeouts,workspace_abort,contact_frac,productive_window_frac,max_tilt,min_obj_obstacle,min_pusher_obstacle,n_push_transactions,acq_rate,prod_rate,prod_given_contact
+ycb_clutter,draw0,False,,358.3,0.3834,1.6717,0.3831,0.0,11,11,0,False,0.107,0.023,1.62,-0.0,0.0126,12,0.333,0.333,1.0
+ycb_clutter,draw1,False,,335.2,0.3999,1.9692,0.3996,0.0,93,50,6,False,0.067,0.024,0.436,-0.0,0.019,90,0.122,0.044,0.364
+ycb_clutter,draw2,False,,288.2,0.044,3.0758,0.0407,0.0,100,69,0,False,0.341,0.14,0.102,0.0006,0.0123,100,0.55,0.2,0.364
