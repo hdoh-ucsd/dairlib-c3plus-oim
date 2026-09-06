@@ -1,0 +1,4 @@
+scene,draw,success,first_success_t,end_t,final_xy_err,final_yaw_err,best_xy_err,best_yaw_err,repositions,no_progress_transitions,timeouts,workspace_abort,contact_frac,productive_window_frac,max_tilt,min_obj_obstacle,min_pusher_obstacle,n_push_transactions,acq_rate,prod_rate,prod_given_contact
+icra_sign,draw0,False,,232.3,0.1458,1.9551,0.1458,0.0034,7,6,0,False,0.924,0.082,1.572,,,7,0.857,0.857,1.0
+icra_sign,draw1,False,,242.9,0.1631,1.6131,0.163,0.0326,6,4,0,False,0.939,0.079,1.772,,,6,0.833,0.833,1.0
+icra_sign,draw2,True,53.9,56.8,0.0198,0.0938,0.0197,0.0041,13,10,0,False,0.338,0.359,0.43,,,14,0.857,0.5,0.583

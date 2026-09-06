@@ -1,0 +1,9 @@
+tag,sector_deg,contact,obj_dxy,obj_dyaw,goal_progress,min_obj_obstacle,productive,error
+ycb_draw1_stall,0.0,True,0.04402,0.0351,-0.0002,0.00022,True,
+ycb_draw1_stall,45.0,True,0.02966,0.4837,0.0055,-0.0001,True,
+ycb_draw1_stall,90.0,True,0.00331,0.0661,0.0002,-4e-05,False,
+ycb_draw1_stall,135.0,True,0.00082,0.0785,0.0006,-4e-05,False,
+ycb_draw1_stall,180.0,True,0.03486,0.0797,-0.0183,0.0003,True,
+ycb_draw1_stall,225.0,True,0.03664,0.1527,-0.0268,-0.0,True,
+ycb_draw1_stall,270.0,True,0.02474,0.0275,-0.0147,-2e-05,True,
+ycb_draw1_stall,315.0,True,0.01957,0.0085,-0.0135,-1e-05,True,

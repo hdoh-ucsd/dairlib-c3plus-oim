@@ -1,0 +1,4 @@
+scene,tag,start_off,push,min_pusher_obj_gap,contact_dur_s,obj_dxy,obj_dyaw,min_obj_obstacle,min_pusher_obstacle,contact_acquired
+push_t_bt010_ycb_clutter,ycb_north_push_south,0.000;0.090,0.000;-0.060,-0.0,0.7,0.00486,0.0002,0.03259,0.07727,True
+push_t_bt010_ycb_clutter,ycb_probe_long,0.000;0.110,0.000;-0.120,-3e-05,1.2,0.04489,0.0067,0.00732,0.04382,True
+push_t_bt010_icra_sign,icra_north_push_south,0.000;0.110,0.000;-0.120,-3e-05,1.2,0.04489,0.0067,,,True
