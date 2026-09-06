@@ -324,7 +324,17 @@ class Xarm6FiveJointVelocityExecutor
     // clamped into its time range.
     const double t = std::clamp(timestamp, traj.start_time(),
                                 traj.end_time());
-    const Eigen::Vector3d p_des = traj.value(t);
+    Eigen::Vector3d p_des = traj.value(t);
+    // Robot-specific radial safety clamp: never chase a Cartesian target
+    // beyond the xArm6's usable planar reach (r2 trial2: an unreachable
+    // r=0.67 lift-height target parked the arm at saturation and pushed the
+    // measured EE past the planner's radius assert). Direction-preserving:
+    // scale only the planar components down to the reach circle.
+    constexpr double kMaxPlanarReach = 0.68;
+    const double r_des = p_des.head<2>().norm();
+    if (r_des > kMaxPlanarReach) {
+      p_des.head<2>() *= kMaxPlanarReach / r_des;
+    }
     const Eigen::Vector3d v_des = traj.EvalDerivative(t, 1);
 
     // 6x5 spatial Jacobian of the tip; rows [angular(3); translational(3)].
@@ -359,8 +369,13 @@ class Xarm6FiveJointVelocityExecutor
         kLambda * kLambda * Eigen::Matrix<double, 5, 5>::Identity();
     Eigen::Matrix<double, 5, 1> qdot_cmd =
         JtJ.ldlt().solve(J.transpose() * v_task);
-    for (int i = 0; i < 5; ++i) {
-      qdot_cmd(i) = std::clamp(qdot_cmd(i), -kQdotLimit, kQdotLimit);
+    // Direction-preserving saturation: componentwise clamping distorts the
+    // task direction (measured: descent stalls at z=+0.05 while xy tracks —
+    // the clamped joint mix cancels the z motion). Scale the whole vector so
+    // max |qdot_i| == kQdotLimit, preserving the damped-J task direction.
+    const double qdot_max = qdot_cmd.cwiseAbs().maxCoeff();
+    if (qdot_max > kQdotLimit) {
+      qdot_cmd *= kQdotLimit / qdot_max;
     }
 
     // Velocity servo + gravity compensation (MuJoCo gravcomp ordering: the
