@@ -80,6 +80,11 @@ class Servo(LeafSystem):
         out.SetFromVector(self.kp * (tgt - q) - self.kd * v)
 
 q0 = np.array(sim["q_init_objects"][0], dtype=float)
+ovr = os.environ.get("AGENTD_OBJ_POSE")
+if ovr:
+    _x, _y, _yw = map(float, ovr.split(","))
+    q0[0], q0[1], q0[2], q0[3] = math.cos(_yw/2), 0.0, 0.0, math.sin(_yw/2)
+    q0[4], q0[5] = _x, _y
 sx, sy = q0[4] + offx, q0[5] + offy
 servo = builder.AddSystem(Servo())
 builder.Connect(plant.get_state_output_port(), servo.get_input_port())
@@ -132,6 +137,7 @@ for tstep in np.arange(0.1, 3.51, 0.1):
         ox_, oy_, oyaw_ = obj_pose()
         print(f't={tstep:.1f} gap={g:.4f} obj=({ox_:.4f},{oy_:.4f},{oyaw_:.3f}) pusher_y={jy.get_translation(pctx):.4f} pz={jz.get_translation(pctx):.4f}')
 x1, y1, yaw1 = obj_pose()
+print('OBJ_FINAL', x1, y1, yaw1)
 print('pusher final', jx.get_translation(pctx), jy.get_translation(pctx), jz.get_translation(pctx))
 row = dict(scene=task, tag=tag, start_off=f"{offx:.3f};{offy:.3f}", push=f"{dx:.3f};{dy:.3f}",
            min_pusher_obj_gap=round(min_gap, 5), contact_dur_s=round(contact_time, 2),
@@ -141,6 +147,8 @@ row = dict(scene=task, tag=tag, start_off=f"{offx:.3f};{offy:.3f}", push=f"{dx:.
            min_pusher_obstacle=round(min_pobs, 5) if min_pobs < 8e9 else "",
            contact_acquired=min_gap < 1e-4)
 print(row)
+if os.environ.get("AGENTD_OBJ_POSE"):
+    sys.exit(0)
 path = "results_agent_d/contacts/scene_exact_contact_sanity.csv"
 new = not os.path.exists(path)
 with open(path, "a", newline="") as f:
