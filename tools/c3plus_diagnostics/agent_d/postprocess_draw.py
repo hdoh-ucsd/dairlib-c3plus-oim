@@ -19,20 +19,52 @@ WT = os.path.dirname(os.path.abspath(__file__)) + "/../../.."
 from pydrake.multibody.plant import MultibodyPlant
 from pydrake.multibody.parsing import Parser
 from pydrake.math import RigidTransform, RotationMatrix, RollPitchYaw
-plant = MultibodyPlant(0.0)
-parser = Parser(plant)
-parser.SetAutoRenaming(True)
-parser.AddModelsFromUrl("package://drake_models/franka_description/urdf/panda_arm.urdf")
-plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"))
-parser.AddModels(f"{WT}/examples/sampling_c3/urdf/end_effector_full.urdf")
-plant.WeldFrames(plant.GetFrameByName("panda_link7"), plant.GetFrameByName("end_effector_flange"),
-                 RigidTransform(RotationMatrix(RollPitchYaw(3.1415, 0, 0)), [0, 0, 0.107]))
-plant.Finalize()
+
+XARM6_MODEL = "/root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml"
+
+def build_fk():
+    from pydrake.multibody.plant import MultibodyPlant
+    from pydrake.multibody.parsing import Parser
+    from pydrake.math import RigidTransform, RotationMatrix, RollPitchYaw
+    plant = MultibodyPlant(0.0)
+    parser = Parser(plant)
+    parser.SetAutoRenaming(True)
+    if os.environ.get("AGENTD_FK") == "xarm6":
+        parser.AddModels(XARM6_MODEL)
+        base = "link_base" if plant.HasBodyNamed("link_base") else None
+        if base is None:
+            for cand in ("xarm6_link_base", "world_link", "base"):
+                if plant.HasBodyNamed(cand):
+                    base = cand
+                    break
+        if base is not None:
+            try:
+                plant.WeldFrames(plant.world_frame(), plant.GetFrameByName(base))
+            except Exception:
+                pass  # already anchored by the MJCF
+        parser.AddModels(f"{WT}/examples/sampling_c3/urdf/end_effector_full.urdf")
+        link6 = "xarm6_link6" if plant.HasBodyNamed("xarm6_link6") else "link6"
+        plant.WeldFrames(plant.GetFrameByName(link6), plant.GetFrameByName("end_effector_flange"),
+                         RigidTransform(RotationMatrix(RollPitchYaw(3.1415, 0, 0)), [0, 0, 0.107]))
+    else:
+        parser.AddModelsFromUrl("package://drake_models/franka_description/urdf/panda_arm.urdf")
+        plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"))
+        parser.AddModels(f"{WT}/examples/sampling_c3/urdf/end_effector_full.urdf")
+        plant.WeldFrames(plant.GetFrameByName("panda_link7"), plant.GetFrameByName("end_effector_flange"),
+                         RigidTransform(RotationMatrix(RollPitchYaw(3.1415, 0, 0)), [0, 0, 0.107]))
+    plant.Finalize()
+    return plant
+
+plant = build_fk()
+
 fk_ctx = plant.CreateDefaultContext()
 tip_frame = plant.GetFrameByName("end_effector_tip")
 
 def ee_pos(q7):
-    plant.SetPositions(fk_ctx, np.array(q7))
+    qv = np.array(q7, dtype=float)
+    if len(qv) != plant.num_positions():
+        qv = qv[:plant.num_positions()]
+    plant.SetPositions(fk_ctx, qv)
     return plant.CalcRelativeTransform(fk_ctx, plant.world_frame(), tip_frame).translation()
 
 # ---- T footprint gap (same sample-point method as the controller)
