@@ -1,0 +1,106 @@
+{
+  "open_table": {
+    "scenario": "open_table",
+    "notes": [],
+    "franka_loaded": true,
+    "body_geometry_counts": {
+      "vertical_link": {
+        "body_index": 13,
+        "n_collision": 1,
+        "n_visual": 1
+      },
+      "horizontal_link": {
+        "body_index": 14,
+        "n_collision": 1,
+        "n_visual": 1
+      }
+    },
+    "object_world_pose": {
+      "translation": [
+        0.5,
+        0.3,
+        0.0008
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "roll_pitch_yaw": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    },
+    "min_object_table_signed_distance_m": -1.1107649934270853e-16,
+    "min_object_obstacle_distance_m": null,
+    "object_on_table_check": {
+      "not_penetrating": true,
+      "not_floating": true,
+      "value": -1.1107649934270853e-16
+    },
+    "ee_tip_world_position": [
+      0.32668245969038656,
+      0.40079495940379617,
+      0.07330996317120639
+    ]
+  },
+  "shelf_gap": {
+    "scenario": "shelf_gap",
+    "notes": [],
+    "franka_loaded": true,
+    "body_geometry_counts": {
+      "vertical_link": {
+        "body_index": 13,
+        "n_collision": 1,
+        "n_visual": 1
+      },
+      "horizontal_link": {
+        "body_index": 14,
+        "n_collision": 1,
+        "n_visual": 1
+      },
+      "shelf_big": {
+        "body_index": 17,
+        "n_collision": 1,
+        "n_visual": 1
+      },
+      "shelf_small": {
+        "body_index": 18,
+        "n_collision": 1,
+        "n_visual": 1
+      }
+    },
+    "object_world_pose": {
+      "translation": [
+        0.5,
+        0.3,
+        0.0008
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "roll_pitch_yaw": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    },
+    "min_object_table_signed_distance_m": -1.1107649934270853e-16,
+    "min_object_obstacle_distance_m": 0.16699212556285395,
+    "object_on_table_check": {
+      "not_penetrating": true,
+      "not_floating": true,
+      "value": -1.1107649934270853e-16
+    },
+    "ee_tip_world_position": [
+      0.32668245969038656,
+      0.40079495940379617,
+      0.07330996317120639
+    ]
+  }
+}
