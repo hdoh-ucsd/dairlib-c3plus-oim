@@ -44,3 +44,14 @@ xArm6 executor below the robot-independent Cartesian interface is:
   preserved dairlib Cartesian contract).
 
 See `xarm6_joint_control_inventory.csv` for the full per-joint table with file:line citations.
+
+## Independent cross-check (Agent D @323e3d8b7)
+
+The 5-joint velocity verdict was independently confirmed against the OIM checkout (5 velocity
+actuators xarm6.xml:263-272, ctrl = target qdot, uniform ±0.5 ctrlrange, joint6 FIXED at :201,
+qdot written directly to ctrl in sim3d/run.py:520,786; the real arm publishes 5 joint velocities
+with joint6=0, real3d/interface.py:102,168; no per-scene kv/ctrlrange overrides). Nuance
+acknowledged: upstream's damped 5×5 Jacobian is MPPI noise/task *shaping* — the optimizer's
+action IS qdot; our Cartesian-target → damped-J → qdot adapter is an equivalent-intent
+realization of the same kinematic map required because the preserved dairlib policy emits
+Cartesian references rather than joint velocities.
