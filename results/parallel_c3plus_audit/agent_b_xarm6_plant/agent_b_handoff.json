@@ -1,0 +1,33 @@
+{
+  "base_commit": "0abc0eb7c (audit/xarm6-plant-fidelity from c3plus-channel-route-v1; umbrella repo HEAD 4316b1ea)",
+  "plant_model_differences": [
+    "default reduced planner LCS is frictionless, gravity-free, table-free, with fictitious 1.0 kg point pusher and no object geometry",
+    "full spatial LCS assumes object-table mu 0.4615 vs sim 0.3; pusher-table 1.0 vs 0.4615",
+    "arm kinematics / reposition lift / reach filtering / tilt handling absent from all planning models (post-C3 filters only)",
+    "ranking rollout teleports pusher to candidate contact; no acquisition time, no arm, no latency",
+    "object state feedback 20 Hz vs 2 ms sim (up to 50 ms pose age = one plan step)",
+    "C3 input force u never used on the live execution path (pure position servo on knot-2 predicted pusher state)"
+  ],
+  "first_prediction_loss_layer": "between candidate selection and physical pusher-object contact (acquisition); secondary 0.61 gain haircut in contact",
+  "contact_acquisition_rate": 0.131,
+  "contact_acquisition_note": "productive 0.5s-window fraction: 0.131 in the only success vs 0.017-0.049 in all failures; ~26% of promise windows had any pushing in the prior campaign; 74% of promises issued mid-travel realize 0",
+  "normal_push_fidelity": {"actual_cm_per_10cm_pusher_travel": 3.84, "determinism": "5/5 identical", "in_contact_rho": 0.61},
+  "lateral_push_fidelity": {"actual_cm_per_10cm_pusher_travel": 5.15, "note": "lateral is STRONGER than normal; B5 excluded", "in_contact_rho": 0.61},
+  "shelf_push_fidelity": {"in_vivo_success_burst_mm_per_s": 22.9, "failure_mode": "yaw-misaligned corridor arrival -> permanent contact re-acquisition failure, candidate-pool starvation (sample buffer overflow), reposition storm", "post_plateau_lambda_obs": 0.0, "osc_anomalies": 0},
+  "candidate_replay_results": [
+    {"variant": "A full execution", "status": "population-matched windows substitute", "finding": "traveling promises realize 0; in-contact rho 0.61"},
+    {"variant": "B exact-contact start", "status": "scripted-pusher micro-test", "finding": "prediction-scale deterministic transport both directions"},
+    {"variant": "C ideal Cartesian pusher", "status": "same rig", "finding": "plant physics deliver when contact held"},
+    {"variant": "D resampling disabled", "status": "post-P5 committed-selection ablation", "finding": "removes zero-realization promises, does not raise transport (production-limited)"}
+  ],
+  "cost_questions_for_agent_c": [
+    "Should candidate scores be discounted by an acquisition-feasibility/It-takes-time-to-get-there model (travel time + P(acquire|object yaw, corridor geometry)) instead of a flat 0.61 calibration?",
+    "Post-plateau lambda_obs is exactly 0 in every draw: does the cost ever see the obstacle once the object parks at the mouth, or is the score blind to the re-engagement problem?",
+    "Sample-buffer overflow during plateau = candidate starvation: is the pool exhausted by the collision/path vetoes at yaw-misaligned corridor poses, and should admission (not cost) be relaxed there?"
+  ],
+  "outer_loop_questions_for_agent_a": [
+    "Yaw at corridor entry gates success (stem-aligned +3.09 rad transits; ~20-25 deg misaligned stalls forever): should the outer loop enforce a yaw-alignment pre-goal before gap entry?",
+    "Reposition storm (45-75 events) with zero re-acquisition: is there a detector for 'reposition completed but contact never re-acquired N times' that should trigger a different recovery (e.g. re-orient object, back off and realign)?",
+    "Parked-on-object plateaus (proxy-contact ~0.5, 0.02 mm/s transport, C3-mode ~99%): C3 mode holds contact but produces nothing - candidate for a productivity watchdog at the outer loop"
+  ]
+}
