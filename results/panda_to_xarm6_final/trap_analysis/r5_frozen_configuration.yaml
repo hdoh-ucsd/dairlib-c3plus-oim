@@ -1,0 +1,27 @@
+# Frozen r5 configuration — diagnostic reference (do not modify during the pass)
+commit: ab8ba8b12 (r5 executor code = f3ed26860; closure docs on top)
+robot_model: xarm6_policyport.xml (joint 6 WELDED; link6 rigid on link5 at default pose)
+active_joints: [xarm6_joint1..xarm6_joint5]
+joint_limits_rad: {j1: +-6.283, j2: +-2.0 (114.59 deg), j3: [-3.90, 0.19], j4: +-6.283, j5: [-1.65, 3.142]}
+velocity_limits: +-0.5 rad/s (MuJoCo ctrlrange; plant limits and executor clamp)
+effort_limits_Nm: [50, 50, 32, 32, 32]
+joint_damping: 50 (all)
+armature: 1
+joint4_spring: RevoluteSpring k=175 ref=0
+executor: Xarm6FiveJointVelocityExecutor (franka_osc_controller.cc, --xarm6_five_joint=true)
+  jacobian_rows: [vx, vy, vz, wx, wy] of the 6x5 end_effector_tip spatial Jacobian (wz dropped)
+  W: diag(1, 1, 1, 0.2, 0.2)
+  dls_lambda: 0.05
+  Kc: 4.0   # 1/s Cartesian position feedback
+  alpha: 2.0  # 1/s tilt-to-vertical bias
+  saturation: direction-preserving uniform scaling to max|qdot_i| = 0.5
+  nan_guard: qdot=0 on non-finite
+  reach_clamp: p_des planar radius clamped to 0.68 m (direction-preserving)
+  servo: tau_i = clamp(kv_i (qdot_cmd_i - qdot_i), +-effort_i) + tau_grav; kv=[300,300,200,200,200]
+prelift_release: enabled (wedge radius 0.085, release distance 0.095, step 0.01, z held)
+matched_friction: --matched_mu (object 0.3, ground 0.3, EE 1.5 -> pairs T-table 0.3, EE-T 0.5)
+outer_loop_config: push_t_bt010_open_table_xarm6 (byte-copy of Panda demo except robot_radius_limits
+  [0.25, 0.70], pwl_waypoint_height 0.10, 5-dim q_init, osc_params_xarm6.yaml)
+c3_parameters: unchanged (admm_iter 3, N 5, C3+ anitescu, dt 0.05/0.1, Q/R/G/U per reference manifest)
+time_budget: 1200 s wall (~800-830 s sim at observed rate)
+run_data: /root/push_anything_ADMM/results/panda_to_xarm6_port_final_r4 and _r5

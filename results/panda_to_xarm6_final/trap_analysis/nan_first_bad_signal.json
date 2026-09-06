@@ -1,0 +1,42 @@
+[
+  {
+    "trial": "r4_trial1",
+    "crash_t_last_planner_alive": "planner last alive t~263s (last p_des update); run/logs end t=842.7s",
+    "last_executor_print_t": 842,
+    "first_bad_signal": "transient_not_captured",
+    "classification": "N4_PLANNER_INTERNAL_OVERFLOW",
+    "saturated_run_ending_at_crash_s": 13,
+    "longest_saturated_run_s": 43,
+    "evidence": [
+      "state_trace: 5785 samples scanned, all finite, no |dq|>1 rad or |dobj|>0.5 m jumps; last sample t=842.7",
+      "osc.log: last XARM6_5J print at t=842s, no nonfinite values printed",
+      "planner-alive markers: last p_des change at t=263s, last PRELIFT event at t=222.04s; sim+executor continued fully finite for ~579s after the last planner-driven target update \u2014 the crash killed only the planner process",
+      "osc.log: |qdot_cmd|>=0.45 run ending at crash = 13s; longest saturated run in trial = 43s",
+      "planner.log tail flags: ['!!! WARNING !!! Unsuccessful sample buffer overflow', '!!! WARNING !!! Unsuccessful sample buffer overflow', \"terminate called after throwing an instance of 'drake::internal::assertion_error'\", \"what():  Failure at bazel-out/k8-opt/bin/external/drake+/tools/install/libdrake/_virtual_includes/drake_shared_library/drake/multibody/plant/multibody_plant.h:2826 in SetPositionsAndVelocities(): condition 'AllFinite(q_v)' failed.\"]",
+      "sim.log tail flags: [\"[2026-09-06 11:58:00.336] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:202: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.\", \"[2026-09-06 11:58:00.336] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:201: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.\", \"[2026-09-06 11:58:00.368] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:212: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.\", \"[2026-09-06 11:58:00.368] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:259: warning: The tag 'velocity' found as a child of 'actuator' is currently unsupported and will be ignored.\"]",
+      "saturation near planner death: 30/30 s with |qdot_cmd|>=0.45 in the 30 s before the last p_des update",
+      "All recorded signals (10 Hz sim state, 1 Hz servo command) are finite through the crash instant; the nonfinite vector reached SetPositionsAndVelocities inside the planner process. The 10 Hz recorder could miss a <100 ms sim transient, but the sim and executor both kept running normally for hundreds of seconds after the planner's last target update (osc.log XARM6_5J prints continue with finite, bounded |qdot_cmd|; sim.log has no warnings), which argues the sim state stayed finite (rules out N1) and the servo command stayed finite (rules out N2); the nonfinite value was internal to the planner (its own predicted-x0/rollout state), i.e. N4, with N3 (bad planner input only) as the alternative the 10 Hz recorder cannot fully exclude."
+    ],
+    "recommended_guard": "Guard at the planner's state-input boundary: before every SetPositionsAndVelocities (LCS formulation and internal rollout), check AllFinite on the assembled q_v; on failure, log the offending vector + source (LCM message vs internal prediction), clamp/skip the tick instead of aborting. Secondary: finite-check the planner's predicted-x0 extrapolation (velocity extrapolation under saturated pressing is the prime internal suspect)."
+  },
+  {
+    "trial": "r5_trial2",
+    "crash_t_last_planner_alive": "planner last alive t~450s (last p_des update); run/logs end t=820.2s",
+    "last_executor_print_t": 820,
+    "first_bad_signal": "transient_not_captured",
+    "classification": "N4_PLANNER_INTERNAL_OVERFLOW",
+    "saturated_run_ending_at_crash_s": 0,
+    "longest_saturated_run_s": 12,
+    "evidence": [
+      "state_trace: 5605 samples scanned, all finite, no |dq|>1 rad or |dobj|>0.5 m jumps; last sample t=820.2",
+      "osc.log: last XARM6_5J print at t=820s, no nonfinite values printed",
+      "planner-alive markers: last p_des change at t=450s, last PRELIFT event at t=449.763s; sim+executor continued fully finite for ~370s after the last planner-driven target update \u2014 the crash killed only the planner process",
+      "osc.log: |qdot_cmd|>=0.45 run ending at crash = 0s; longest saturated run in trial = 12s",
+      "planner.log tail flags: ['!!! WARNING !!! Unsuccessful sample buffer overflow', '!!! WARNING !!! Unsuccessful sample buffer overflow', \"terminate called after throwing an instance of 'drake::internal::assertion_error'\", \"what():  Failure at bazel-out/k8-opt/bin/external/drake+/tools/install/libdrake/_virtual_includes/drake_shared_library/drake/multibody/plant/multibody_plant.h:2826 in SetPositionsAndVelocities(): condition 'AllFinite(q_v)' failed.\"]",
+      "sim.log tail flags: [\"[2026-09-06 14:01:04.641] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:202: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.\", \"[2026-09-06 14:01:04.641] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:201: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.\", \"[2026-09-06 14:01:04.677] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:212: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.\", \"[2026-09-06 14:01:04.677] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:259: warning: The tag 'velocity' found as a child of 'actuator' is currently unsupported and will be ignored.\"]",
+      "saturation near planner death: 22/30 s with |qdot_cmd|>=0.45 in the 30 s before the last p_des update",
+      "All recorded signals (10 Hz sim state, 1 Hz servo command) are finite through the crash instant; the nonfinite vector reached SetPositionsAndVelocities inside the planner process. The 10 Hz recorder could miss a <100 ms sim transient, but the sim and executor both kept running normally for hundreds of seconds after the planner's last target update (osc.log XARM6_5J prints continue with finite, bounded |qdot_cmd|; sim.log has no warnings), which argues the sim state stayed finite (rules out N1) and the servo command stayed finite (rules out N2); the nonfinite value was internal to the planner (its own predicted-x0/rollout state), i.e. N4, with N3 (bad planner input only) as the alternative the 10 Hz recorder cannot fully exclude."
+    ],
+    "recommended_guard": "Guard at the planner's state-input boundary: before every SetPositionsAndVelocities (LCS formulation and internal rollout), check AllFinite on the assembled q_v; on failure, log the offending vector + source (LCM message vs internal prediction), clamp/skip the tick instead of aborting. Secondary: finite-check the planner's predicted-x0 extrapolation (velocity extrapolation under saturated pressing is the prime internal suspect)."
+  }
+]
