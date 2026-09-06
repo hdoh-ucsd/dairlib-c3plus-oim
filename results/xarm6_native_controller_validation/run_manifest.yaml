@@ -1,0 +1,39 @@
+# xArm6-NATIVE controller validation — provenance manifest
+date: 2026-09-05
+repository: /root/push_anything_ADMM/external/oim_c++_anything
+work_branch: audit/xarm6-plant-fidelity (worktree .claude/worktrees/audit-xarm6-plant)
+oim_t_sources_identical_to: c08e80611 "Land gates 380-388 sources" (branch oim_c++_anything HEAD;
+  verified `git diff --stat HEAD c08e80611 -- examples/sampling_c3/oim_t` is empty)
+head_commit_at_start: e70c391e4
+xarm6_model: examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6.xml (MJCF, 6-DOF xArm6,
+  stick capsule r=0.00555 L=0.08415 on link6, tip point [0,0,0.1794])
+task_object_model: examples/sampling_c3/urdf/oim_xarm6_tabletop/... t_block.sdf (0.1 kg OIM-scale T,
+  crossbar 0.089x0.0198x0.0596 + stem 0.0198x0.0794x0.0596, COM offset (0,-0.0149,0))
+simulator_backend: Drake discrete MultibodyPlant dt=0.002 (xarm6_sim.cc; TAMSI default contact)
+controller_entry_point: examples/sampling_c3/oim_t/xarm6_sampling_c3_controller.cc (planner_mode
+  default reduced_exact_t; task loop = full_sampling_c3plus via xarm6_full_sampling_c3plus.cc)
+c3_entry_point: SolveOneContact (xarm6_sampling_c3_controller.cc:981-1078, hand-built 10-state
+  planar LCS) / BuildSpatialLcsProblem (xarm6_full_sampling_c3plus.cc:1400-1449, 19-state Anitescu)
+osc_entry_point: examples/sampling_c3/oim_t/xarm6_osc_controller.cc (3 OSC QPs + OscPhaseMux +
+  XarmVelocityServoBridge)
+rates:
+  sim_dt_s: 0.002
+  robot_state_hz: 500
+  object_state_hz: 20
+  osc_hz: 500 (LcmDrivenLoop on XARM_STATE_SIMULATION)
+  planner_update_period_ms: 20 (full_execution_period_ms)
+  planning_dt_s: 0.05
+goal: start (0.381, 0.400, 0) -> goal (0.381, -0.400, 3.1416)  # 0.8 m + 180 deg
+success_thresholds: {translation_tolerance_m: 0.05, orientation_tolerance_rad: 0.10}
+proof_of_native_not_franka: >
+  xarm6_sim.cc loads xarm6.xml via AddXarmActuators (xarm6_process_common.cc:158-168) with xArm6
+  effort limits [50,50,32,32,32,20] N.m and joint-4 spring k=175; LCM channels XARM_STATE_SIMULATION /
+  XARM_INPUT_SIMULATION / OIM_XARM_TRAJECTORY. The Franka OIM scene demos (push_t_bt010_*) instead
+  boot sampling_c3_franka_osc_controller on FRANKA_STATE_SIMULATION with panda_arm.urdf — different
+  binaries, channels, and robot model.
+prior_state_of_the_arc: gate ledger n=16 success_rate 0.0 (pos_err 0.7421 +/- 0.0151,
+  theta_err 2.7630 +/- 0.1361, exec 227.2 +/- 21.6 s at 8000-update budget); measured progress curve
+  of the exact8000 trial: 1.5 cm translation + 0.042 rad yaw in first ~40 s, then terminal hold from
+  update 1471 of 8000 (81% idle) — single contact transaction, measured_cycles=0.
+binaries: built in this worktree via bazel (see build receipt in the final report); prior campaign
+  binaries at the main checkout bazel-bin (built 2026-09-02).

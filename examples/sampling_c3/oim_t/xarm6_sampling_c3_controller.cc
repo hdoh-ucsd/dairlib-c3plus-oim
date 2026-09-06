@@ -2499,6 +2499,19 @@ int DoMain(int argc, char* argv[]) {
                         << contact_receipt.tip_hold_error
                         << " physically_lost_latch="
                         << physically_lost_latch << std::endl;
+              if (physically_lost_latch &&
+                  initial_contact_dwell_updates > 0) {
+                // A physically-established dwell lost its latch: close the
+                // transaction as complete-but-unproductive so control enters
+                // the existing recovery + measured-cycle machinery instead of
+                // silently ending the run with the response still open.
+                initial_contact_productive = false;
+                initial_contact_response_complete = true;
+                std::cout <<
+                    "full_sampling_c3plus_initial_contact_lost_latch_"
+                    "recovery=ROUTE prior_updates="
+                          << initial_contact_dwell_updates << std::endl;
+              }
               initial_contact_dwell_updates = 0;
               initial_contact_engaged = false;
               initial_contact_start_pose.reset();
