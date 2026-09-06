@@ -1,5 +1,10 @@
 #include <math.h>
+#include <algorithm>
 #include <vector>
+
+#include <drake/geometry/geometry_roles.h>
+#include <drake/geometry/proximity_properties.h>
+#include <drake/multibody/plant/coulomb_friction.h>
 
 #include <drake/common/find_resource.h>
 #include <drake/common/yaml/yaml_io.h>
@@ -57,6 +62,37 @@ DEFINE_string(demo_name, "jacktoy",
               "Name for the demo, used when building filepaths for output.");
 DEFINE_string(robot_model, "franka",
               "Robot arm model: 'franka' (default) or 'xarm6'.");
+DEFINE_bool(matched_mu, false,
+            "Override collision friction to match the OIM MJX benchmark: "
+            "object 0.3, ground/platform 0.3, end-effector 1.5 "
+            "(harmonic pairs: T-table 0.3, EE-T 0.5).");
+
+namespace {
+
+// Re-assigns the CoulombFriction of every collision geometry on `body` via
+// the scene graph's proximity properties (RoleAssign::kReplace).
+void SetBodyFriction(const drake::multibody::MultibodyPlant<double>& plant,
+                     drake::geometry::SceneGraph<double>* scene_graph,
+                     const drake::multibody::RigidBody<double>& body,
+                     double mu) {
+  const auto& inspector = scene_graph->model_inspector();
+  for (const auto& geom_id : plant.GetCollisionGeometriesForBody(body)) {
+    const drake::geometry::ProximityProperties* old_props =
+        inspector.GetProximityProperties(geom_id);
+    if (old_props == nullptr) continue;
+    drake::geometry::ProximityProperties new_props(*old_props);
+    new_props.UpdateProperty(
+        "material", "coulomb_friction",
+        drake::multibody::CoulombFriction<double>(mu, mu));
+    scene_graph->AssignRole(*plant.get_source_id(), geom_id, new_props,
+                            drake::geometry::RoleAssign::kReplace);
+    std::cout << "[MATCHED_MU] body=" << body.name()
+              << " geom=" << inspector.GetName(geom_id)
+              << " mu=" << mu << std::endl;
+  }
+}
+
+}  // namespace
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -110,6 +146,37 @@ int DoMain(int argc, char* argv[]) {
 //     balls.push_back(object_index1);
 //   }                                                                          
   plant.Finalize();
+
+  // OIM benchmark-matched friction override (see --matched_mu). Applied after
+  // parsing/finalize but before diagram build, via proximity-property
+  // replacement in the scene graph model. Works identically for franka/xarm6.
+  if (FLAGS_matched_mu) {
+    constexpr double kObjectMu = 0.3;
+    constexpr double kGroundMu = 0.3;
+    constexpr double kEeMu = 1.5;
+    for (drake::multibody::BodyIndex body_index(0);
+         body_index < plant.num_bodies(); ++body_index) {
+      const auto& body = plant.get_body(body_index);
+      const std::string model_name =
+          plant.GetModelInstanceName(body.model_instance());
+      const bool is_object =
+          std::find(object_indices.begin(), object_indices.end(),
+                    body.model_instance()) != object_indices.end();
+      if (is_object) {
+        SetBodyFriction(plant, &scene_graph, body, kObjectMu);
+      } else if (body.name() == "ground" || body.name() == "platform") {
+        SetBodyFriction(plant, &scene_graph, body, kGroundMu);
+      } else if (model_name.rfind("end_effector", 0) == 0) {
+        SetBodyFriction(plant, &scene_graph, body, kEeMu);
+      }
+      // Robot links, walls, obstacles: unchanged.
+    }
+    auto harmonic = [](double a, double b) { return 2 * a * b / (a + b); };
+    std::cout << "[MATCHED_MU] effective pair friction: object-table="
+              << harmonic(kObjectMu, kGroundMu)
+              << " ee-object=" << harmonic(kEeMu, kObjectMu)
+              << " ee-table=" << harmonic(kEeMu, kGroundMu) << std::endl;
+  }
   /* -------------------------------------------------------------------------------------------*/
 
   drake::lcm::DrakeLcm drake_lcm(FLAGS_lcm_url);
