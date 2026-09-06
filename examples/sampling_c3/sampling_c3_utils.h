@@ -71,10 +71,11 @@ drake::multibody::ModelInstanceIndex AddFrankaToPlant(
 
 /// Add the xArm6 (policy-port model, tool stick removed) to a given plant and
 /// scene graph, mirroring AddFrankaToPlant: same end-effector weld transform,
-/// same ground/platform/wall scene. Drake's MJCF parser does not import
-/// MuJoCo actuators, so one JointActuator per revolute joint is added with
-/// the vendor effort limits {50,50,32,32,32,20} N*m and velocity limits
-/// +-3.1416 rad/s.
+/// same ground/platform/wall scene. Faithful MJX plant: 5 joints (joint6
+/// welded out in the MJCF), damping 50, joint-4 RevoluteSpring k=175.
+/// Drake's MJCF parser does not import MuJoCo actuators, so one
+/// JointActuator per revolute joint is added with the vendor effort limits
+/// {50,50,32,32,32} N*m and velocity limits +-0.5 rad/s (MuJoCo ctrlrange).
 drake::multibody::ModelInstanceIndex AddXarm6ToPlant(
     drake::multibody::MultibodyPlant<double>* plant,
     drake::geometry::SceneGraph<double>* scene_graph = nullptr,

@@ -41,15 +41,13 @@
            self-collision exclusion behavior are unaffected. -->
       <geom type="mesh" contype="1" conaffinity="1"
             solimp="0.99 0.99 0.01" solref="0.01 1"/>
-      <!-- POLICYPORT DEVIATION: source model uses damping="50", tuned for
-           MuJoCo velocity-servo actuators (kv 200-300). This port is torque
-           controlled via the dairlib OSC, whose inverse-dynamics QP models
-           only M*vdot + bias - gravity (no joint force elements), so an
-           unmodeled 50 N*m*s drag saturates every joint's effort limit and
-           caps speed at tau_max/damping = 1 rad/s (verified in closed-loop
-           smoke: joints plateaued at ~1.0 rad/s while the EE wandered).
-           Reduced to 1.0, a realistic joint-friction scale for the arm. -->
-      <joint damping="1" armature="1" frictionloss="0" limited="true"/>
+      <!-- damping="50" restored (faithful MJX plant): the execution layer is
+           now a per-joint velocity servo (tau = kv*(qdot_cmd - qdot) + gravity
+           compensation), the same construction the source MuJoCo model uses,
+           which handles this damping exactly as MuJoCo does (steady-state
+           tracking kv/(kv+damping) ~ 80-86%). The earlier reduction to 1.0 was
+           a workaround for the torque OSC path only. -->
+      <joint damping="50" armature="1" frictionloss="0" limited="true"/>
       <velocity ctrllimited="true" forcelimited="true"/>
     </default>
   </default>
@@ -205,13 +203,13 @@
                 <geom name="xarm6_link5" mesh="link5" euler="0 0 180"
                       material="xarm6_red" mass="1.275"/>
 
-                <!-- True xArm6 wrist roll.  The previous OIM import welded
-                     this degree of freedom because the stick is
-                     axis-symmetric; the native six-joint controller keeps it
-                     available for posture/null-space regulation.  Limits
-                     follow UFACTORY's xarm6 URDF. -->
+                <!-- joint6 (wrist roll) is fixed, not actuated -- rolling a
+                     symmetric stick about its own axis has no effect on
+                     pushing (mirrors the intended MJX model, which welds
+                     this DOF out; see oim/models/xarm6/xarm6.xml). With no
+                     <joint> element, link6 is rigid on link5 at its default
+                     pose. -->
                 <body name="xarm6_link6" pos="0.076010 0.068771 0.004339" euler="-90 0 0" gravcomp="1">
-                  <joint name="xarm6_joint6" axis="0 0 1" range="-360 360"/>
                   <geom name="xarm6_link6" mesh="link6" euler="0 0 90"
                         material="xarm6_white" mass="0.1096"/>
                 </body>
@@ -268,7 +266,6 @@
               ctrlrange="-0.5 0.5" forcerange="-32 32" kv="200"/>
     <velocity class="xarm6" name="xarm6_motor5" joint="xarm6_joint5"
               ctrlrange="-0.5 0.5" forcerange="-32 32" kv="200"/>
-    <velocity class="xarm6" name="xarm6_motor6" joint="xarm6_joint6"
-              ctrlrange="-0.5 0.5" forcerange="-20 20" kv="200"/>
+    <!-- xarm6_motor6 removed: joint6 is welded out (see link6 body). -->
   </actuator>
 </mujoco>
