@@ -70,7 +70,7 @@ class Servo(LeafSystem):
     def target(self, t):
         # 0-1 s: hold at start; 1-3 s: linear push
         a = min(max((t - 1.0) / 2.0, 0.0), 1.0)
-        return np.array([sx + a * dx, sy + a * dy, 0.019])
+        return np.array([sx + a * dx, sy + a * dy, float(os.environ.get("AGENTD_PUSH_Z", "0.019"))])
 
     def calc(self, ctx, out):
         x = self.get_input_port().Eval(ctx)
@@ -93,7 +93,7 @@ diagram = builder.Build()
 ctx = diagram.CreateDefaultContext()
 pctx = plant.GetMyContextFromRoot(ctx)
 plant.SetPositions(pctx, obj, q0)
-jx.set_translation(pctx, sx); jy.set_translation(pctx, sy); jz.set_translation(pctx, 0.019)
+jx.set_translation(pctx, sx); jy.set_translation(pctx, sy); jz.set_translation(pctx, float(os.environ.get("AGENTD_PUSH_Z", "0.019")))
 
 def obj_pose():
     q = plant.GetPositions(pctx, obj)
@@ -110,7 +110,7 @@ def min_dists():
         nb = insp.GetName(insp.GetFrameId(p.id_B))
         pair = na + "|" + nb
         is_p = "pusher_tip" in pair
-        is_o = "push_t" in pair or "vertical_link" in pair or "horizontal_link" in pair
+        is_o = ("push_t" in pair or "vertical_link" in pair or "horizontal_link" in pair or "c_glyph" in pair)
         is_obs = "scene_" in pair or "obstacle" in pair
         if is_p and is_o:
             d_po = min(d_po, p.distance)

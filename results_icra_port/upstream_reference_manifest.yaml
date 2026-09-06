@@ -1,0 +1,25 @@
+# Faithful icra_sign port — upstream reference manifest (2026-09-06)
+upstream_repository: https://github.com/NikolaRaicevic2001/Object-Informed-Manipulation-MJX
+upstream_branch: main
+upstream_commit: d6d80a65ba6a45079e1384ba879e54d50d25bc39
+local_checkout: /root/push_anything_ADMM/external/Object-Informed-Manipulation-MJX
+local_checkout_commit: a954f00047b6f2f302e83176124f482b2ec1a2e7
+icra_files_identical_between_local_and_upstream:
+  oim/models/xarm6_pusht_tabletop/icra_sign.xml: SAME (byte-identical)
+  examples/poses/icra_sign.yaml: SAME (byte-identical)
+  oim/objects/planar_pushing.py: SAME (byte-identical)
+  oim/utils/scenes.py: file DIFFERS overall, but the _GLYPH_* hull block and the
+    "icra_sign" SceneSpec entry are character-identical (verified programmatically);
+    _ROBOT_BASE_RADIUS = 0.09 in both
+  glyph_hulls.py / tests/test_scenes.py: differ elsewhere; hull data consumed here
+    comes from scenes.py (identical region)
+authoritative_sources_used:
+  glyph_hulls: oim/utils/scenes.py lines 282-329 (_GLYPH_I/R/A/2/0/6, 10 verts each)
+  row_layout: scenes.py icra_sign entry (I -0.55, R -0.25, A -0.10, 2 +0.15,
+    0 +0.30, 2 +0.45, 6 +0.60; all at x=0.5; C slot at y=-0.40)
+  robot_base_obstacle: scenes.py line 333 (_ROBOT_BASE_RADIUS = 0.09, planner-only)
+  c_model: icra_sign.xml body "block" (c_spine/c_top_bar/c_bot_bar, 0.1 kg total)
+  c_footprint: planar_pushing.py c_shape_footprint(0.0483, 0.0515, 0.016)
+  physics: scenes.py (mass 0.1, mu 0.3, limit_surface_radius 0.0548)
+  poses: examples/poses/icra_sign.yaml (5 start/goal variants, verbatim)
+cpp_port_branch: icra-sign-faithful-port (worktree audit-ycb-icra, base fb7994563 on 43d5efb96 post-P5 code)

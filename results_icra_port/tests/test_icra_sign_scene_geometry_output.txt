@@ -1,0 +1,36 @@
+PASS planner_obstacle_count 8
+PASS planner_poly_count 7
+PASS base_disc 
+PASS sim_glyph_link_count ['glyph_0', 'glyph_2', 'glyph_2b', 'glyph_6', 'glyph_A', 'glyph_I', 'glyph_R']
+PASS glyph_I_pose [ 0.5    -0.55    0.0085]
+PASS glyph_I_one_collision 
+PASS glyph_I_hull_vertices_match max drift 0.00e+00
+PASS glyph_I_vertex_count 10
+PASS glyph_R_pose [ 0.5    -0.25    0.0085]
+PASS glyph_R_one_collision 
+PASS glyph_R_hull_vertices_match max drift 0.00e+00
+PASS glyph_R_vertex_count 10
+PASS glyph_A_pose [ 0.5    -0.1     0.0085]
+PASS glyph_A_one_collision 
+PASS glyph_A_hull_vertices_match max drift 0.00e+00
+PASS glyph_A_vertex_count 10
+PASS glyph_2_pose [0.5    0.15   0.0085]
+PASS glyph_2_one_collision 
+PASS glyph_2_hull_vertices_match max drift 0.00e+00
+PASS glyph_2_vertex_count 10
+PASS glyph_0_pose [0.5    0.3    0.0085]
+PASS glyph_0_one_collision 
+PASS glyph_0_hull_vertices_match max drift 0.00e+00
+PASS glyph_0_vertex_count 10
+PASS glyph_2b_pose [0.5    0.45   0.0085]
+PASS glyph_2b_one_collision 
+PASS glyph_2b_hull_vertices_match max drift 0.00e+00
+PASS glyph_2b_vertex_count 10
+PASS glyph_6_pose [0.5    0.6    0.0085]
+PASS glyph_6_one_collision 
+PASS glyph_6_hull_vertices_match max drift 0.00e+00
+PASS glyph_6_vertex_count 10
+PASS c_footprint_matches_sim_boxes sim=[(-0.0323, 0.0, 0.016, 0.0515), (0.0, -0.0355, 0.0483, 0.016), (0.0, 0.0355, 0.0483, 0.016)]
+PASS goal_slot_clearance_positive 0.0511 (upstream 0.051)
+PASS goal_slot_clearance_matches_upstream 0.0511
+RESULT: PASS

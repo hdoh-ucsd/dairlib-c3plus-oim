@@ -7,7 +7,9 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 #include <array>
+#include <map>
 #include <thread>
 #include <utility>
 
@@ -190,6 +192,11 @@ struct ObsExtConfig {
   // Optional exact-geometry obstacle SDF: axis-aligned boxes (cx,cy,hx,hy per
   // obstacle, ';'-separated) via SAMPLING_C3_OBS_BOXES. Empty -> disc model.
   std::vector<std::array<double, 4>> obs_boxes;
+  // Optional exact-geometry obstacle SDF: convex polygons (world-frame
+  // vertices) via SAMPLING_C3_OBS_POLYS = "oi|x,y|x,y|...;oj|...". A polygon
+  // overrides both the disc and any box at its index. Used by the faithful
+  // icra_sign port, where each glyph is the upstream 10-vertex compiled hull.
+  std::map<int, std::vector<std::array<double, 2>>> obs_polys;
   double nonpen_margin = 0.01;  // object_obstacle.margin (obs_margin)
   // Reposition transaction_v1 scoring (SAMPLING_C3_REPOSITION_SCORE_MODE):
   // gate C3->repos exits on the value of the full reposition transaction.
@@ -251,6 +258,70 @@ inline const std::vector<std::pair<double, double>>& TFootprint() {
   }();
   return pts;
 }
+// Block capital-C footprint (faithful icra_sign pushed object): the exact
+// union boundary of push_c_glyph.sdf's three boxes — spine + top/bottom bars,
+// matching upstream c_shape_footprint(half_width 0.0483, half_height 0.0515,
+// half_stroke 0.016) and icra_sign.xml's c_spine/c_top_bar/c_bot_bar.
+inline const std::vector<std::pair<double, double>>& CFootprint() {
+  static std::vector<std::pair<double, double>> pts = [] {
+    std::vector<std::pair<double, double>> v;
+    auto rect = [&](double cx, double cy, double w, double h) {
+      for (int i = 0; i <= 10; i++) {
+        double a = i / 10.0;
+        v.push_back({cx - w / 2 + a * w, cy - h / 2});
+        v.push_back({cx - w / 2 + a * w, cy + h / 2});
+        v.push_back({cx - w / 2, cy - h / 2 + a * h});
+        v.push_back({cx + w / 2, cy - h / 2 + a * h});
+      }
+    };
+    rect(-0.0323, 0.0, 0.032, 0.103);   // spine
+    rect(0.0, 0.0355, 0.0966, 0.032);   // top bar
+    rect(0.0, -0.0355, 0.0966, 0.032);  // bottom bar
+    return v;
+  }();
+  return pts;
+}
+// Object footprint selector: SAMPLING_C3_OBJECT_FOOTPRINT=c_glyph switches
+// every footprint consumer (LCS witness, route, swept veto, legacy nonpen)
+// from the T to the C. Scene representation only — no controller semantics.
+inline const std::vector<std::pair<double, double>>& Footprint() {
+  static const bool use_c = [] {
+    const char* f = std::getenv("SAMPLING_C3_OBJECT_FOOTPRINT");
+    return f && std::string(f) == "c_glyph";
+  }();
+  return use_c ? CFootprint() : TFootprint();
+}
+
+// Signed distance from a point to a convex polygon (CCW world vertices),
+// with outward normal and closest boundary point. Same contract as the disc
+// and AABB branches: d < 0 inside, n points obstacle -> query point.
+struct PolySdfResult {
+  double d, nx, ny, cpx, cpy;
+};
+inline PolySdfResult PolySignedDistance(
+    double px, double py, const std::vector<std::array<double, 2>>& v) {
+  const int n = (int)v.size();
+  double best = 1e18, bx = 0, by = 0;
+  bool inside = true;
+  for (int i = 0; i < n; ++i) {
+    const double ax = v[i][0], ay = v[i][1];
+    const double ex = v[(i + 1) % n][0] - ax, ey = v[(i + 1) % n][1] - ay;
+    if (ex * (py - ay) - ey * (px - ax) < 0) inside = false;
+    const double L2 = ex * ex + ey * ey;
+    double t = L2 > 0 ? ((px - ax) * ex + (py - ay) * ey) / L2 : 0.0;
+    t = std::max(0.0, std::min(1.0, t));
+    const double cx = ax + t * ex, cy = ay + t * ey;
+    const double dd = std::hypot(px - cx, py - cy);
+    if (dd < best) { best = dd; bx = cx; by = cy; }
+  }
+  PolySdfResult r;
+  r.cpx = bx; r.cpy = by;
+  if (best < 1e-9) { r.d = 0.0; r.nx = 0.0; r.ny = 0.0; return r; }
+  r.d = inside ? -best : best;
+  r.nx = (px - bx) / best * (inside ? -1.0 : 1.0);
+  r.ny = (py - by) / best * (inside ? -1.0 : 1.0);
+  return r;
+}
 // ---------------------------------------------------------------------------
 // lcs_contact mode (SAMPLING_C3_OBSTACLE_MODE=lcs_contact): the obstacle is a
 // frictionless normal contact INSIDE the LCS, per the C3+ design notes:
@@ -295,6 +366,11 @@ struct RouteSupervisorState {
 // witness computation, so route and collision use one obstacle representation.
 inline double ObsSdfPoint(double wx, double wy,
                           const std::vector<double>& o, int oi) {
+  {
+    auto it = ObsCfg().obs_polys.find(oi);
+    if (it != ObsCfg().obs_polys.end())
+      return PolySignedDistance(wx, wy, it->second).d;
+  }
   if (oi < (int)ObsCfg().obs_boxes.size()) {
     const auto& b = ObsCfg().obs_boxes[oi];
     const double qx = std::abs(wx - b[0]) - b[2], qy = std::abs(wy - b[1]) - b[3];
@@ -311,7 +387,7 @@ inline double RouteFootprintSdf(double x, double y, double yaw,
   const double cs = std::cos(yaw), sn = std::sin(yaw);
   double m = 1e18;
   for (int oi = 0; oi < (int)obs.size(); ++oi)
-    for (const auto& b : TFootprint())
+    for (const auto& b : Footprint())
       m = std::min(m, ObsSdfPoint(x + cs * b.first - sn * b.second,
                                   y + sn * b.first + cs * b.second, obs[oi], oi));
   return m;
@@ -337,7 +413,7 @@ inline bool RouteSweptFeasible(const Eigen::Vector2d& a, double yaw_a,
 inline double RouteWidthT(double theta, const Eigen::Vector2d& axis) {
   const double cs = std::cos(theta), sn = std::sin(theta);
   double lo = 1e18, hi = -1e18;
-  for (const auto& b : TFootprint()) {
+  for (const auto& b : Footprint()) {
     const double v = axis.x() * (cs * b.first - sn * b.second) +
                      axis.y() * (sn * b.first + cs * b.second);
     lo = std::min(lo, v);
@@ -455,7 +531,20 @@ inline std::vector<RouteChannel> RouteBuildChannels(
   const double infl = wmin / 2 + margin;
   for (int oi = 0; oi < (int)obs.size(); ++oi) {
     double lat_c, lat_r, lon_lo, lon_hi;
-    if (oi < (int)ObsCfg().obs_boxes.size()) {
+    auto pit = ObsCfg().obs_polys.find(oi);
+    if (pit != ObsCfg().obs_polys.end()) {
+      // project the polygon's vertices onto the corridor axes
+      double llo = 1e18, lhi = -1e18, nlo = 1e18, nhi = -1e18;
+      for (const auto& v : pit->second) {
+        Eigen::Vector2d cpt(v[0], v[1]);
+        const double la = st.e_left.dot(cpt - st.p_hit);
+        const double lo_ = st.e_fwd.dot(cpt - st.p_hit);
+        llo = std::min(llo, la); lhi = std::max(lhi, la);
+        nlo = std::min(nlo, lo_); nhi = std::max(nhi, lo_);
+      }
+      lat_c = (llo + lhi) / 2; lat_r = (lhi - llo) / 2;
+      lon_lo = nlo; lon_hi = nhi;
+    } else if (oi < (int)ObsCfg().obs_boxes.size()) {
       const auto& b = ObsCfg().obs_boxes[oi];
       // project 4 corners
       double llo = 1e18, lhi = -1e18, nlo = 1e18, nhi = -1e18;
@@ -554,11 +643,18 @@ inline std::vector<ObsLcsContact> ComputeObstacleLcsContacts(
     ObsLcsContact ct;
     ct.obstacle_id = oi;
     const bool use_box = oi < (int)ObsCfg().obs_boxes.size();
-    for (const auto& b : TFootprint()) {
+    auto poly_it = ObsCfg().obs_polys.find(oi);
+    const bool use_poly = poly_it != ObsCfg().obs_polys.end();
+    for (const auto& b : Footprint()) {
       const double wx = ox + cs * b.first - sn * b.second;
       const double wy = oy + sn * b.first + cs * b.second;
       double d, nx, ny, owx, owy;
-      if (use_box) {
+      if (use_poly) {
+        // Exact convex-polygon SDF (upstream compiled-hull glyph geometry).
+        const PolySdfResult pr = PolySignedDistance(wx, wy, poly_it->second);
+        if (pr.nx == 0.0 && pr.ny == 0.0) continue;  // degenerate on-boundary
+        d = pr.d; nx = pr.nx; ny = pr.ny; owx = pr.cpx; owy = pr.cpy;
+      } else if (use_box) {
         // Exact axis-aligned box SDF (cx, cy, hx, hy).
         const auto& bx = ObsCfg().obs_boxes[oi];
         const double px = wx - bx[0], py = wy - bx[1];
@@ -780,6 +876,37 @@ inline ObsExtConfig& ObsCfg() {
           c.obs_boxes.push_back(b);
       }
     }
+    // Exact convex-polygon obstacles: "oi|x,y|x,y|...;oj|..." (world frame).
+    // Vertices are normalized to CCW; a polygon overrides disc AND box at oi.
+    const char* op = std::getenv("SAMPLING_C3_OBS_POLYS");
+    if (op) {
+      std::stringstream ss(op);
+      std::string entry;
+      while (std::getline(ss, entry, ';')) {
+        std::stringstream es(entry);
+        std::string tok;
+        if (!std::getline(es, tok, '|')) continue;
+        const int oi = std::atoi(tok.c_str());
+        std::vector<std::array<double, 2>> verts;
+        while (std::getline(es, tok, '|')) {
+          std::array<double, 2> v{};
+          if (sscanf(tok.c_str(), "%lf,%lf", &v[0], &v[1]) == 2)
+            verts.push_back(v);
+        }
+        if (verts.size() >= 3) {
+          double area2 = 0;
+          for (size_t i = 0; i < verts.size(); ++i) {
+            const auto& a = verts[i];
+            const auto& b2 = verts[(i + 1) % verts.size()];
+            area2 += a[0] * b2[1] - b2[0] * a[1];
+          }
+          if (area2 < 0) std::reverse(verts.begin(), verts.end());
+          c.obs_polys[oi] = std::move(verts);
+        }
+      }
+      std::cout << "[OBS-POLY] " << c.obs_polys.size()
+                << " exact convex-polygon obstacles configured" << std::endl;
+    }
     // Fail loudly on conflicting obstacle mechanisms: lcs_contact must be the
     // ONLY active obstacle handling (no soft potential, no legacy halfspace).
     if (c.lcs_contact && (c.inner != ObsInner::kNone || c.nonpen)) {
@@ -834,8 +961,17 @@ inline bool ReposPwlPathBlocked(
   // configured boxes, already minus the pusher radius.
   auto clearance = [&](double x, double y) -> double {
     double best = 1e9;
+    int oi = 0;
     for (const auto& o : obstacles) {
-      best = std::min(best, std::hypot(x - o[0], y - o[1]) - o[2] - pr);
+      // A polygon at this index is the exact geometry — skip the (larger)
+      // circumscribed disc fallback so the veto matches the LCS/SDF model.
+      if (c.obs_polys.count(oi) == 0) {
+        best = std::min(best, std::hypot(x - o[0], y - o[1]) - o[2] - pr);
+      }
+      ++oi;
+    }
+    for (const auto& kv : c.obs_polys) {
+      best = std::min(best, PolySignedDistance(x, y, kv.second).d - pr);
     }
     for (const auto& b : c.obs_boxes) {
       double dx = std::abs(x - b[0]) - b[2], dy = std::abs(y - b[1]) - b[3];
@@ -2196,7 +2332,7 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
         double pcx = x_lcs_curr(7), pcy = x_lcs_curr(8);
         for (const auto& o : scen.obstacles) {
           double bestphi = 1e9, nx = 0, ny = 0;
-          for (const auto& b : TFootprint()) {
+          for (const auto& b : Footprint()) {
             double wx = pcx + cs * b.first - sn * b.second;
             double wy = pcy + sn * b.first + cs * b.second;
             double dd = std::hypot(wx - o[0], wy - o[1]);
