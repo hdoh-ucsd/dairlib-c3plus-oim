@@ -1,0 +1,22 @@
+{
+  "verdict": "B_POLICY_EQUIVALENT_BUT_5JOINT_EXECUTION_NOT_YET_RELIABLE",
+  "baseline_frozen": false,
+  "commit_chain": "000eef388 (adapter) -> 4c99df4a4 (5-joint executor) -> 01def72fe (dir-scaling+reach clamp) -> f3ed26860 (weighted rows) -> closure commit",
+  "solved_this_phase": [
+    "5-joint velocity architecture source-proven (joint 6 welded, velocity servos, no IK/torque) + independently cross-checked by Agent D",
+    "faithful executor implemented (weighted damped 5x5 Jacobian, direction-preserving saturation, velocity servos + gravcomp)",
+    "topple class ELIMINATED: 0 topples in the final 10 trials (pre-lift release + matched mu jointly; A/B quantified)",
+    "benchmark physics matched: T-table 0.3 / EE-T 0.5 via --matched_mu, identical for both robots",
+    "termination guards live in both stacks (topple >0.5 rad; 10k sampler cap)"
+  ],
+  "gate_status": "0/5 in all rounds; best = position solved to 0.009 m (r2 trial4, wall-clock truncated mid-yaw); final rounds topple-free with 2/5 still progressing at 1200 s",
+  "remaining_ranked": [
+    "X6/X2 kinematic-trap stalls at reachable targets (3/5 r5 trials) - next: executor trap escape or reachability-filtered targets",
+    "X4 acquisition duty cycle (shared with Panda)",
+    "X9 throughput vs budget - needs a user decision on the fair-comparison time budget for a 0.5 rad/s servo arm (Panda ~10x faster task rate)",
+    "X7 one residual sim NaN under sustained saturated press - add planner-ingestion finiteness guard"
+  ],
+  "run_data": "results/panda_to_xarm6_port_final_r{1..5} (r1/r3 labeled ablations; r2 near-miss; r4/r5 topple-free)",
+  "agent_d_artifacts": "branch icra-sign-faithful-port: OIM crosscheck, r2 forensics, prediction_honesty.py (AGENTD_FK=xarm6), next_stage_obstacle_manifest.md (object-obstacle mu 0.5)",
+  "do_not": ["freeze a baseline until >=3/5", "start obstacle scenes", "touch outer-loop policy to chase the gate"]
+}
