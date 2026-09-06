@@ -29,6 +29,10 @@ circle_radius: 0.20
 circle_height: 0.00
 
 # Piecewise-linear-specific parameters.
-pwl_waypoint_height: 0.06
+# xArm6 safe lift height (robot-specific, sanctioned as "different safe lift height"):
+# the xArm6's z tracking lags the PWL, so at traverse onset the sphere bottom skims the
+# T top (0.0306) and scoops it over at mu_eff=1.0 (measured topples t~8 s, rounds 2-3).
+# 0.10 buys ~4 cm of lag margin. Panda keeps 0.06.
+pwl_waypoint_height: 0.10
 
 max_tilt_angle: 20

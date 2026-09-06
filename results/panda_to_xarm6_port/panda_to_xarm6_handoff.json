@@ -1,0 +1,14 @@
+{
+  "port_commit": "000eef388 + calibration rounds (final commit on audit/xarm6-plant-fidelity)",
+  "verdict": "B_POLICY_EQUIVALENT_BUT_XARM6_EXECUTION_STILL_LIMITED",
+  "policy_equivalence": "by construction - identical planner binary, byte-copied params (except sanctioned robot calibrations: robot_radius_limits 0.70, pwl_waypoint_height 0.10), identical contact geometry (same EE model+weld)",
+  "execution_state": "round-7 config (translation-primary W=50, Kd=40, accel 10, roll weight 0, joint2 task off): full rotation phase completes (yaw err 0.0004-0.23), zero crashes, 0/5 success",
+  "blocking_mechanism": "lift-from-wedged-contact scoop: xArm6 lateral tracking lags the fast-rotating T ~2 cm; at the policy's reposition call the tip is ~4.5 cm from object center (Panda: ~9.6 cm free space); the PWL lift drags the face up at sim mu_eff=1.0 -> topple (roll 90 deg) in <0.5 s; lying-down T then triggers a pre-existing PerimeterSampling infinite loop (also in Panda code, never triggered there)",
+  "next_steps_ranked": [
+    "executor-level pre-lift disengage (retreat 1-2 cm along last contact normal before the PWL lift) - below the Cartesian interface, no policy change",
+    "authorized mu-literal A/B (sim effective 1.0 vs reference intent 0.4615) to quantify the friction contribution to the scoop",
+    "5-trial gate (>=3/5) then freeze xarm6_panda_equivalent_baseline.yaml; only then obstacle scenes"
+  ],
+  "sampler_robustness_note": "PerimeterSampling never returns when the object is toppled (100% CPU spin, planner mute, OSC silent-holds) - policy-side robustness gap worth a guard in BOTH robots' stacks (timeout/abort instead of spin)",
+  "artifacts": "results/panda_to_xarm6_port/ (manifests, architecture docs, geometry+equivalence CSVs, figures, this handoff); raw runs at /root/push_anything_ADMM/results/panda_to_xarm6_port_runs*/ incl. instrumented debug runs with SAMPLING_C3_COST_LOG_DIR"
+}

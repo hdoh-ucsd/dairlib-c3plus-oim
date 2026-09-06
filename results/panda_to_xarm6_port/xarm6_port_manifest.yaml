@@ -1,0 +1,18 @@
+# xArm6 port — configuration manifest
+date: 2026-09-05
+commit: 000eef388 (branch audit/xarm6-plant-fidelity, pushed to standalone)
+executables: same three binaries as the Panda reference, launched with --robot_model=xarm6
+  --demo_name=push_t_bt010_open_table_xarm6
+robot_model: xarm6_policyport.xml (xarm6.xml minus stick tool, damping 1) + end_effector_full.urdf
+  welded to xarm6_link6 at the Franka transform; actuators added in code (efforts {50,50,32,32,32,20},
+  vel +/-3.1416)
+policy_configuration: byte-identical to reference_panda_manifest.yaml (same demo param copies; only
+  sim q_init (6-dim IK-matched) and osc_params_xarm6.yaml differ)
+osc_differences_vs_panda:
+  panda_joint2_posture_task: gated off (no null space on 6-DOF)
+  EndEffectorRotW: tool-axis diagonal 0 (frees physically-irrelevant tool roll)
+  W_accel: [0.01 x6]; W_input_reg: [1,1,1,1,1,10]
+  EndEffectorKd: 40 (vs 20) - deceleration saturation on lower effort ceilings
+  neutral_position: start tip (kills startup transient)
+q_init_xarm6: [0.8876, 0.268, -1.1745, 0.003, 0.9179, 0.0]  # tip matches Franka start to <=0.1 mm
+goal: [0.5, -0.3, pi]; success 0.02 m / 0.1 rad (recorder gate; yaml tolerances identical to Panda)
