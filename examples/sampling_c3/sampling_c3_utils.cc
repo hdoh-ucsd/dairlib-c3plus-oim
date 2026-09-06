@@ -1,7 +1,9 @@
 #include "sampling_c3_utils.h"
+#include <array>
 #include <iostream>
 #include "common/find_resource.h"
 #include "drake/multibody/parsing/parser.h"
+#include "drake/multibody/tree/revolute_joint.h"
 
 namespace dairlib {
 
@@ -55,6 +57,70 @@ ModelInstanceIndex AddFrankaToPlant(MultibodyPlant<double>* plant,
   }
 
   return franka_index;
+}
+
+ModelInstanceIndex AddXarm6ToPlant(MultibodyPlant<double>* plant,
+                                   SceneGraph<double>* scene_graph,
+                                   const bool& include_ee,
+                                   const bool& include_ground_and_platform,
+                                   const bool& include_walls) {
+  Parser parser(plant, scene_graph);
+  parser.SetAutoRenaming(true);
+
+  // Note: Drake's MJCF parser automatically welds the jointless base body
+  // (xarm6_link_base) to the world at identity, so no explicit weld is
+  // needed (adding one throws a duplicate-joint error).
+  ModelInstanceIndex xarm6_index =
+      parser.AddModels(FindResourceOrThrow(kXarm6Model))[0];
+
+  // Drake's MJCF parser does not import MuJoCo velocity actuators. Recreate
+  // one torque input per revolute joint with the vendor effort limits, and
+  // set uniform velocity limits. (No joint-4 spring for the policy port.)
+  const std::array<const char*, 6> xarm6_joints = {
+      "xarm6_joint1", "xarm6_joint2", "xarm6_joint3",
+      "xarm6_joint4", "xarm6_joint5", "xarm6_joint6"};
+  const std::array<double, 6> xarm6_effort_limits = {50, 50, 32, 32, 32, 20};
+  const double kXarm6VelocityLimit = 3.1416;
+  for (int i = 0; i < 6; ++i) {
+    auto& joint = plant->GetMutableJointByName<
+        drake::multibody::RevoluteJoint>(xarm6_joints[i]);
+    joint.set_velocity_limits(
+        Eigen::VectorXd::Constant(1, -kXarm6VelocityLimit),
+        Eigen::VectorXd::Constant(1, kXarm6VelocityLimit));
+    plant->AddJointActuator(std::string(xarm6_joints[i]) + "_actuator", joint,
+                            xarm6_effort_limits[i]);
+  }
+
+  if (include_ee) {
+    parser.AddModels(FindResourceOrThrow(kEndEffectorModel));
+    RigidTransform<double> T_EE_W = RigidTransform<double>(
+      drake::math::RotationMatrix<double>(
+        drake::math::RollPitchYaw<double>(3.1415, 0, 0)),
+      kToolAttachmentFrame);
+    plant->WeldFrames(plant->GetFrameByName("xarm6_link6"),
+                      plant->GetFrameByName("end_effector_flange"), T_EE_W);
+  }
+
+  if (include_ground_and_platform) {
+    parser.AddModels(FindResourceOrThrow(kGroundModel));
+    parser.AddModels(FindResourceOrThrow(kPlatformModel));
+
+    RigidTransform<double> X_F_P = RigidTransform<double>(
+      drake::math::RotationMatrix<double>(), kFrankaToPlatformOffset);
+    RigidTransform<double> X_F_G = RigidTransform<double>(
+      drake::math::RotationMatrix<double>(), kFrankaToGroundOffset);
+
+    plant->WeldFrames(plant->GetFrameByName("xarm6_link_base"),
+                      plant->GetFrameByName("ground"), X_F_G);
+    plant->WeldFrames(plant->GetFrameByName("xarm6_link_base"),
+                      plant->GetFrameByName("platform"), X_F_P);
+  }
+
+  if (include_walls) {
+    AddWallsToPlant(plant, scene_graph);
+  }
+
+  return xarm6_index;
 }
 
 void AddWallsToPlant(

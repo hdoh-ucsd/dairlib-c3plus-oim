@@ -1,0 +1,37 @@
+# Reference Panda (Franka) controller — proven configuration
+date: 2026-09-05
+repository: /root/push_anything_ADMM/external/oim_c++_anything (worktree audit/xarm6-plant-fidelity)
+base_commit: 0c173d571 (policy sources = c3plus-channel-route-v1 lineage; demonstrated 3/3 open_table)
+executables: franka_sim / franka_osc_controller / franka_sampling_c3_controller (demo push_t_bt010_open_table)
+robot_model: panda_arm.urdf + end_effector_full.urdf welded to panda_link7 @ (0,0,0.107) RPY(pi,0,0)
+object_model_sim: urdf/push_t_oimscale_m01.sdf (0.1 kg)
+object_model_controller: urdf/push_t_oimscale_m01_control.sdf (adds 3 witness spheres)
+c3_configuration:
+  file: push_t_bt010_open_table/parameters/sampling_c3plus_options.yaml
+  projection_type: C3+; contact_model: anitescu; admm_iter: 3; rho_scale: 3; N: 5
+  planning_dt_pose: 0.05; planning_dt_position: 0.1; lcs_dt_resolution: 4
+  w_Q: 50; w_R: 1; w_G: 0.01; w_U: 0.26
+  q_vector: [0.01x3 EE, 0.1x4 quat, 200,200,120 obj pos, 5x3 EE vel, 0.013x3 obj angvel, 0.05x3 obj vel]
+  r_vector: [0.01 x3]; quaternion_dependent_weight: 510
+  g/u zeros except g_lambda 2, u_lambda 20, g_eta 1, u_eta 1
+  mu_per_pair_type: [0.4165, 1, 0.4615]
+  ee_velocity_limits: [-0.14, 0.14]; u limits +/-50 N
+  workspace_limits: x [0.15,0.75], y [-0.6,0.6], z [-0.01,0.3]; robot_radius_limits [0.25,0.75]; margin 0.02
+candidate_sampling: {strategy: 4 kRandomOnPerimeter, additional_c3: 2, additional_repos: 1,
+  buffer_N: 100 (retention 3mm/2deg), unsuccessful_N: 10 (6mm/0.05rad, radius 0.01), z_height: -0.004,
+  gen_planar_samples: true, projection_clearance: 0.02}
+lookahead: {step: 0.15 m, angle: 2 rad, hysteresis: 0.4 rad, ee_z_offset: 0.06}
+reposition: {traj_type: 3 kPiecewiseLinear, speed: 0.18, pwl_waypoint_height: 0.06,
+  straight_line_under: 0.008, max_tilt_angle_deg: 20}
+progress_detector: {cost_type: 5 kSimImpedanceObjectCostOnly, Kp_rollout: [100,100,50],
+  track_via: 3 kConfigCostDrop, enforced_drop: 0.01 over 180 loops, relative_hysteresis: true,
+  fracs: {c3_to_repos: 0.4/0.6, repos_to_c3: 0.9/0.5, repos_to_repos: 0.3/0.1}}
+obstacle_handling: scenario open_table, obstacles [], weight 0
+success_thresholds: {position: 0.02 m, orientation: 0.1 rad}
+osc: {freq: 1000 Hz, EE_Kp: 200, EE_Kd: 20, EE_W: I3, Rot_Kp: 800, Rot_W: 10*I3 always in QP,
+  panda_joint2_posture: {target: 1.1 rad, w: 1, kp: 200, note: the 7-DOF redundancy resolver},
+  W_accel: 0.01x7, W_input_reg: [1,1,1,1,1,1,10], track_end_effector_orientation: false (traj gate only)}
+cartesian_interface: >
+  LCM TRACKING_TRAJECTORY_ACTOR, lcmt_timestamped_saved_traj with 3 named 5-knot trajectories:
+  end_effector_position_target (3x5, m, world), end_effector_orientation_target (4x5 quat wxyz),
+  end_effector_force_target (3x5, N). Nothing joint-space crosses this boundary.

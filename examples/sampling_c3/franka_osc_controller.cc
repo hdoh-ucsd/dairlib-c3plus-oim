@@ -61,6 +61,8 @@ DEFINE_string(lcm_url, "udpm://239.255.76.67:7667?ttl=0",
               "LCM URL with IP, port, and TTL settings");
 DEFINE_string(demo_name, "jacktoy",
               "Demo within sampling_c3; used to find controller params file");
+DEFINE_string(robot_model, "franka",
+              "Robot arm model: 'franka' (default) or 'xarm6'.");
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -87,7 +89,11 @@ int DoMain(int argc, char* argv[]) {
 
   // Create a Franka-only plant.
   drake::multibody::MultibodyPlant<double> plant(0.0);
-  AddFrankaToPlant(&plant);
+  if (FLAGS_robot_model == "xarm6") {
+    AddXarm6ToPlant(&plant);
+  } else {
+    AddFrankaToPlant(&plant);
+  }
   plant.Finalize();
   auto plant_context = plant.CreateDefaultContext();
 
@@ -156,13 +162,18 @@ int DoMain(int argc, char* argv[]) {
       osc_params.end_effector_acceleration * Vector3d::Ones();
   end_effector_position_tracking_data->SetCmdAccelerationBounds(
       -end_effector_acceleration_limits, end_effector_acceleration_limits);
-  auto mid_link_position_tracking_data_for_rel =
-      std::make_unique<JointSpaceTrackingData>(
-          "panda_joint2_target", osc_params.K_p_mid_link,
-          osc_params.K_d_mid_link, osc_params.W_mid_link, plant,
-          plant);
-  mid_link_position_tracking_data_for_rel->AddJointToTrack("panda_joint2",
-                                                           "panda_joint2dot");
+  // The elbow (panda_joint2) posture task uses the Franka's 7th-DOF
+  // redundancy; the 6-DOF xArm6 has none, so only build it for the Franka.
+  std::unique_ptr<JointSpaceTrackingData> mid_link_position_tracking_data_for_rel;
+  if (FLAGS_robot_model == "franka") {
+    mid_link_position_tracking_data_for_rel =
+        std::make_unique<JointSpaceTrackingData>(
+            "panda_joint2_target", osc_params.K_p_mid_link,
+            osc_params.K_d_mid_link, osc_params.W_mid_link, plant,
+            plant);
+    mid_link_position_tracking_data_for_rel->AddJointToTrack("panda_joint2",
+                                                             "panda_joint2dot");
+  }
 
   auto end_effector_force_tracking_data =
       std::make_unique<ExternalForceTrackingData>(
@@ -182,8 +193,11 @@ int DoMain(int argc, char* argv[]) {
   // Since the Franka has 7 joints to control a 6 DOF EE command, add an
   // additional tracking objective for joint 2 at a good configuration for the
   // sampling C3 experiments.  1.1 joint target empirically works well.
-  osc->AddConstTrackingData(std::move(mid_link_position_tracking_data_for_rel),
-                            1.1 * VectorXd::Ones(1));
+  if (mid_link_position_tracking_data_for_rel != nullptr) {
+    osc->AddConstTrackingData(
+        std::move(mid_link_position_tracking_data_for_rel),
+        1.1 * VectorXd::Ones(1));
+  }
   osc->AddTrackingData(std::move(end_effector_orientation_tracking_data));
   osc->AddForceTrackingData(std::move(end_effector_force_tracking_data));
   osc->SetAccelerationCostWeights(osc_params.W_acceleration);
