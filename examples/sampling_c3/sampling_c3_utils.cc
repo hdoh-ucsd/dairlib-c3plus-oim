@@ -91,8 +91,18 @@ ModelInstanceIndex AddXarm6ToPlant(MultibodyPlant<double>* plant,
     joint.set_velocity_limits(
         Eigen::VectorXd::Constant(1, -kXarm6VelocityLimit),
         Eigen::VectorXd::Constant(1, kXarm6VelocityLimit));
-    plant->AddJointActuator(std::string(xarm6_joints[i]) + "_actuator", joint,
-                            xarm6_effort_limits[i]);
+    const auto& actuator_const = plant->AddJointActuator(
+        std::string(xarm6_joints[i]) + "_actuator", joint,
+        xarm6_effort_limits[i]);
+    auto& actuator =
+        plant->get_mutable_joint_actuator(actuator_const.index());
+    // MJCF `armature="1"` (per-DOF rotor inertia) is silently lost when the
+    // parser drops the <velocity> actuators; without it the wrist DOFs sit
+    // far below the discrete stability limit of the kv velocity servo and
+    // chatter at ~300 Hz, consuming all torque authority (measured: q static
+    // while |qdot| oscillates 0.3-0.7 rad/s). Restore the MuJoCo inertia.
+    actuator.set_default_gear_ratio(1.0);
+    actuator.set_default_rotor_inertia(1.0);
   }
   plant->AddForceElement<drake::multibody::RevoluteSpring>(
       plant->GetJointByName<drake::multibody::RevoluteJoint>("xarm6_joint4"),

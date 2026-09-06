@@ -335,7 +335,17 @@ class Xarm6FiveJointVelocityExecutor
     if (r_des > kMaxPlanarReach) {
       p_des.head<2>() *= kMaxPlanarReach / r_des;
     }
-    const Eigen::Vector3d v_des = traj.EvalDerivative(t, 1);
+    // Terminal hold: beyond the trajectory's time range Drake extrapolates
+    // the last polynomial segment, and the measured slope exactly cancelled
+    // the Kc feedback (v_des == -Kc*(p_des - p_tip) captured live), nulling
+    // v_task and freezing the arm -- the true identity of the r4/r5
+    // "kinematic traps". Match the Panda path's terminal-hold semantics:
+    // outside the range, hold position with zero desired velocity.
+    const bool in_range =
+        (t >= traj.start_time()) && (t <= traj.end_time());
+    const Eigen::Vector3d v_des =
+        in_range ? Eigen::Vector3d(traj.EvalDerivative(t, 1))
+                 : Eigen::Vector3d::Zero();
 
     // 6x5 spatial Jacobian of the tip; rows [angular(3); translational(3)].
     Eigen::MatrixXd J_full(6, plant_.num_velocities());
@@ -411,7 +421,9 @@ class Xarm6FiveJointVelocityExecutor
       std::cout << "XARM6_5J t=" << timestamp
                 << " p_des=" << p_des.transpose()
                 << " p_tip=" << p_tip.transpose()
-                << " |qdot_cmd|=" << qdot_cmd.norm() << std::endl;
+                << " |qdot_cmd|=" << qdot_cmd.norm()
+                << " v_des=" << v_des.transpose()
+                << " v_task=" << v_task.transpose() << std::endl;
     }
   }
 
