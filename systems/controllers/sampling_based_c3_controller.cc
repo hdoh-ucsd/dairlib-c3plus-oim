@@ -221,6 +221,13 @@ struct ObsExtConfig {
   double pusher_radius = 0.025; // conservative pusher-tip sphere radius (m)
   bool swept_check = false;     // Stage 2.3: reposition swept-path pusher check
   double swept_res = 0.005;     // reposition_swept_check.spatial_resolution (m)
+  // P5 fixes (post-outer-loop-fix audit 2026-09-04): the PWL lateral leg runs
+  // at a fixed altitude that can sit below obstacle tops, and the planner is
+  // otherwise pusher-obstacle blind — both DEFAULT ON so repositioning can
+  // never be an absorbing state again.
+  bool repos_path_veto = true;   // veto targets whose PWL path hits an obstacle
+  double obs_top_z = 0.12;       // obstacle top height for the z-aware veto (m)
+  bool repos_timeout_default = true;  // timeout active outside transaction_v1_1
   int oracle = 0;               // diagnostic: 0 none, 1 left detour, 2 right detour
   bool loaded = false;
 };
@@ -790,6 +797,12 @@ inline ObsExtConfig& ObsCfg() {
     if (pm) c.pusher_margin = std::atof(pm);
     const char* sw = std::getenv("SAMPLING_C3_SWEPT_CHECK");
     if (sw && std::string(sw) == "1") c.swept_check = true;
+    const char* pv = std::getenv("SAMPLING_C3_REPOS_PATH_VETO");
+    if (pv && std::string(pv) == "0") c.repos_path_veto = false;
+    const char* otz = std::getenv("SAMPLING_C3_OBS_TOP_Z");
+    if (otz) c.obs_top_z = std::atof(otz);
+    const char* rtd = std::getenv("SAMPLING_C3_REPOS_TIMEOUT_DEFAULT");
+    if (rtd && std::string(rtd) == "0") c.repos_timeout_default = false;
     const char* orc = std::getenv("SAMPLING_C3_ORACLE_ROUTE");
     if (orc) {
       std::string s(orc);
@@ -802,6 +815,56 @@ inline ObsExtConfig& ObsCfg() {
 // reciprocal-square calibration from the exponential (match value+log-slope at
 // d_ref): eps_inv = 2*sigma - d_ref ; k_inv = w*exp(-d_ref/sigma)*(d_ref+eps_inv)^2.
 inline double RecipEpsInv(double sigma, double d_ref) { return 2.0 * sigma - d_ref; }
+
+// P5 fix: z-aware swept check of the PWL reposition path (lateral leg at
+// pwl_height + descend leg) against disc obstacles and, when configured, the
+// exact AABB footprints. Obstacles are treated as occupying z <= obs_top_z, so
+// a lateral leg above the obstacle tops passes. The vertical lift leg at the
+// current EE xy is deliberately NOT checked: the EE may legitimately start
+// pressed against an obstacle face and slide straight up along it.
+template <typename ObstacleList>
+inline bool ReposPwlPathBlocked(
+    const Eigen::Vector3d& cur_ee, const Eigen::Vector3d& tgt,
+    const ObstacleList& obstacles, double pwl_height,
+    double straight_xy_thresh) {
+  const auto& c = ObsCfg();
+  const double pr = c.pusher_radius, pm = c.pusher_margin;
+  const double res = c.swept_res;
+  // Planar clearance of the pusher-tip sphere at (x, y): min over discs and
+  // configured boxes, already minus the pusher radius.
+  auto clearance = [&](double x, double y) -> double {
+    double best = 1e9;
+    for (const auto& o : obstacles) {
+      best = std::min(best, std::hypot(x - o[0], y - o[1]) - o[2] - pr);
+    }
+    for (const auto& b : c.obs_boxes) {
+      double dx = std::abs(x - b[0]) - b[2], dy = std::abs(y - b[1]) - b[3];
+      double d = (dx > 0 || dy > 0)
+                     ? std::hypot(std::max(dx, 0.0), std::max(dy, 0.0))
+                     : std::max(dx, dy);
+      best = std::min(best, d - pr);
+    }
+    return best;
+  };
+  auto leg_blocked = [&](const Eigen::Vector3d& a,
+                         const Eigen::Vector3d& b) -> bool {
+    int steps = std::max(1, (int)std::ceil((b - a).norm() / res));
+    for (int s = 0; s <= steps; s++) {
+      Eigen::Vector3d p = a + (double)s / steps * (b - a);
+      if (p(2) - pr >= c.obs_top_z) continue;  // clear above the obstacle top
+      if (clearance(p(0), p(1)) < pm) return true;
+    }
+    return false;
+  };
+  const double xy = (tgt.head(2) - cur_ee.head(2)).norm();
+  if (xy < straight_xy_thresh) {
+    // Straight-line shortcut path (matches RepositionStraightLine).
+    return leg_blocked(cur_ee, tgt);
+  }
+  Eigen::Vector3d wp1(cur_ee(0), cur_ee(1), pwl_height);
+  Eigen::Vector3d wp2(tgt(0), tgt(1), pwl_height);
+  return leg_blocked(wp1, wp2) || leg_blocked(wp2, tgt);
+}
 inline double RecipKInv(double w, double sigma, double d_ref) {
   double e = RecipEpsInv(sigma, d_ref);
   return w * std::exp(-d_ref / sigma) * (d_ref + e) * (d_ref + e);
@@ -2331,6 +2394,37 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     }
   }
 
+  // ---- P5 fix: reposition swept-path veto (DEFAULT ON) ----
+  // A candidate is only reachable through the PWL reposition path (lateral leg
+  // at pwl_waypoint_height + descend). If that path intersects an obstacle the
+  // simulator will block the EE and arrival can never fire (measured 165 s
+  // absorbing state on shelf_gap draw0), so exclude the candidate up front.
+  // This also un-sticks a currently pursued target whose path is blocked: its
+  // cost goes to 1e12, so the repos-to-repos hysteresis cannot retain it.
+  if (ObsCfg().repos_path_veto &&
+      (!controller_params_.scenario_params.obstacles.empty() ||
+       !ObsCfg().obs_boxes.empty())) {
+    const auto& scen = controller_params_.scenario_params;
+    for (int i = 1; i < (int)all_sample_costs_.size(); i++) {
+      if (all_sample_costs_[i] > 1e11) continue;  // already excluded
+      if (i >= (int)all_sample_locations_.size()) continue;
+      if (ReposPwlPathBlocked(
+              x_lcs_curr.head(3), all_sample_locations_[i], scen.obstacles,
+              reposition_params_.pwl_waypoint_height,
+              reposition_params_.use_straight_line_traj_under_piecewise_linear)) {
+        all_sample_costs_[i] = 1e12;
+        if (CostLogger::Get().active()) {
+          CostLogger::Get().pushfilt
+              << 0.0 << "," << CostLogger::Get().event_id << "," << i << ","
+              << all_sample_locations_[i](0) << ","
+              << all_sample_locations_[i](1) << ","
+              << all_sample_locations_[i](2) << ",0,0,-1,"
+              << ObsCfg().pusher_margin << ",REJECT_REPOS_PATH_BLOCKED\n";
+        }
+      }
+    }
+  }
+
   // Review the cost results to determine the best sample.
   bool force_c3_mode = radio_out->channel[12];
   double best_other_cost;
@@ -2675,11 +2769,14 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     // (b) Symmetric gate: if no candidate is better than the current position
     //     (best_other >= curr), the reposition has no transaction value —
     //     return to C3 immediately instead of waiting on the 0.9 hysteresis.
-    else if (ObsCfg().repos_v11 &&
+    // P5 fix: the timeout leg is now DEFAULT ON (repositioning must never be
+    // an absorbing state); the symmetric transaction gate stays v1.1-only.
+    else if ((ObsCfg().repos_v11 || ObsCfg().repos_timeout_default) &&
              (++repos_loop_count_ > ObsCfg().repos_timeout_loops ||
-              (RouteSel().active
-                   ? (RouteSel().R_cur >= RouteSel().R_best - 0.002)
-                   : (best_other_cost >= curr_cost)))) {
+              (ObsCfg().repos_v11 &&
+               (RouteSel().active
+                    ? (RouteSel().R_cur >= RouteSel().R_best - 0.002)
+                    : (best_other_cost >= curr_cost))))) {
       is_doing_c3_ = true;
       finished_reposition_flag_ = false;
       mode_switch_reason_ = ModeSwitchReason::kToC3Cost;
