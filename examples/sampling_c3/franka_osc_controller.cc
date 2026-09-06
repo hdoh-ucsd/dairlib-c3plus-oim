@@ -363,12 +363,25 @@ class Xarm6FiveJointVelocityExecutor
     v_task(3) = s * kAlpha * a.y();
     v_task(4) = -s * kAlpha * a.x();
 
-    // Damped square solve, then clamp to the MuJoCo ctrlrange.
+    // Weighted damped square solve, then clamp to the MuJoCo ctrlrange.
+    // Row weights make translation primary and tilt a soft BIAS — matching
+    // the MJX architecture, where tilt regulation is an additive bias on the
+    // sampled qdot, never an equal-priority constraint. Equal weighting
+    // (round 4) let the tilt rows pin the solve in a kinematic trap: the tip
+    // stalled 6 cm from a reachable target with saturated qdot for minutes,
+    // the servo pressed into the wedge, and the sim eventually went NaN.
+    static const Eigen::Matrix<double, 5, 1> kRowW =
+        (Eigen::Matrix<double, 5, 1>() << 1.0, 1.0, 1.0, 0.2, 0.2).finished();
+    const Eigen::Matrix<double, 5, 5> Jw = kRowW.asDiagonal() * J;
     const Eigen::Matrix<double, 5, 5> JtJ =
-        J.transpose() * J +
+        Jw.transpose() * Jw +
         kLambda * kLambda * Eigen::Matrix<double, 5, 5>::Identity();
     Eigen::Matrix<double, 5, 1> qdot_cmd =
-        JtJ.ldlt().solve(J.transpose() * v_task);
+        JtJ.ldlt().solve(Jw.transpose() *
+                         (kRowW.asDiagonal() * v_task));
+    if (!qdot_cmd.allFinite()) {
+      qdot_cmd.setZero();  // NaN guard: hold rather than propagate.
+    }
     // Direction-preserving saturation: componentwise clamping distorts the
     // task direction (measured: descent stalls at z=+0.05 while xy tracks —
     // the clamped joint mix cancels the z motion). Scale the whole vector so
