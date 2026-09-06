@@ -1,0 +1,11 @@
+# Upstream: scenes.py line 333 — "Measured directly off xarm6.xml's own base
+# mesh (xarm6_base_shell): max xy vertex radius 0.0912 m. Not guessed."
+center: [0.0, 0.0]
+radius: 0.09
+representation_upstream: planner-only Circle in ObstacleField (not sim collision;
+  the arm base link is physically present in sim anyway)
+representation_cpp: scenario_params obstacle index 7 as a true disc
+  [0.0, 0.0, 0.09]; NOT overridden by a polygon; enters lcs_contact N_closest
+  selection, route SDF, and the P5 swept veto exactly like any other obstacle.
+  Not added to the sim SDF (the Franka's own base link is already there),
+  preserving the upstream planner-only distinction.
