@@ -1,0 +1,45 @@
+# xArm6/OIM environment validation — run manifest (canonical copy also at
+# /root/push_anything_ADMM/results/xarm6_environment_validation/run_manifest.yaml)
+date: 2026-09-05
+repository: /root/push_anything_ADMM/external/oim_c++_anything
+execution_worktree: .claude/worktrees/obstacle-lcs-contact
+branch: c3plus-channel-route-v1
+head_commit: 0abc0eb7c (docs-only atop 43d5efb96 = P5 fixes; planner binary built 2026-09-05 18:11,
+  same build that produced results/c3plus_p5_fix_validation)
+audit_branch: audit/xarm6-plant-fidelity (this worktree, same base)
+dirty_state: execution worktree not modified by this audit; binaries prebuilt
+robot_model_note: >
+  Despite the OIM/xArm6 heritage naming, the push_t_bt010_* scene demos load a FRANKA
+  (panda_arm.urdf) in Drake via franka_sim.cc. The only xArm6-native Drake environment in the
+  repo is examples/sampling_c3/oim_t (open_table only, separate gate-campaign arc).
+executables:
+  sim: bazel-bin/examples/sampling_c3/franka_sim
+  osc: bazel-bin/examples/sampling_c3/franka_osc_controller
+  planner: bazel-bin/examples/sampling_c3/franka_sampling_c3_controller
+demos:
+  open_table: push_t_bt010_open_table
+  single_obstacle: push_t_bt010_single_obstacle
+  shelf_gap: push_t_bt010_shelf_gap
+object_sdf_sim: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf   # 0.1 kg total (0.0528504+0.0471496)
+object_sdf_controller: examples/sampling_c3/urdf/push_t_oimscale_m01_control.sdf  # +3 witness spheres r=0.001
+robot_model: examples/sampling_c3/urdf/panda_arm.urdf (+ end_effector_full.urdf welded at panda_link7,
+  xyz (0,0,0.107) rpy (pi,0,0))
+planner_ee_model: examples/sampling_c3/urdf/end_effector_simple_model.urdf (tip sphere r=0.0195, m=0.057,
+  3 prismatic joints)
+scene_configuration:
+  scenario_params: examples/sampling_c3/push_t_bt010_shelf_gap/parameters/scenario_params.yaml
+  obstacle_model: examples/sampling_c3/urdf/scene_shelf_gap.sdf  # shelves x=0.73 (0.26x0.16x0.14) and
+    # x=0.35 (0.10x0.16x0.14), 5 planner obstacle points
+initial_pose:
+  q_init_object: [1,0,0,0, 0.5, 0.3, 0.0008]   # resting exactly on table (signed distance -1.1e-16 m)
+  q_init_franka: [2.191, 1.1, -1.33, -2.22, 1.30, 2.02, 0.08]
+goal_pose: [0.5, -0.3, 3.14159265]   # fixed_target_position + quat (0,0,0,1) = yaw pi
+success_thresholds: {position_m: 0.02, yaw_rad: 0.1}
+rates:
+  sim_dt: 0.0001
+  franka_publish_rate_hz: 1000
+  object_publish_rate_hz: 10
+  actuator_delay_s: 0.0
+run_protocol: serial under flock /tmp/c3plus_sim.lock; recorder scripts/c3ab/record_full_state.py
+  with regenerated pure-python dairlib LCM decoders (original generated module lived in a deleted
+  job tmp dir — scripts/c3ab/record_full_state.py hardcodes sys.path to /root/.claude/jobs/cfe8fda1/tmp/pylcm)
