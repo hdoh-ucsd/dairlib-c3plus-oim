@@ -846,12 +846,19 @@ inline bool ReposPwlPathBlocked(
     }
     return best;
   };
+  // Escape zone: the EE may legitimately be pressed against an obstacle while
+  // pushing, so path samples near the START are exempt — otherwise every leg
+  // begins in violation and all candidates are vetoed (measured starvation:
+  // 3/3 candidates rejected on 95% of cycles, controller stuck in C3).
+  const Eigen::Vector2d start_xy = cur_ee.head(2);
+  const double escape_r = 0.04;
   auto leg_blocked = [&](const Eigen::Vector3d& a,
                          const Eigen::Vector3d& b) -> bool {
     int steps = std::max(1, (int)std::ceil((b - a).norm() / res));
     for (int s = 0; s <= steps; s++) {
       Eigen::Vector3d p = a + (double)s / steps * (b - a);
       if (p(2) - pr >= c.obs_top_z) continue;  // clear above the obstacle top
+      if ((p.head(2) - start_xy).norm() < escape_r) continue;
       if (clearance(p(0), p(1)) < pm) return true;
     }
     return false;
@@ -2408,6 +2415,13 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     for (int i = 1; i < (int)all_sample_costs_.size(); i++) {
       if (all_sample_costs_[i] > 1e11) continue;  // already excluded
       if (i >= (int)all_sample_locations_.size()) continue;
+      // A near-zero location is an empty placeholder slot, not a real target;
+      // it must never win the argmin (a pre-existing hazard: when selected,
+      // the EE drives at the robot base and trips the workspace abort).
+      if (all_sample_locations_[i].norm() < 1e-9) {
+        all_sample_costs_[i] = 1e12;
+        continue;
+      }
       if (ReposPwlPathBlocked(
               x_lcs_curr.head(3), all_sample_locations_[i], scen.obstacles,
               reposition_params_.pwl_waypoint_height,
