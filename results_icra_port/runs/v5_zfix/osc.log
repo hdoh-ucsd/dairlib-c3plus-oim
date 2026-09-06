@@ -1,0 +1,8 @@
+Setting C3 and LCS factory options for pose and position tracking.
+trajectory_name: end_effector_orientation_target
+Error: /usr/lib/x86_64-linux-gnu/graphviz/config6a is zero sized, or other read error.
+Format: "svg" not recognized. Use one of:
+Constructing subscriber for FRANKA_STATE_SIMULATION
+ACTIVE CHANNEL: FRANKA_STATE_SIMULATION
+[2026-09-06 04:16:02.116] [console] [info] Waiting for the first lcm input messages
+[2026-09-06 04:16:05.182] [console] [info] sampling_c3_franka_osc_controller started
