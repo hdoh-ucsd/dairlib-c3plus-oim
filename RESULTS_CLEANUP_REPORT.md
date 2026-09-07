@@ -98,3 +98,15 @@ CLEANUP_COMPLETE_CANONICAL_RESULTS_PRESERVED
 - Retained: xarm6_native_controller_validation summary CSVs/manifest only (they document the
   wrong-outer-loop verdict and the port-the-Franka-loop decision) and the in-repo GATES_*.md
   source docs (source files, outside results-cleanup scope by rule).
+
+
+## Fifth pass (2026-09-07, user-directed: pre-Sep-3 files)
+- DELETED debris: hidden raw shell captures at results root (~230 MB, .tight_goal/.push_h p16x arc),
+  Y_shape frame exports (102 files), diagnostics/ + renderer/reference smoke dirs, oversized fig8
+  raw stdout receipts, c3T raw trial dirs, L1_progress_cluster, letterI/portdump .npz matrix dumps.
+- ORGANIZED keepers into results/historical/{galleries,receipts,videos,misc,campaign_summaries}:
+  fig8 galleries, jack/blockT/tgate/push_t receipt txts and evidentiary mp4s, c3ab + c3T ledgers,
+  trimmed campaign summary dirs (33 dirs).
+- Local results: 610 MB, 28 tidy top-level entries (canonical set + historical/ + active work).
+- D mirror: same organization applied (+335 MB freed, 501 entries reorganized); D-only keepers
+  (fig8_objects mesh assets, oim_mjx_run_jsons) retained under D results.
