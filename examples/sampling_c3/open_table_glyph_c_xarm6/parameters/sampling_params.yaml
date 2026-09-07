@@ -61,7 +61,7 @@ max_attempts: 100
 barycentric_bias: 1 # Values from 0 to infinity, <1 biases towards the vertices, 
 # >1 biases towards centroid or edges, =1 is uniform.
 
-z_height: 0.002
+z_height: -0.012 # stick tip 17mm above table, below the ~21mm letter CoM (topple fix 2026-09-07; was 0.002 = 31mm, above CoM)
 # This ^ will be overwritten by generating new files.
 
 gen_planar_samples: true # true = projects all samples to z_height
