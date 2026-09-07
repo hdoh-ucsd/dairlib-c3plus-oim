@@ -321,3 +321,20 @@ py_binary(
         "//lcmtypes:lcmtypes_robot_py",
     ],
 )
+
+cc_binary(
+    name = "xarm6_plant_verify",
+    srcs = ["xarm6_plant_verify.cc"],
+    data = [
+        ":urdfs",
+        "@drake_models//:franka_description",
+    ],
+    deps = [
+        "//examples/sampling_c3:sampling_c3_utils",
+        "@drake//:drake_shared_library",
+    ],
+    linkopts = [
+        "-L/lib/x86_64-linux-gnu",
+        "-lopenblas",
+    ],
+)

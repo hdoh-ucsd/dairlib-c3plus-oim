@@ -1,0 +1,63 @@
+# Baseline runtime verification — FROZEN xArm6 Panda-equivalent stack
+# Date: 2026-09-06. Worktree: audit-xarm6-plant.
+# Evidence sources:
+#   plant checks: bazel-bin/examples/sampling_c3/xarm6_plant_verify (new read-only
+#     utility, examples/sampling_c3/xarm6_plant_verify.cc; builds the plant via the
+#     SAME AddXarm6ToPlant call franka_sim uses)
+#   banners: 15 s smoke of the push_t_bt010_open_table_xarm6 trio on private LCM
+#     udpm://239.255.76.67:7991?ttl=0 (scripts/smoke_xarm6_demo.sh; logs /tmp/xarm6_smokes/open_*.log)
+checks:
+  actuators_5_rotor_inertia_1:
+    status: PASS
+    evidence: "[VERIFY] num_actuators=5; actuator xarm6_jointN_actuator gear_ratio=1 rotor_inertia=1 for N=1..5"
+  joint6_absent:
+    status: PASS
+    evidence: "[VERIFY] has_joint6=0"
+  velocity_limits_0p5:
+    status: PASS
+    evidence: "[VERIFY] joint xarm6_jointN vel_limit=0.5 for N=1..5"
+  efforts_50_50_32_32_32:
+    status: PASS
+    evidence: "[VERIFY] actuator efforts: joint1=50 joint2=50 joint3=32 joint4=32 joint5=32"
+  damping_50:
+    status: PASS
+    evidence: "[VERIFY] joint xarm6_jointN damping=50 for N=1..5"
+  joint4_spring:
+    status: PASS
+    evidence: "[VERIFY] revolute_spring joint=xarm6_joint4 k=175 ref=0; num_revolute_springs=1"
+  matched_mu_pairs:
+    status: PASS
+    evidence: "[MATCHED_MU] effective pair friction: object-table=0.3 ee-object=0.5 ee-table=0.5 (open_sim.log); obstacle scenes add object-obstacle=0.5"
+  executor_banner:
+    status: PASS
+    evidence: "XARM6_5J executor active: Kc=4.0 alpha=2.0 lambda=0.05 kv=[300,300,200,200,200] efforts=[50,50,32,32,32] qdot_limit=0.5 (open_osc.log)"
+  prelift_banner:
+    status: PASS
+    evidence: "PRELIFT_RELEASE system enabled (channel OBJECT_G_shape_video_STATE_SIMULATION) (open_osc.log)"
+  planner_runs_open_table:
+    status: PASS
+    evidence: "open_c3.log: goal change detected, C3/repositioning mode switches, no errors in 15 s"
+new_demo_smokes:  # 15 s, SAMPLING_C3_OBSTACLE_MODE=lcs_contact on the planner only
+  push_t_bt010_single_obstacle_xarm6:
+    status: PASS
+    evidence:
+      - "[MATCHED_MU] body=obstacle geom=single_obstacle_box::obstacle_collision mu=1.5; object-obstacle=0.5 (sobs_sim.log)"
+      - "[OBS-LCS] lcs_contact ACTIVE: n_obs_slots=2 n_lambda=18 obstacle_cost_active=false obstacle_lcs_contact_active=true (sobs_c3.log)"
+      - "planner mode switches present, zero 'terminate'/'what()' in all logs"
+  push_t_bt010_shelf_gap_xarm6:
+    status: PASS
+    evidence:
+      - "[MATCHED_MU] body=shelf_big/shelf_small geom=scene_shelf_gap::*_c mu=1.5; object-obstacle=0.5 (shelf_sim.log)"
+      - "[OBS-LCS] lcs_contact ACTIVE: n_obs_slots=2 n_lambda=18 obstacle_cost_active=false obstacle_lcs_contact_active=true (shelf_c3.log)"
+      - "planner mode switches present, zero 'terminate'/'what()' in all logs"
+notes:
+  - "matched_mu obstacle extension: franka_sim.cc now sets obstacle-model bodies to mu 1.5
+     so the Drake harmonic pair with the 0.3 object equals 0.5 (OIM MJX object-obstacle value).
+     Before this, obstacle SDF collision geoms carried the Drake default mu 1.0 (pair 0.4615)."
+  - "Under lcs_contact the banner reports obstacle_cost_active=false: the scenario_params
+     obstacle_cost_weight 5000 ranking cost is disabled by design in that mode."
+  - "Workspace fit (declared xarm6 radius <= 0.70): start (0.5,0.3) r=0.583 and goal
+     (0.5,-0.3) r=0.583 for ALL three scenes (goal_params/q_init_object byte-identical
+     across the franka scene demos and the xarm6 open_table demo). Shelf_gap big-shelf
+     planner discs at x=0.73 lie partly outside the declared reach (obstacle only, not a
+     target); reported, not moved."
