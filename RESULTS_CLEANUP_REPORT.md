@@ -76,3 +76,16 @@ CLEANUP_COMPLETE_CANONICAL_RESULTS_PRESERVED
 - In-scope retained set now ~360 files / ~0.6 GB. D mirror updated with --delete on retained dirs.
 - REMAINING BULK IS OUT OF SCOPE: ~23 GB / ~4400 files are the fig8/jack/push_t/reference
   lineages, untouched per the original scope ruling - a third pass can cover them on direction.
+
+
+## Third pass (2026-09-07, user-directed: fig8/jack/push_t/reference lineages)
+- Campaign run subdirectories removed from 21 lineage dirs (fig8 campaigns/archives, reference,
+  campaigns, c3T trials) keeping every top-level summary CSV/JSON/MD + RUNS_REMOVED_NOTE per dir;
+  the curated fig8_success_gallery retained; repo-root FIG8_*.csv untouched.
+- Oversized raw stdout logs deleted (jacktoy 600s captures, push_t_krandom_28_s0.txt [v2 kept],
+  ttg vm-killed log, gallon failure txt); memory-referenced receipts and all small evidentiary
+  videos (tgate_sixleg, push_t_single_video, jack_win/costlcs/rerun sidepanels) kept.
+- Freed locally: ~22.4 GB. Local results tree final: 948 MB / 1,131 files (from 38 GB / ~5,200).
+- D mirror: equivalent pass freed ~22.9 GB + D-only raw jack ttg/win stdout logs and the
+  L1_progress_cluster; D results final 3.4 GB (extra vs local = source-asset fig8_objects meshes
+  [protected as assets], oim_mjx_run_jsons, and small D-only historical receipts).
