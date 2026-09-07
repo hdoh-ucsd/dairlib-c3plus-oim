@@ -19,7 +19,19 @@ T-block (0.381, 0.4, 0°) → (0.381, −0.4, 180°). Receipts, per-trial traces
 | open_table (5 pose pairs × 2) | **10/10** (85–247 sim-s, final ≤ 0.020 m) | pre-fidelity: 6/10; ability solved, residual gap vs OIM is speed only (OIM 15–18 s) |
 | shelf_gap (5 × 2) | **3/10** (119 / 200 / 274 s) | pre-fidelity: 0/10 — first shelf successes |
 | single_obstacle (5 × 2) | **1/10** (202 s) | unchanged vs pre-fidelity; blocker is planner acquisition churn near the obstacle, not geometry |
-| ycb_clutter (10 × 1 pair) | **2/8** so far (197 s best, final 0.004 m; 2 trials in flight) | first-ever C++ YCB runs — scene completed with reference-exact spam_can + mustard_bottle hulls |
+| ycb_clutter (10 × 1 pair) | **2/10** (197 s best, final 0.004 m) | first-ever C++ YCB runs — scene completed with reference-exact spam_can + mustard_bottle hulls |
+
+### Videos (xArm6 C3+ on the OIM scenarios — one success per scene)
+| open_table | single_obstacle |
+|---|---|
+| ![open_table](results/fidelity_2026-09-07/gifs/matched_open_table_xarm6_t1_trial2.gif) | ![single_obstacle](results/fidelity_2026-09-07/gifs/matched_single_obstacle_xarm6_t2_trial1.gif) |
+
+| shelf_gap | ycb_clutter |
+|---|---|
+| ![shelf_gap](results/fidelity_2026-09-07/gifs/matched_shelf_gap_xarm6_t1_trial2.gif) | ![ycb_clutter](results/fidelity_2026-09-07/gifs/ycb_clutter_trial5.gif) |
+
+Full MP4s of **every** run — successes and failures, with the green goal ghost — are in
+[`results/fidelity_2026-09-07/videos/`](results/fidelity_2026-09-07/videos/).
 
 Failure classes across scenes: no-progress repositioning churn with unsuccessful-sample buffer
 overflow (dominant), post-latch drift. Zero crashes, zero topples on the OIM table. Key commits:
