@@ -89,3 +89,12 @@ CLEANUP_COMPLETE_CANONICAL_RESULTS_PRESERVED
 - D mirror: equivalent pass freed ~22.9 GB + D-only raw jack ttg/win stdout logs and the
   L1_progress_cluster; D results final 3.4 GB (extra vs local = source-asset fig8_objects meshes
   [protected as assets], oim_mjx_run_jsons, and small D-only historical receipts).
+
+
+## Fourth pass (2026-09-07, user-directed: wrong-outer-loop C3+ logs)
+- Removed the remaining gates-arc/native-outer-loop receipts: 29 full_sampling_* gate dirs +
+  oim_cpp_contact_capsule_gate_20260831 (+ ledger json where present) from BOTH local results and
+  the D mirror (60 entries, ~36 MB). xarm6_oim_arc was already erased in pass 1.
+- Retained: xarm6_native_controller_validation summary CSVs/manifest only (they document the
+  wrong-outer-loop verdict and the port-the-Franka-loop decision) and the in-repo GATES_*.md
+  source docs (source files, outside results-cleanup scope by rule).
