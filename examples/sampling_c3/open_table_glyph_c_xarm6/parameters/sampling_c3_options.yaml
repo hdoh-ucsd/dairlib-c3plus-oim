@@ -27,6 +27,11 @@ workspace_limits: [[1, 0, 0, 0.15, 0.9],
                    [0, 1, 0, -0.6, 0.6],
                    [0, 0, 1, -0.01, 0.3]]
 robot_radius_limits: [0.25, 0.75]
+# Object-only bound: ground.urdf surface ends at y=+/-0.455; with the 0.02
+# workspace margin this keeps the object CoM inside +/-0.44 (goal y=-0.40 feasible).
+object_workspace_limits: [[1, 0, 0, 0.15, 0.9],
+                          [0, 1, 0, -0.42, 0.42],
+                          [0, 0, 1, -0.01, 0.3]]
 workspace_margins: 0.02
 u_horizontal_limits: [-50, 50]
 u_vertical_limits: [-50, 50]

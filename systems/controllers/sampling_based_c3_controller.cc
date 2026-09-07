@@ -2285,17 +2285,18 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
             c3::ConstraintVariable::STATE);
       }
       // Set object bounds
-      for (int i = 0; i < sampling_c3_options_.workspace_limits.size(); ++i) {
+      const auto& object_limits =
+          sampling_c3_options_.object_workspace_limits.has_value()
+              ? *sampling_c3_options_.object_workspace_limits
+              : sampling_c3_options_.workspace_limits;
+      for (int i = 0; i < object_limits.size(); ++i) {
         for (int j = 0; j < controller_params_.num_objects; j++) {
           Eigen::RowVectorXd A = VectorXd::Zero(n_x_);
-          A.segment(7 + 7 * j, 3) =
-              sampling_c3_options_.workspace_limits[i].segment(0, 3);
+          A.segment(7 + 7 * j, 3) = object_limits[i].segment(0, 3);
           test_c3_object->AddLinearConstraint(
               A,
-              sampling_c3_options_.workspace_limits[i][3] -
-                  sampling_c3_options_.workspace_margins,
-              sampling_c3_options_.workspace_limits[i][4] +
-                  sampling_c3_options_.workspace_margins,
+              object_limits[i][3] - sampling_c3_options_.workspace_margins,
+              object_limits[i][4] + sampling_c3_options_.workspace_margins,
               c3::ConstraintVariable::STATE);
         }
       }
