@@ -1,0 +1,37 @@
+# Physics manifest — open_table scene (xArm6 C3+ comparison)
+# Source of truth: examples/sampling_c3/push_t_bt010_open_table_xarm6/parameters/*
+# + examples/sampling_c3/franka_sim.cc (--matched_mu) + sampling_c3_utils.h.
+scene: open_table
+demo_dir: examples/sampling_c3/push_t_bt010_open_table_xarm6
+object:
+  model: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf
+  controller_model: examples/sampling_c3/urdf/push_t_oimscale_m01_control.sdf
+  total_mass_kg: 0.1  # two links: 0.0528504 (horizontal bar) + 0.0471496 (vertical bar)
+  links:
+    - name: horizontal_bar
+      mass_kg: 0.0528504
+      com_body_frame: [0.0, 0.0099, 0.0]
+      inertia: {ixx: 1.73710e-05, iyy: 5.05300e-05, izz: 3.66120e-05, ixy: 0, ixz: 0, iyz: 0}
+    - name: vertical_bar
+      mass_kg: 0.0471496
+      com_body_frame: [0.0, 0.0, 0.0]  # link frame at [0, -0.0397, 0] in model frame
+      inertia: {ixx: 3.87280e-05, iyy: 1.54970e-05, izz: 2.63110e-05, ixy: 0, ixz: 0, iyz: 0}
+friction:  # Drake harmonic-mean pair values under --matched_mu=true
+  object_body_mu: 0.3
+  ground_platform_mu: 0.3
+  end_effector_mu: 1.5
+  pair_object_table: 0.3
+  pair_ee_object: 0.5
+  pair_ee_table: 0.5
+table:
+  ground_frame_z: -0.029        # kFrankaToGroundOffset (ground.urdf, 5 x 0.91 x 0.1 box)
+  platform_center_z: -0.0145    # kFrankaToPlatformOffset (platform.urdf 0.3 x 0.6 x 0.029)
+  platform_top_z: 0.0
+  object_resting_height_z: -0.009  # goal_params resting_object_height (world frame)
+gravity_mps2: 9.81  # Drake default, -z
+start_pose:
+  q_init_object: [1.0, 0.0, 0.0, 0.0, 0.5, 0.3, 0.0008]  # [qw qx qy qz x y z]
+goal_pose:
+  position: [0.5, -0.3, 0.0008]
+  orientation_wxyz: [0.0, 0.0, 0.0, 1.0]  # Eigen::Quaterniond(w,x,y,z) in goal_generator.cc:131 -> 180 deg yaw goal
+obstacles: []  # no static obstacle

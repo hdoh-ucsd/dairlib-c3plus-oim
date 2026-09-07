@@ -1,0 +1,16 @@
+# OIM authoritative source for the matched benchmark
+repository: external/Object-Informed-Manipulation-MJX
+branch: main
+commit: a954f00047b6f2f302e83176124f482b2ec1a2e7
+role: >
+  Authority for task definitions (scenes.py, xarm6_pusht_tabletop/*.xml, poses/*.yaml, glyph hulls),
+  robot embodiment (5 velocity-servo joints, joint 6 welded, kv [300,300,200,200,200],
+  ctrl +-0.5 rad/s, armature 1, damping 50, gravcomp), and benchmark physics (T-table mu 0.3,
+  default geom 0.5 governing EE-object and object-obstacle).
+method_B_execution: >
+  OIM runs natively in MJX (its own simulator) on the SAME xArm6 model the C3+ Drake substrate was
+  matched to. Simulator difference (MJX vs Drake) is an unavoidable, documented implementation
+  distinction; physics semantics were matched Drake->MJX (friction pairs, actuator model, inertia,
+  armature, spring, gravcomp equivalents), validated in the port phase.
+c3plus_baseline_commit: 9557bbdc4 (frozen; results/panda_to_xarm6_final/baseline/xarm6_panda_equivalent_baseline.yaml)
+shared_time_cap_s: 2400 (declared before campaign execution; applies to both methods identically)

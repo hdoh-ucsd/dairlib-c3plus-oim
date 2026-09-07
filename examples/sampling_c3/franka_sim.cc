@@ -129,9 +129,10 @@ int DoMain(int argc, char* argv[]) {
 
   // Scenario static obstacle(s): an SDF with <static>true</static> welds
   // itself; the planner shapes costs from the same scenario_params file.
+  std::vector<ModelInstanceIndex> obstacle_indices;
   if (controller_params.scenario_params.obstacle_model.has_value()) {
     drake::multibody::Parser obstacle_parser(&plant, &scene_graph);
-    obstacle_parser.AddModels(dairlib::FindResourceOrThrow(
+    obstacle_indices = obstacle_parser.AddModels(dairlib::FindResourceOrThrow(
         controller_params.scenario_params.obstacle_model.value()));
   }
 
@@ -154,6 +155,13 @@ int DoMain(int argc, char* argv[]) {
     constexpr double kObjectMu = 0.3;
     constexpr double kGroundMu = 0.3;
     constexpr double kEeMu = 1.5;
+    // Obstacle geoms: OIM MJX obstacles use the MuJoCo default geom mu 0.5,
+    // and MJX pair friction is governed by that value for object-obstacle.
+    // Drake combines by harmonic mean, so to realize an object-obstacle PAIR
+    // of 0.5 with object mu 0.3 the obstacle body must carry mu 1.5
+    // (2*0.3*1.5/(0.3+1.5) = 0.5). Without this, the SDF obstacles keep the
+    // Drake default mu 1.0 (pair 0.4615) — an unmatched physics divergence.
+    constexpr double kObstacleMu = 1.5;
     for (drake::multibody::BodyIndex body_index(0);
          body_index < plant.num_bodies(); ++body_index) {
       const auto& body = plant.get_body(body_index);
@@ -162,20 +170,29 @@ int DoMain(int argc, char* argv[]) {
       const bool is_object =
           std::find(object_indices.begin(), object_indices.end(),
                     body.model_instance()) != object_indices.end();
+      const bool is_obstacle =
+          std::find(obstacle_indices.begin(), obstacle_indices.end(),
+                    body.model_instance()) != obstacle_indices.end();
       if (is_object) {
         SetBodyFriction(plant, &scene_graph, body, kObjectMu);
+      } else if (is_obstacle) {
+        SetBodyFriction(plant, &scene_graph, body, kObstacleMu);
       } else if (body.name() == "ground" || body.name() == "platform") {
         SetBodyFriction(plant, &scene_graph, body, kGroundMu);
       } else if (model_name.rfind("end_effector", 0) == 0) {
         SetBodyFriction(plant, &scene_graph, body, kEeMu);
       }
-      // Robot links, walls, obstacles: unchanged.
+      // Robot links, walls: unchanged.
     }
     auto harmonic = [](double a, double b) { return 2 * a * b / (a + b); };
     std::cout << "[MATCHED_MU] effective pair friction: object-table="
               << harmonic(kObjectMu, kGroundMu)
               << " ee-object=" << harmonic(kEeMu, kObjectMu)
-              << " ee-table=" << harmonic(kEeMu, kGroundMu) << std::endl;
+              << " ee-table=" << harmonic(kEeMu, kGroundMu);
+    if (!obstacle_indices.empty()) {
+      std::cout << " object-obstacle=" << harmonic(kObjectMu, kObstacleMu);
+    }
+    std::cout << std::endl;
   }
   /* -------------------------------------------------------------------------------------------*/
 
