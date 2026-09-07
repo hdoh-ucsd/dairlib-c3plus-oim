@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!-- Dynamic ICRA glyph I: 10-vertex convex hull (OIM scenes.py) extruded
+     to the pushed C's thickness 0.025 m at its uniform density
+     538.3290 kg/m^3. Upstream treats I as a STATIC obstacle; mass,
+     COM and inertia here are DERIVED (density x hull area x thickness,
+     polygon second moments, centroid COM).
+-->
+<sdf version="1.7">
+  <model name="push_i_glyph">
+    <link name="c_glyph_base">
+      <inertial><pose>0.000002 -0.000001 0 0 0 0</pose><mass>0.041276311</mass>
+        <inertia><ixx>5.199951157e-06</ixx><iyy>3.858549978e-05</iyy><izz>3.948583522e-05</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia></inertial>
+      <visual name="hull_visual"><pose>0 0 0 0 0 0</pose>
+        <geometry><mesh><uri>icra_glyphs/dynamic/I_prism.obj</uri></mesh></geometry>
+      </visual>
+      <collision name="hull_collision"><pose>0 0 0 0 0 0</pose>
+        <geometry><mesh><uri>icra_glyphs/dynamic/I_prism.obj</uri><drake:declare_convex/></mesh></geometry>
+        <surface><friction><ode><mu>0.3</mu><mu2>0.3</mu2></ode></friction></surface>
+        <drake:proximity_properties><drake:mu_static>0.3</drake:mu_static><drake:mu_dynamic>0.3</drake:mu_dynamic></drake:proximity_properties>
+      </collision>
+    </link>
+  </model>
+</sdf>

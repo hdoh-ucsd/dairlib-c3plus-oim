@@ -282,15 +282,66 @@ inline const std::vector<std::pair<double, double>>& CFootprint() {
   }();
   return pts;
 }
-// Object footprint selector: SAMPLING_C3_OBJECT_FOOTPRINT=c_glyph switches
-// every footprint consumer (LCS witness, route, swept veto, legacy nonpen)
-// from the T to the C. Scene representation only — no controller semantics.
+// I/R/A glyph footprints: 10-vertex convex-hull outlines of the ICRA sign
+// glyphs, in the object's local frame. Vertex pairs are hardcoded verbatim
+// from results/final_oim_c3plus_comparison/scene_fidelity/
+// icra_glyph_obstacles.csv (x_local,y_local columns; source scenes.py
+// L282/L290/L298). Each hull edge is subdivided into boundary sample points,
+// mirroring the rect() densification used by TFootprint()/CFootprint().
+inline std::vector<std::pair<double, double>> DensifyHull(
+    const std::vector<std::pair<double, double>>& hull) {
+  std::vector<std::pair<double, double>> v;
+  const int n = (int)hull.size();
+  for (int i = 0; i < n; ++i) {
+    const auto& a = hull[i];
+    const auto& b = hull[(i + 1) % n];
+    for (int k = 0; k < 10; ++k) {
+      double t = k / 10.0;
+      v.push_back({a.first + t * (b.first - a.first),
+                   a.second + t * (b.second - a.second)});
+    }
+  }
+  return v;
+}
+inline const std::vector<std::pair<double, double>>& IFootprint() {
+  static std::vector<std::pair<double, double>> pts = DensifyHull(
+      {{-0.032, -0.0149}, {0.0503, -0.0149}, {0.0511, -0.0145},
+       {0.0515, -0.0137}, {0.0515, 0.0138},  {0.0503, 0.0149},
+       {-0.0504, 0.0149}, {-0.0515, 0.0137}, {-0.0515, -0.0138},
+       {-0.0504, -0.0149}});
+  return pts;
+}
+inline const std::vector<std::pair<double, double>>& RFootprint() {
+  static std::vector<std::pair<double, double>> pts = DensifyHull(
+      {{0.0515, -0.0496}, {0.0515, 0.0496},  {0.0511, 0.0506},
+       {-0.0294, 0.0417}, {-0.0445, 0.034},  {-0.0502, 0.0208},
+       {-0.0515, 0.0035}, {-0.0515, -0.0496}, {-0.0507, -0.0506},
+       {0.0508, -0.0506}});
+  return pts;
+}
+inline const std::vector<std::pair<double, double>>& AFootprint() {
+  static std::vector<std::pair<double, double>> pts = DensifyHull(
+      {{-0.0515, 0.0162}, {-0.0515, -0.0162}, {-0.0501, -0.018},
+       {0.0499, -0.0556}, {0.0511, -0.0556},  {0.0515, -0.0543},
+       {0.0515, 0.0543},  {0.0511, 0.0556},   {0.0499, 0.0556},
+       {-0.0501, 0.018}});
+  return pts;
+}
+// Object footprint selector: SAMPLING_C3_OBJECT_FOOTPRINT switches every
+// footprint consumer (LCS witness, route, swept veto, legacy nonpen) from
+// the default T to the named glyph: c_glyph, i_glyph, r_glyph, a_glyph.
+// Scene representation only — no controller semantics.
 inline const std::vector<std::pair<double, double>>& Footprint() {
-  static const bool use_c = [] {
+  static const std::vector<std::pair<double, double>>* sel = [] {
     const char* f = std::getenv("SAMPLING_C3_OBJECT_FOOTPRINT");
-    return f && std::string(f) == "c_glyph";
+    const std::string s = f ? f : "";
+    if (s == "c_glyph") return &CFootprint();
+    if (s == "i_glyph") return &IFootprint();
+    if (s == "r_glyph") return &RFootprint();
+    if (s == "a_glyph") return &AFootprint();
+    return &TFootprint();
   }();
-  return use_c ? CFootprint() : TFootprint();
+  return *sel;
 }
 
 // Signed distance from a point to a convex polygon (CCW world vertices),
