@@ -5,6 +5,26 @@ Warning! This is very much "development-level" code and is provided as-is. APIs 
 * `main` branch build and unit tests (Ubuntu Jammy 22.04): [![Build Status](https://api.cirrus-ci.com/github/DAIRLab/dairlib.svg?task=build_jammy&script=test)](https://cirrus-ci.com/github/DAIRLab/dairlib)
 * `main` branch build and unit tests (Ubuntu Focal 24.04): [![Build Status](https://api.cirrus-ci.com/github/DAIRLab/dairlib.svg?task=build_focal&script=test)](https://cirrus-ci.com/github/DAIRLab/dairlib)
 * Experimental build against Drake's `master` branch (Jammy): [![Build Status](https://api.cirrus-ci.com/github/DAIRLab/dairlib.svg?task=drake_master_build&script=test)](https://cirrus-ci.com/github/DAIRLab/dairlib)
+## xArm6 OIM-Fidelity Pushing Benchmark (2026-09-07)
+
+Sampling-based C3+ on a 5-joint velocity-controlled xArm6, matched to the OIM reference scene
+(white 0.80 × 1.523 m table with long axis Y, flush-mounted stick end-effector r = 5.55 mm with
+tip at 179.4 mm, matched friction 0.3/0.5, upstream tolerance 0.05 m ∧ 0.1 rad). Task: push a
+T-block (0.381, 0.4, 0°) → (0.381, −0.4, 180°). Receipts, per-trial traces, and rendered videos
+(success AND failure, with a transparent green goal ghost) live in
+`results/fidelity_2026-09-07/` and the shared results tree.
+
+| Scene | Goal reached | Notes |
+|---|---|---|
+| open_table (5 pose pairs × 2) | **10/10** (85–247 sim-s, final ≤ 0.020 m) | pre-fidelity: 6/10; ability solved, residual gap vs OIM is speed only (OIM 15–18 s) |
+| shelf_gap (5 × 2) | **3/10** (119 / 200 / 274 s) | pre-fidelity: 0/10 — first shelf successes |
+| single_obstacle (5 × 2) | **1/10** (202 s) | unchanged vs pre-fidelity; blocker is planner acquisition churn near the obstacle, not geometry |
+| ycb_clutter (10 × 1 pair) | **2/8** so far (197 s best, final 0.004 m; 2 trials in flight) | first-ever C++ YCB runs — scene completed with reference-exact spam_can + mustard_bottle hulls |
+
+Failure classes across scenes: no-progress repositioning churn with unsuccessful-sample buffer
+overflow (dominant), post-latch drift. Zero crashes, zero topples on the OIM table. Key commits:
+`4b7951cd4` (fidelity port), `ba264f57e` (ycb scene), `a366bbbe9` (glyph validation arc).
+
 ## Complete Build Instructions
 
 ### Download dairlib
