@@ -29,7 +29,7 @@ import yaml
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 POSES_DIR = "/root/push_anything_ADMM/external/Object-Informed-Manipulation-MJX/examples/poses"
 SCENES = ["open_table", "single_obstacle", "shelf_gap"]
-TRIALS = [1, 2, 3]
+TRIALS = ["1", "2", "3", "4", "5"]
 Z_OBJ = 0.0008
 R_MAX, Y_MAX = 0.70, 0.6
 

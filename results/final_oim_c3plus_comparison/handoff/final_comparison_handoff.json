@@ -1,0 +1,20 @@
+{
+  "verdict": "B_OIM_OUTPERFORMS_C3PLUS_UNDER_MATCHED_XARM6_BENCHMARK",
+  "scope": "3 of 5 scenes fidelity-verified (open_table, single_obstacle, shelf_gap); ycb_clutter excluded (2 missing obstacles), icra_sign excluded (xArm6 visual gate pending)",
+  "headline": "OIM 15/15 at 15-18 s median vs C3+ 6/10 / 1/10 / 0/10 under the upstream 100 s cap; when both succeed OIM ~4x faster, C3+ tighter in final position",
+  "protocol": "cap 100 sim s (upstream), tolerance 0.05/0.1 (upstream), rigid identity poses (pairs 1-5), matched physics 0.3/0.5/0.5, paired trials; parallel execution user-authorized (sim-time scoring)",
+  "fidelity_catches_fixed_before_running": [
+    "legacy obstacle SDFs in a +0.15/+0.11 m shifted frame -> OIM-native SDF copies",
+    "historic dairlab pose registration was non-rigid (y*0.5) -> rejected, identity used",
+    "object-obstacle mu defaulted to 0.4615 -> matched to 0.5 via geom 1.5 harmonic"
+  ],
+  "provenance": {"c3plus": "9557bbdc4 frozen baseline + scene defs (health check 3/3)", "oim": "a954f000 native MJX, first local execution; setup receipt in provenance/oim_environment_setup.md"},
+  "open_items_for_next_stage": [
+    "longer-cap ablation to split speed-vs-ability in the C3+ gap",
+    "ycb_clutter: add spam_can + mustard_bottle to the C++ scene (hull verts ready at OIM scenes.py:248-266)",
+    "icra_sign: xArm6-embodiment run + visual gate (Agent D port merged, env-gated)",
+    "tool-geometry ablation (stick vs sphere tip) if the tool difference must be closed",
+    "OIM n>5 if the no-multi-seed rule is relaxed for benchmark statistics"
+  ],
+  "data": "runs at /root/push_anything_ADMM/results/final_oim_c3plus_comparison_runs/{c3plus_matched,c3plus_matched_b,oim_matched,oim_matched_b}; OIM run JSONs under external/Object-Informed-Manipulation-MJX/oim/results/runs/"
+}
