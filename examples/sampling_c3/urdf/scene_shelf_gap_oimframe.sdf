@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!-- OIM shelf_gap scene in the OIM-NATIVE frame (rigid identity
+     registration, benchmark_protocol.yaml). MJX shelf_gap.xml:
+       shelf_1 (big):   half-size (0.13, 0.08, 0.07) at (0.62, 0.0, 0.07)
+       shelf_2 (small): half-size (0.05, 0.08, 0.07) at (0.24, 0.0, 0.07)
+     Gap in x: [0.29, 0.49] = 0.200 m centred on x = 0.39 (~corridor 0.381).
+     Platform top z = -0.029 -> centre z = 0.041. The legacy
+     scene_shelf_gap.sdf had both shelves shifted +0.11 in x (0.73 / 0.35),
+     centring the gap on x = 0.50 (registered frame); this copy matches the
+     MJX scene verbatim. -->
+<sdf version="1.7">
+  <model name="scene_shelf_gap">
+    <static>true</static>
+    <link name="shelf_big"><pose>0.62 0.0 0.041 0 0 0</pose>
+      <visual name="shelf_big_v"><geometry><box><size>0.26 0.16 0.14</size></box></geometry>
+        <material><diffuse>0.85 0.35 0.1 1.0</diffuse></material></visual>
+      <collision name="shelf_big_c"><geometry><box><size>0.26 0.16 0.14</size></box></geometry></collision>
+    </link>
+    <link name="shelf_small"><pose>0.24 0.0 0.041 0 0 0</pose>
+      <visual name="shelf_small_v"><geometry><box><size>0.10 0.16 0.14</size></box></geometry>
+        <material><diffuse>0.85 0.35 0.1 1.0</diffuse></material></visual>
+      <collision name="shelf_small_c"><geometry><box><size>0.10 0.16 0.14</size></box></geometry></collision>
+    </link>
+  </model>
+</sdf>

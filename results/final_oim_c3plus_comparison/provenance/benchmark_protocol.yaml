@@ -1,0 +1,18 @@
+# Benchmark protocol — declared BEFORE campaign execution (section 6/17/21)
+shared_time_cap: 100 sim seconds (= the authoritative OIM benchmark's 2000 steps x 0.05 s control dt),
+  applied identically to both methods; C3+ trials record full traces and are scored at t<=100 s.
+success_tolerance: 0.05 m position AND 0.1 rad yaw (upstream OIM definition, oim/run early-stop and
+  run_eval scoring). The dairlib-internal 0.02 m gate is NOT used for the comparison.
+progress_rule: no-progress early termination allowed only method-independently; for the smoke phase
+  neither method terminates early on stall (the 100 s cap bounds everything).
+pose_registration: RIGID IDENTITY. Tasks use the OIM-native frame poses verbatim (e.g. open_table
+  (0.381,0.400,0) -> (0.381,-0.400,pi)); the historic dairlib registration (x+0.10, y*0.50) is
+  non-rigid and therefore REJECTED for this comparison. xArm6 reach check: r=0.553 < 0.70 declared.
+paired_trials: trial k uses OIM pose keys (start k, goal k), k in {1,2,3} for Phase A, pinned via
+  --start/--goal on OIM and per-trial generated parameter variants on C3+. Internal sampling
+  randomness of each method is preserved.
+phaseA_scope: open_table, single_obstacle, shelf_gap - 3 paired trials per scene per method.
+  ycb_clutter EXCLUDED until the C++ reconstruction adds the 2 missing obstacles; icra_sign
+  EXCLUDED until the xArm6-embodiment visual gate passes.
+note_healthcheck: the first C3+ smoke sweep (bt010 0.6 m task, 2400 s recorder) is an
+  infrastructure health check only and is NOT comparison data.
