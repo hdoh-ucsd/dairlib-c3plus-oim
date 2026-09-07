@@ -59,3 +59,20 @@ worktree↔shared mirroring of small CSVs (retained; the D tree is a mirror by d
 [x] no controller/source changes  [ ] D mirror — synced in the follow-up step below
 
 CLEANUP_COMPLETE_CANONICAL_RESULTS_PRESERVED
+
+
+## Second pass (2026-09-07, user-directed: prune videos and logs)
+- ICRA draws v1-v5/v1_fresh/v4_zfix removed (kept v5_zfix tight-success + summary CSVs + note):
+  icra_sign_faithful_port 1.33 GB -> 122 MB.
+- Diagnostic logs (planner/osc/sim.log) stripped from final benchmark runs, r6 gate,
+  env-validation trials, p5 draws (rollout.mp4 + qp_variables.jsonl also dropped);
+  metric-bearing traces (state_trace.jsonl, success.log, CSVs) retained everywhere.
+- Videos pruned to representatives: 3x 3D success + gate success/fail pair + matched
+  success/fail pair + P6_r2_t3 TOPPLE + P5_r2_t4 NEARMISS (+ manifest); ~60 redundant MP4s removed.
+  The curated D XARM6_C3PLUS_WORKING_VIDEOS folder retained as the user-facing gallery.
+- Also removed: 6-DOF port rounds r6/r7, the early oim_xarm_full_20260829 receipt, oim-arc
+  sidepanel MP4s, native-validation per-trial logs (summaries restored from committed copies),
+  and the geometric-release debug arc from D.
+- In-scope retained set now ~360 files / ~0.6 GB. D mirror updated with --delete on retained dirs.
+- REMAINING BULK IS OUT OF SCOPE: ~23 GB / ~4400 files are the fig8/jack/push_t/reference
+  lineages, untouched per the original scope ruling - a third pass can cover them on direction.
