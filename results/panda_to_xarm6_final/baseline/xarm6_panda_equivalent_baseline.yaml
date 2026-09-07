@@ -1,0 +1,33 @@
+# xArm6 Panda-equivalent baseline — FROZEN (acceptance gate PASSED 3/5)
+# Gate campaign: results/panda_to_xarm6_port_final_r6 — successes 84.2 s / 161.2 s / 96.5 s
+# (Panda reference: 49.9-131.2 s), failures at 0.049/0.868 and 0.107/0.510 after 1560-1670 s.
+# Do NOT tune further; obstacle-scene comparison uses this configuration as-is.
+frozen_at_commit: <this commit — trap fixes = armature restoration + terminal-hold v_des on top of ab8ba8b12>
+architecture: 5-joint velocity control (joint 6 welded; MJX-faithful)
+plant:
+  model: examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml (damping 50, joint6 removed)
+  actuators: 5, efforts [50,50,32,32,32] N.m, velocity limits +-0.5 rad/s,
+    gear_ratio 1.0, rotor_inertia 1.0 (MJCF armature restored in code)
+  joint4_spring: RevoluteSpring k=175 ref=0
+  end_effector: end_effector_full.urdf welded to xarm6_link6 @ RPY(pi,0,0)+(0,0,0.107) (same as Panda)
+executor: Xarm6FiveJointVelocityExecutor (--robot_model=xarm6 --xarm6_five_joint=true)
+  task_rows: [vx,vy,vz,wx,wy] (stick yaw dropped)
+  W: diag(1,1,1,0.2,0.2); dls_lambda: 0.05; Kc: 4.0; alpha: 2.0
+  saturation: direction-preserving uniform scaling to max|qdot_i|=0.5
+  terminal_hold: v_des = 0 outside the trajectory time range
+  reach_clamp: p_des planar radius <= 0.68 (direction-preserving)
+  servo: tau = clamp(kv (qdot_cmd - qdot), +-effort) + tau_grav; kv=[300,300,200,200,200]
+contact_release: PreliftReleaseSystem (--prelift_release=true): wedge radius 0.085,
+  release distance 0.095, planar retreat step <= 0.01, z held
+physics: --matched_mu=true (object 0.3, ground 0.3, EE 1.5 -> pairs T-table 0.3, EE-T 0.5
+  = OIM MJX benchmark values; object-obstacle for later scenes: 0.5)
+object: push_t_oimscale_m01.sdf (0.1 kg OIM-scale T; controller m01_control.sdf)
+policy: byte-identical dairlib C3+ (demo push_t_bt010_open_table_xarm6 = Panda demo copy except
+  robot_radius_limits [0.25,0.70], pwl_waypoint_height 0.10, 5-dim q_init
+  [0.888666,0.268? see sim_params], osc_params_xarm6.yaml)
+c3: admm_iter 3, N 5, C3+ anitescu, planning_dt 0.05/0.1, Q/R/G/U per reference_panda_manifest.yaml
+candidate/progress/buffers/hysteresis: unchanged from the Panda reference
+success_criteria: 0.02 m / 0.1 rad (recorder gate; task yaml tolerances unchanged)
+time_budget_validation: 2400 s wall (see time_budget_recommendation.md; final benchmark uses one
+  shared cap for C3+ and OIM on this same robot)
+guards: topple >0.5 rad termination; 10k sampler-iteration caps (both robots)
