@@ -110,7 +110,8 @@ int DoMain(int argc, char* argv[]) {
   std::vector<ModelInstanceIndex> object_indices_lcs = AddLCSModelsToPlant(
       &plant_lcs, &scene_graph, controller_params.object_models,
       controller_params.include_end_effector_orientation,
-      sampling_c3_options.include_walls);
+      sampling_c3_options.include_walls,
+      FLAGS_robot_model == "xarm6");
   plant_lcs.Finalize();
 
   std::unique_ptr<MultibodyPlant<drake::AutoDiffXd>> plant_lcs_autodiff =
