@@ -99,3 +99,5 @@ buffer-candidate cost, (ii) reposition executor semantics (PWL altitude + arriva
 
 Caveats: single draws per condition — no repeatability claim; §11 deterministic state-restore replay
 remains unbuilt (documented limitation), so pre-fix vs post-fix comparisons are behavioral, not bitwise.
+
+> **Results-cleanup note (2026-09-07):** the raw run directories cited in this report were removed in the results canonicalization (superseded/pre-fidelity data). The conclusions stand on this report itself; canonical replacement evidence lives in `results/canonical_failure_evidence/` and the final dataset in `results/final_oim_c3plus_comparison/`.
