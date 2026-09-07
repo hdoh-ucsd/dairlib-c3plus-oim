@@ -142,3 +142,5 @@ Unchanged and out of scope: the sub-goal generator still aims straight at the go
 All checks pass (unit tests A–G 15/15; in-binary H/I/J; behavioral contact validation; matched single_obstacle comparison with zero physical penetration; shelf_gap N_closest validation), with the caveats stated above (disc geometry retained for Phase-A mechanism isolation; single-draw comparison runs; the ADMM iterate's complementarity is soft between projections by C3+ design).
 
 **OBJECT–OBSTACLE HANDLING IS NOW IMPLEMENTED AS A FRICTIONLESS CLOSEST-FOOTPRINT CONTACT IN THE LCS, INCLUDING OBSTACLE IMPULSE, COMPLEMENTARITY, LEVER-ARM YAW COUPLING, C3+ PROJECTION/CONSENSUS, AND FORWARD-ROLLOUT CONSISTENCY. NO OBSTACLE OBJECTIVE OR STANDALONE POSITION HALFSPACE IS ACTIVE IN THIS MODE.**
+
+> **Results-cleanup note (2026-09-07):** the raw run directories cited in this report were removed in the results canonicalization (superseded/pre-fidelity data). The conclusions stand on this report itself; canonical replacement evidence lives in `results/canonical_failure_evidence/` and the final dataset in `results/final_oim_c3plus_comparison/`.

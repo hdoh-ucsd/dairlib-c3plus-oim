@@ -109,3 +109,5 @@ Adopt `transaction_v1` behind its env flag (already landed), then: (1) add the s
 1. **NO LOCAL CANDIDATE PROVIDED TRANSLATIONAL PROGRESS** at the stall (best predicted terminal 0.17 vs current 0.15 m; 0 around-and-past among 1,959 late candidates) — the outcome cap (Case C).
 2. **REPOSITION CANDIDATES WERE MIS-SCORED** (stale buffer cost winning selection, zero travel cost, stay-current excluded, hair-trigger 0.4 relative hysteresis) — 49% of runtime spent on 74 zero-gain repositions (Case A); fixing this produced the first success.
 3. **PROGRESS-DETECTOR MODE CHURN** — real but secondary; its resets and exits are mostly downstream of causes 1–2.
+
+> **Results-cleanup note (2026-09-07):** the raw run directories cited in this report were removed in the results canonicalization (superseded/pre-fidelity data). The conclusions stand on this report itself; canonical replacement evidence lives in `results/canonical_failure_evidence/` and the final dataset in `results/final_oim_c3plus_comparison/`.
