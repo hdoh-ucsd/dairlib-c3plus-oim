@@ -1,0 +1,13 @@
+{
+  "verdict": "A_EXECUTOR_MAPPING_DEFECT_IDENTIFIED",
+  "gate": "PASSED 3/5 (84.2 s / 161.2 s / 96.5 s - Panda-class; failures are endgame-convergence shortfalls, not a new execution class)",
+  "baseline": "FROZEN at results/panda_to_xarm6_final/baseline/xarm6_panda_equivalent_baseline.yaml - no further open_table tuning",
+  "root_causes_fixed": [
+    "armature=1 rotor inertia silently lost at MJCF import (zero actuators parsed) -> 500 Hz servo chatter consuming all torque (measured I_eff 0.027 vs 1.0); fixed with set_default_rotor_inertia on code-added actuators",
+    "trajectory-derivative extrapolation beyond end time exactly cancelled the Kc feedback (captured v_des == -Kc*err) -> the 'kinematic trap' stalls; fixed with terminal-hold v_des=0 out of range (Panda-OSC semantics)"
+  ],
+  "exonerated_by_diagnostics": ["kinematic feasibility (all K3)", "singularity (sigma_min 0.066-0.083)", "damping lambda", "tilt task rows", "direction-preserving saturation", "actuator throughput as primary"],
+  "nan": "N4 planner-internal (predicted-x0 suspect); driver was chatter-era dynamics - not reproduced post-fix in the gate campaign",
+  "next": "obstacle scenes per the frozen baseline (single_obstacle -> shelf_gap -> ycb_clutter -> icra_sign); matched object-obstacle mu = 0.5; one shared time cap for C3+ vs OIM on this robot",
+  "run_data": "results/panda_to_xarm6_port_final_r6 (gate) + probes 1-7 (chatter/vdes evidence) under /root/push_anything_ADMM/results/panda_to_xarm6_final_probe*"
+}
