@@ -28,7 +28,7 @@ qp_projection_scaling: 1
 # Workspace limits specified as linear constraints [x, y, z, lb, ub]
 workspace_limits: [[1, 0, 0, 0.15, 0.75],
                    [0, 1, 0, -0.6, 0.6],
-                   [0, 0, 1, -0.01, 0.3]]
+                   [0, 0, 1, -0.024, 0.3]]
 # xArm6 reach calibration (robot-specific): the Panda value 0.75 puts targets at the
 # xArm6's near-singular full extension (measured overshoot to r~0.81 crashed the planner's
 # workspace DRAKE_DEMAND). Declared robot workspace is a robot-specific quantity.
