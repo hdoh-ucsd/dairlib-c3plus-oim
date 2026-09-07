@@ -1,0 +1,8 @@
+scenario_name: open_table
+obstacles:
+- [0.30, 0.15, 0.085]
+- [0.55, 0.10, 0.085]
+- [0.38, -0.18, 0.085]
+obstacle_cost_weight: 5000.0
+obstacle_cost_decay: 0.04
+obstacle_model: examples/sampling_c3/urdf/scene_ira_letter_obstacles.sdf

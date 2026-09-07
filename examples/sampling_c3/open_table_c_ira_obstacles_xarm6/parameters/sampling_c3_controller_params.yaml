@@ -1,0 +1,28 @@
+sampling_c3_options_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/sampling_c3plus_options.yaml
+reposition_params_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/reposition_params.yaml
+progress_params_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/progress_params_c3plus.yaml
+sampling_params_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/sampling_params.yaml
+scenario_params_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/scenario_params.yaml
+goal_params_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/goal_params.yaml
+
+sim_params_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/sim_params.yaml
+vis_params_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/vis_params.yaml
+osc_params_file: examples/sampling_c3/open_table_c_ira_obstacles_xarm6/parameters/osc_params_xarm6.yaml
+osqp_settings_file: examples/sampling_c3/shared_parameters/sampling_c3_qp_settings.yaml
+osc_qp_settings_file: examples/sampling_c3/shared_parameters/osc_qp_settings.yaml
+franka_driver_channels_file: common/parameters/franka_drake_lcm_driver_channels.yaml
+lcm_channels_hardware_file: examples/sampling_c3/shared_parameters/lcm_channels_hardware.yaml
+lcm_channels_simulation_file: examples/sampling_c3/shared_parameters/lcm_channels_simulation.yaml
+
+# Note:  All glyph SDFs use a single link named c_glyph_base (shared naming
+# convention from the C-glyph task); its origin is the glyph frame origin.
+object_model: examples/sampling_c3/urdf/C_shape_texture/C_shape_texture_controller.sdf
+object_body_name: body
+base_name: dummy
+
+object_models: [examples/sampling_c3/urdf/C_shape_texture/C_shape_texture_controller.sdf]
+base_names: [C_shape_texture]
+
+include_end_effector_orientation: false
+
+control_loop_delay_ms: 0

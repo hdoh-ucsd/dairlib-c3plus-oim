@@ -250,7 +250,8 @@ int DoMain(int argc, char* argv[]) {
     ground_object_contact_pairs.push_back(
         SortedPair(contact_geoms["BOTTOM_SPHERE"], contact_geoms["GROUND"]));
   } else if (FLAGS_demo_name.rfind("anything", 0) == 0 ||
-             FLAGS_demo_name.rfind("open_table_glyph", 0) == 0) {
+             FLAGS_demo_name.rfind("open_table_glyph", 0) == 0 ||
+             FLAGS_demo_name.rfind("open_table_c_ira", 0) == 0) {
     if (sampling_c3_options.include_walls) {
       drake::geometry::GeometryId left_wall_geoms =
           plant_lcs.GetCollisionGeometriesForBody(
@@ -416,7 +417,8 @@ int DoMain(int argc, char* argv[]) {
     target_generator = std::make_unique<systems::SamplingC3GoalGeneratorPlanar>(
         plant_object, controller_params.goal_params, object_indices);
   } else if (FLAGS_demo_name.rfind("anything", 0) == 0 ||
-             FLAGS_demo_name.rfind("open_table_glyph", 0) == 0) {
+             FLAGS_demo_name.rfind("open_table_glyph", 0) == 0 ||
+             FLAGS_demo_name.rfind("open_table_c_ira", 0) == 0) {
     target_generator = std::make_unique<systems::SamplingC3GoalGeneratorPlanar>(
         plant_object, controller_params.goal_params, object_indices);
 
