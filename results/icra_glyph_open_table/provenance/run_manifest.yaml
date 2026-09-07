@@ -1,0 +1,22 @@
+# ICRA glyph open-table validation — protocol (declared before any campaign run)
+date: 2026-09-07
+baseline: FROZEN xArm6 C3+/dairlib (commit 9557bbdc4 lineage, now mainline c26cf2add);
+  five-joint velocity executor, prelift release, terminal hold, reach clamp, matched_mu —
+  NO controller modification; only object-specific model/footprint parameters differ per glyph
+  (env-gated SAMPLING_C3_OBJECT_FOOTPRINT selector, object SDF paths in task yamls).
+tasks: open_table_{I,C,R,A} — single dynamic glyph, xArm6, normal table, no sign glyphs,
+  no slot, no clutter, no robot-base obstacle beyond normal handling, no ICRA route logic.
+nominal_task: start (0.30, +0.40, yaw 0) -> goal (0.50, -0.40, yaw +pi/2)
+  workspace check: start r=0.500, goal r=0.640 (<=0.70), |y|=0.40 (<=0.6) — PASS for all glyphs
+  (glyph max half-extent ~0.052 keeps boundary inside limits).
+success_tolerance: 0.05 m AND 0.1 rad (upstream OIM convention, same as the matched benchmark)
+time_cap: 2400 s wall validation cap with success early-exit (open-table validation tier;
+  NOT the 100 s benchmark cap — this stage asks CAN the glyph be manipulated, not how fast)
+trial_protocol: per glyph — 3 serial-equivalent smoke trials (parallel execution authorized,
+  unique LCM ports), then 10 trials if no implementation/model defect; identical protocol for
+  I/C/R/A; no tuning between glyphs.
+gates_before_campaign: model fidelity (sim==controller dynamics), static geometry renders,
+  footprint validation, sampling coverage, exact-contact microtests, prediction sanity.
+physics: matched_mu (object 0.3 / ground 0.3 / EE 1.5 -> pairs 0.3 & 0.5), gravity 9.81,
+  per-glyph mass/inertia derived at C-glyph uniform density (upstream defines I/R/A only as
+  static hulls — derivation documented in provenance/upstream_glyph_sources.md).
