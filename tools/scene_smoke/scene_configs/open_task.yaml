@@ -15,7 +15,7 @@ footprint:
   - [0.0099, 0.0]
   - [0.0445, 0.0]
   - [0.0445, 0.0198]
-pusher_radius: 0.0195
+pusher_radius: 0.00555  # OIM stick tip sphere (end_effector_xarm6_stick.urdf)
 block_half_height: 0.0298
 tip_target_z: 0.0298
 obstacles: {}

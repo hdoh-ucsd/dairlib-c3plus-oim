@@ -35,9 +35,10 @@ from pydrake.common.eigen_geometry import Quaternion
 REPO = "/root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics"
 URDF = os.path.join(REPO, "examples/sampling_c3/urdf")
 XARM6_SRC_DIR = os.path.join(URDF, "oim_xarm6_tabletop/xarm6")
-EE = os.path.join(URDF, "end_effector_full.urdf")
-GROUND = os.path.join(URDF, "ground.urdf")
-PLATFORM = os.path.join(URDF, "platform.urdf")
+# OIM-faithful tool + table (matches AddXarm6ToPlant in the sim): flush
+# stick EE on link6, white 0.80 x 1.523 m table with its long axis along y.
+EE = os.path.join(URDF, "end_effector_xarm6_stick.urdf")
+GROUND = os.path.join(URDF, "ground_oim_xarm6.urdf")
 
 W, H = 960, 720
 FOV_Y = 0.9
@@ -124,7 +125,14 @@ def add_goal_marker(plant, gx, gy, gyaw):
 def build(object_sdf, obstacle_sdf, goal, assets_tmp):
     builder = DiagramBuilder()
     plant, scene_graph = AddMultibodyPlantSceneGraph(builder, 0.0)
-    scene_graph.AddRenderer("vtk", MakeRenderEngineVtk(RenderEngineVtkParams()))
+    # Camera-frame headlight + a downward fill so the white table reads white
+    # instead of shaded gray under the single default directional light.
+    from pydrake.geometry import LightParameter
+    scene_graph.AddRenderer("vtk", MakeRenderEngineVtk(RenderEngineVtkParams(
+        lights=[LightParameter(type="directional", frame="camera",
+                               direction=[0, 0, 1], intensity=0.85),
+                LightParameter(type="directional", frame="world",
+                               direction=[0, 0, -1], intensity=0.55)])))
     parser = Parser(plant, scene_graph)
     parser.SetAutoRenaming(True)
     # MJCF parser auto-welds jointless base to world
@@ -133,20 +141,16 @@ def build(object_sdf, obstacle_sdf, goal, assets_tmp):
     plant.WeldFrames(
         plant.GetFrameByName("xarm6_link6"),
         plant.GetFrameByName("end_effector_flange"),
-        RigidTransform(RotationMatrix(RollPitchYaw(3.1415, 0, 0)), [0, 0, 0.107]))
+        RigidTransform())  # flush at link6, like the sim's OIM stick weld
     obj_model = parser.AddModels(object_sdf)[0]
     if obstacle_sdf:
         obs_model = parser.AddModels(obstacle_sdf)[0]
         if not sdf_is_static(obstacle_sdf):
             weld_unjointed_bases(plant, obs_model)
     parser.AddModels(GROUND)
-    parser.AddModels(PLATFORM)
     plant.WeldFrames(plant.GetFrameByName("xarm6_link_base"),
                      plant.GetFrameByName("ground"),
                      RigidTransform([0, 0, -0.029]))
-    plant.WeldFrames(plant.GetFrameByName("xarm6_link_base"),
-                     plant.GetFrameByName("platform"),
-                     RigidTransform([0, 0, -0.0145]))
     if goal is not None:
         add_goal_marker(plant, goal[0], goal[1], goal[2])
     plant.Finalize()

@@ -9,8 +9,8 @@ files:
 - xarm6_c3plus_icra_sign_s01_to_g01_metrics.csv
 - xarm6_c3plus_icra_sign_s01_to_g01_eval_metrics.png
 - xarm6_c3plus_icra_sign_s01_to_g01_result.json
-git_commit: 2951122671d1a9eac7aa55c14544637beb57439d
+git_commit: 02b386c8687becff9923b2752fe6c87a725afd43
 tolerances:
   pos_tol: 0.05
   ang_tol: 0.1
-generated: '2026-09-07T20:47:19.155989'
+generated: '2026-09-07T21:34:36.688401'
