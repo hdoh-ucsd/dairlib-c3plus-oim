@@ -7,6 +7,9 @@ WT="$(cd "$(dirname "$0")/../.." && pwd)"
 S="$WT/tools/scene_smoke"
 U="$WT/examples/sampling_c3/urdf"
 declare -A GOALS
+GOALS[open_task_01]="0.381 -0.4 3.1416";  GOALS[single_obstacle_01]="0.381 -0.4 3.1416"
+GOALS[shelf_gap_01]="0.381 -0.4 3.1416";  GOALS[ycb_clutter_01]="0.381 -0.4 3.1416"
+GOALS[slalom_01]="0.381 -0.4 3.1416";     GOALS[icra_sign_01]="0.50 -0.40 1.5708"
 GOALS[open_task_02]="0.397 -0.431 3.2400";      GOALS[open_task_03]="0.404 -0.393 2.7924"
 GOALS[open_task_04]="0.386 -0.424 2.7704";      GOALS[open_task_05]="0.359 -0.424 2.7338"
 GOALS[single_obstacle_02]="0.397 -0.431 3.2400";GOALS[single_obstacle_03]="0.404 -0.393 2.7924"
@@ -29,7 +32,7 @@ DEMO[icra_sign]="anything_icra_c_matched_xarm6_t";   OBS[icra_sign]="$U/scene_ic
 SCENES=("$@"); [ ${#SCENES[@]} -eq 0 ] && SCENES=(open_task single_obstacle shelf_gap ycb_clutter slalom icra_sign)
 running=0
 for scene in "${SCENES[@]}"; do
-  for p in 02 03 04 05; do
+  for p in 01 02 03 04 05; do
     bash "$S/package_run.sh" "$scene" "${DEMO[$scene]}${p#0}" \
       ${GOALS[${scene}_${p}]} "${OBS[$scene]}" "${OBJ[$scene]}" "$p" \
       > "$WT/results/xarm6_c3plus_scene_smoke/runs/$scene/pair$p/package.log" 2>&1 &

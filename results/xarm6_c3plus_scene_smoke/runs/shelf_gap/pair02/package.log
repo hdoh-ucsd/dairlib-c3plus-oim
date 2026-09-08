@@ -1,0 +1,14 @@
+[VALIDATE] final-row errors reproduce independently: PASS
+[VALIDATE] result JSON final errors equal CSV final row: PASS
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair02/xarm6_c3plus_shelf_gap_s02_to_g02_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair02/xarm6_c3plus_shelf_gap_s02_to_g02_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair02/xarm6_c3plus_shelf_gap_s02_to_g02_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair02/xarm6_c3plus_shelf_gap_s02_to_g02_manifest.yaml
+  frame 700/763
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair02/xarm6_c3plus_shelf_gap_s02_to_g02.mp4 (763 frames @ 10 fps)
+-rw-r--r-- 1 root root 1283483 Sep  8 00:03 xarm6_c3plus_shelf_gap_s02_to_g02.mp4
+-rw-r--r-- 1 root root  256049 Sep  8 00:03 xarm6_c3plus_shelf_gap_s02_to_g02_eval_metrics.png
+-rw-r--r-- 1 root root     417 Sep  8 00:03 xarm6_c3plus_shelf_gap_s02_to_g02_manifest.yaml
+-rw-r--r-- 1 root root 4928796 Sep  8 00:03 xarm6_c3plus_shelf_gap_s02_to_g02_metrics.csv
+-rw-r--r-- 1 root root     370 Sep  8 00:03 xarm6_c3plus_shelf_gap_s02_to_g02_result.json
+PACKAGE DONE shelf_gap
