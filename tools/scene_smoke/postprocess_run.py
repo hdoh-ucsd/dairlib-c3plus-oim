@@ -158,11 +158,11 @@ def build_fk():
     arm, = parser.AddModels(os.path.join(
         WT, "examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml"))
     ee, = parser.AddModels(os.path.join(
-        WT, "examples/sampling_c3/urdf/end_effector_full.urdf"))
+        WT, "examples/sampling_c3/urdf/end_effector_xarm6_stick.urdf"))
     plant.WeldFrames(
         plant.GetFrameByName("xarm6_link6", arm),
         plant.GetFrameByName("end_effector_flange", ee),
-        RigidTransform(RollPitchYaw(3.1415, 0, 0), [0, 0, 0.107]))
+        RigidTransform())  # OIM stick: flush at link6, matches the sim weld
     plant.Finalize()
     ctx = plant.CreateDefaultContext()
     tip = plant.GetBodyByName("end_effector_tip", ee)

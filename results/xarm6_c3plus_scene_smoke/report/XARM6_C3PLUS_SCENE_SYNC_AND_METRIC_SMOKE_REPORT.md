@@ -126,6 +126,26 @@ known short-cap C3+ behavior (bb55b1ec7: 1/10 single_obstacle, 0/10 shelf at
   start tip (x=0.246) sits inside the C's 48 mm half-footprint + 19.5 mm
   pusher radius; moved to x=0.217.
 
+## Post-review visual/FK fidelity fix (2026-09-07, second pass)
+
+User review flagged the run videos: wrong desk direction/color and a gapped,
+oversized end-effector. The SIM was already faithful (it welds the OIM stick
+`end_effector_xarm6_stick.urdf` flush at link6 and uses the white
+`ground_oim_xarm6.urdf` 0.80 x 1.523 m y-long table); the defects were in the
+smoke tooling only, inherited from an older render script. Fixed in
+`tools/scene_smoke/`:
+- renderer + postprocessor FK now mount the flush OIM stick (no 0.107 m
+  flange offset, no `end_effector_full.urdf`) — tip poses in the metrics CSVs
+  are now the true stick tip (0.17385 m from the flange);
+- renderer draws the upstream lab table (white rgba 0.95, x∈[−0.05,0.75],
+  y∈[−0.7615,0.7615], top z=0) instead of the legacy brown x-long platform,
+  with camera-frame lighting so it reads white;
+- `pusher_radius` in all scene configs corrected 0.0195 → 0.00555 (the stick
+  tip sphere), so `pusher_object_gap`/`physical_contact_active` use the real
+  contact geometry.
+All six runs were re-postprocessed and re-rendered from the original traces
+(no re-simulation needed; trajectories unchanged).
+
 ## Verdict
 
 SIX_SCENE_METRIC_SMOKE_VALIDATED
