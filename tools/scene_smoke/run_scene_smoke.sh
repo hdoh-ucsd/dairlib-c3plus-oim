@@ -6,7 +6,10 @@ set -uo pipefail
 DEMO="${1:?}"; OBJ="${2:?}"; GX="$3"; GY="$4"; GYAW="$5"
 CAP="${6:-120}"; PORT="${7:?}"; OUT="${8:?}"; ENVF="${9:-}"
 WT="$(cd "$(dirname "$0")/../.." && pwd)"
-BIN=/root/push_anything_ADMM/external/oim_c++_anything/bazel-bin/examples/sampling_c3
+# Frozen dca28c1f4 binaries snapshotted from the audit-xarm6-plant worktree
+# build (sources diff-verified identical); shared libs resolved via its
+# bazel solib tree.
+BIN=/root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-xarm6-plant/bazel-bin/examples/sampling_c3
 PY=/root/miniconda3/envs/push_anything_ADMM/bin/python3
 URL="udpm://239.255.76.67:${PORT}?ttl=0"
 mkdir -p "$OUT"
