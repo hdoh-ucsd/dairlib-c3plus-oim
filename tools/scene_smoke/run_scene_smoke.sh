@@ -15,10 +15,10 @@ export TMPDIR="$OUT/tmp"; mkdir -p "$TMPDIR"
 export SAMPLING_C3_OBSTACLE_MODE="${SAMPLING_C3_OBSTACLE_MODE:-lcs_contact}"
 if [ -n "$ENVF" ]; then set -a; . "$ENVF"; set +a; fi
 
-setsid "$BIN/franka_osc_controller" --demo_name="$DEMO" --robot_model=xarm6 \
-  --lcm_url="$URL" > "$OUT/osc.log" 2>&1 & OSC=$!
-setsid "$BIN/franka_sampling_c3_controller" --demo_name="$DEMO" --robot_model=xarm6 \
-  --lcm_url="$URL" > "$OUT/planner.log" 2>&1 & PLAN=$!
+setsid "$BIN/franka_osc_controller" --is_simulation=true --demo_name="$DEMO" \
+  --robot_model=xarm6 --lcm_url="$URL" > "$OUT/osc.log" 2>&1 & OSC=$!
+setsid "$BIN/franka_sampling_c3_controller" --is_simulation=true --demo_name="$DEMO" \
+  --robot_model=xarm6 --lcm_url="$URL" > "$OUT/planner.log" 2>&1 & PLAN=$!
 setsid "$PY" "$WT/tools/scene_smoke/record_metrics.py" \
   --goal "$GX" "$GY" "$GYAW" --object-name "$OBJ" \
   --out-steps "$OUT/steps_raw.jsonl" --out-trace "$OUT/state_trace.jsonl" \
