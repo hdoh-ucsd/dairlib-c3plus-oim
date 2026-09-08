@@ -1,3 +1,3 @@
-SUCCESS t=45.00
-FINAL {"first_success_t": 45.0, "control_steps": 3411, "best_pos_err": 0.03409355707690015, "best_ang_err": 0.0007936448712095867, "pos_tol": 0.05, "ang_tol": 0.1}
+SUCCESS t=60.20
+FINAL {"first_success_t": 60.2, "control_steps": 4955, "best_pos_err": 0.013207983112696206, "best_ang_err": 0.013381210419831202, "pos_tol": 0.05, "ang_tol": 0.1}
 RUN DONE matched_open_table_xarm6_t4 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/open_task/pair04

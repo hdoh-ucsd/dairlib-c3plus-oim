@@ -3,11 +3,11 @@
   "scenario": "open_task",
   "success": false,
   "t_success": null,
-  "first_success_t": null,
-  "final_position_error": 0.17532782990758905,
-  "final_orientation_error": 0.3867493561209563,
-  "best_pos_err": 0.16591696868951022,
-  "best_ang_err": 0.0002123284884567589,
-  "n_control_steps": 7846,
-  "sim_time_end": 110.725
+  "first_success_t": 125.8,
+  "final_position_error": 0.024313845610806878,
+  "final_orientation_error": 0.36727476397833847,
+  "best_pos_err": 0.018667247693518057,
+  "best_ang_err": 0.005802002070261381,
+  "n_control_steps": 9402,
+  "sim_time_end": 128.562999
 }

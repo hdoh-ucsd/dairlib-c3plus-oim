@@ -4,10 +4,10 @@
   "success": false,
   "t_success": null,
   "first_success_t": null,
-  "final_position_error": 0.41449947723213365,
-  "final_orientation_error": 2.749237112163355,
-  "best_pos_err": 0.41449947723213365,
-  "best_ang_err": 2.749229099304451,
-  "n_control_steps": 8324,
-  "sim_time_end": 101.958999
+  "final_position_error": 0.3974742344078808,
+  "final_orientation_error": 2.966481883680669,
+  "best_pos_err": 0.3974742344078808,
+  "best_ang_err": 2.799708496909806,
+  "n_control_steps": 24126,
+  "sim_time_end": 326.76
 }

@@ -4,11 +4,11 @@ WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-s
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/open_task/pair04/xarm6_c3plus_open_task_s04_to_g04_eval_metrics.png
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/open_task/pair04/xarm6_c3plus_open_task_s04_to_g04_result.json
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/open_task/pair04/xarm6_c3plus_open_task_s04_to_g04_manifest.yaml
-  frame 300/309
-wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/open_task/pair04/xarm6_c3plus_open_task_s04_to_g04.mp4 (309 frames @ 10 fps)
--rw-r--r-- 1 root root  589157 Sep  7 23:59 xarm6_c3plus_open_task_s04_to_g04.mp4
--rw-r--r-- 1 root root  226889 Sep  7 23:59 xarm6_c3plus_open_task_s04_to_g04_eval_metrics.png
--rw-r--r-- 1 root root     418 Sep  7 23:59 xarm6_c3plus_open_task_s04_to_g04_manifest.yaml
--rw-r--r-- 1 root root 1648660 Sep  7 23:59 xarm6_c3plus_open_task_s04_to_g04_metrics.csv
--rw-r--r-- 1 root root     375 Sep  7 23:59 xarm6_c3plus_open_task_s04_to_g04_result.json
+  frame 400/426
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/open_task/pair04/xarm6_c3plus_open_task_s04_to_g04.mp4 (426 frames @ 10 fps)
+-rw-r--r-- 1 root root  766712 Sep  8 10:19 xarm6_c3plus_open_task_s04_to_g04.mp4
+-rw-r--r-- 1 root root  211285 Sep  8 10:19 xarm6_c3plus_open_task_s04_to_g04_eval_metrics.png
+-rw-r--r-- 1 root root     418 Sep  8 10:19 xarm6_c3plus_open_task_s04_to_g04_manifest.yaml
+-rw-r--r-- 1 root root 2419192 Sep  8 10:19 xarm6_c3plus_open_task_s04_to_g04_metrics.csv
+-rw-r--r-- 1 root root     380 Sep  8 10:19 xarm6_c3plus_open_task_s04_to_g04_result.json
 PACKAGE DONE open_task

@@ -9,8 +9,8 @@ files:
 - xarm6_c3plus_icra_sign_s04_to_g04_metrics.csv
 - xarm6_c3plus_icra_sign_s04_to_g04_eval_metrics.png
 - xarm6_c3plus_icra_sign_s04_to_g04_result.json
-git_commit: dd3568ced224cbc12682800797fc89c3c8d569f8
+git_commit: 864f33c648c7b5fa47204ce9a728dc21d1db56f7
 tolerances:
   pos_tol: 0.05
   ang_tol: 0.1
-generated: '2026-09-08T00:25:37.623538'
+generated: '2026-09-08T11:34:09.403272'

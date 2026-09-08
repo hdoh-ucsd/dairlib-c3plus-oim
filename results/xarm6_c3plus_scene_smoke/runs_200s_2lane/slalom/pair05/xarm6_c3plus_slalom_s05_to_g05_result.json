@@ -1,0 +1,13 @@
+{
+  "run_id": "xarm6_c3plus_slalom_s05_to_g05",
+  "scenario": "slalom",
+  "success": false,
+  "t_success": null,
+  "first_success_t": null,
+  "final_position_error": 0.7261901636800355,
+  "final_orientation_error": 2.6597288621739965,
+  "best_pos_err": 0.7414911469269334,
+  "best_ang_err": 2.905070336256994,
+  "n_control_steps": 7728,
+  "sim_time_end": 105.377
+}

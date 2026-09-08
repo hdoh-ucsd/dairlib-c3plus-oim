@@ -2,12 +2,12 @@
   "run_id": "xarm6_c3plus_open_task_s02_to_g02",
   "scenario": "open_task",
   "success": true,
-  "t_success": 69.994999,
-  "first_success_t": 82.4,
-  "final_position_error": 0.02502579036691598,
-  "final_orientation_error": 0.021815122056356273,
-  "best_pos_err": 0.018507675710554443,
-  "best_ang_err": 0.009159779521295874,
-  "n_control_steps": 6382,
-  "sim_time_end": 85.139
+  "t_success": 79.193,
+  "first_success_t": 79.1,
+  "final_position_error": 0.04704082063835987,
+  "final_orientation_error": 0.09804422897881082,
+  "best_pos_err": 0.03761877824336739,
+  "best_ang_err": 0.0003456019494993967,
+  "n_control_steps": 5925,
+  "sim_time_end": 81.881
 }

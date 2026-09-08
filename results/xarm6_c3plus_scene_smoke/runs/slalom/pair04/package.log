@@ -4,11 +4,11 @@ WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-s
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/slalom/pair04/xarm6_c3plus_slalom_s04_to_g04_eval_metrics.png
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/slalom/pair04/xarm6_c3plus_slalom_s04_to_g04_result.json
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/slalom/pair04/xarm6_c3plus_slalom_s04_to_g04_manifest.yaml
-  frame 600/657
-wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/slalom/pair04/xarm6_c3plus_slalom_s04_to_g04.mp4 (657 frames @ 10 fps)
--rw-r--r-- 1 root root  813043 Sep  8 00:14 xarm6_c3plus_slalom_s04_to_g04.mp4
--rw-r--r-- 1 root root  195263 Sep  8 00:13 xarm6_c3plus_slalom_s04_to_g04_eval_metrics.png
--rw-r--r-- 1 root root     399 Sep  8 00:13 xarm6_c3plus_slalom_s04_to_g04_manifest.yaml
--rw-r--r-- 1 root root 3830598 Sep  8 00:13 xarm6_c3plus_slalom_s04_to_g04_metrics.csv
--rw-r--r-- 1 root root     366 Sep  8 00:13 xarm6_c3plus_slalom_s04_to_g04_result.json
+  frame 800/878
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/slalom/pair04/xarm6_c3plus_slalom_s04_to_g04.mp4 (878 frames @ 10 fps)
+-rw-r--r-- 1 root root   886499 Sep  8 11:00 xarm6_c3plus_slalom_s04_to_g04.mp4
+-rw-r--r-- 1 root root   157393 Sep  8 10:59 xarm6_c3plus_slalom_s04_to_g04_eval_metrics.png
+-rw-r--r-- 1 root root      399 Sep  8 10:59 xarm6_c3plus_slalom_s04_to_g04_manifest.yaml
+-rw-r--r-- 1 root root 12187234 Sep  8 10:59 xarm6_c3plus_slalom_s04_to_g04_metrics.csv
+-rw-r--r-- 1 root root      365 Sep  8 10:59 xarm6_c3plus_slalom_s04_to_g04_result.json
 PACKAGE DONE slalom

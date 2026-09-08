@@ -1,13 +1,13 @@
 {
   "run_id": "xarm6_c3plus_shelf_gap_s01_to_g01",
   "scenario": "shelf_gap",
-  "success": false,
-  "t_success": null,
-  "first_success_t": null,
-  "final_position_error": 0.5761615063716019,
-  "final_orientation_error": 2.9068139264851682,
-  "best_pos_err": 0.522767626612476,
-  "best_ang_err": 2.6879142377930116,
-  "n_control_steps": 1127,
-  "sim_time_end": 17.609
+  "success": true,
+  "t_success": 186.191999,
+  "first_success_t": 186.2,
+  "final_position_error": 0.04118753361503053,
+  "final_orientation_error": 0.07263050986838193,
+  "best_pos_err": 0.03654378909804547,
+  "best_ang_err": 0.008235182906126681,
+  "n_control_steps": 13440,
+  "sim_time_end": 189.247
 }

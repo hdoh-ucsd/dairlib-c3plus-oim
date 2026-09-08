@@ -1,2 +1,2 @@
-FINAL {"first_success_t": null, "control_steps": 7551, "best_pos_err": 0.8019433382400963, "best_ang_err": 2.690493551917857, "pos_tol": 0.05, "ang_tol": 0.1}
+FINAL {"first_success_t": null, "control_steps": 22583, "best_pos_err": 0.7990715364161854, "best_ang_err": 2.6816308357816028, "pos_tol": 0.05, "ang_tol": 0.1}
 RUN DONE matched_ycb_clutter_xarm6_t2 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair02
