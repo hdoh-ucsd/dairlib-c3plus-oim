@@ -1,0 +1,14 @@
+cpu_count: 16
+memory_gb: 23
+max_parallel_jobs: 7 audit subagents (phase 1); 5 concurrent sim trios + recorders (phase 2); 4 concurrent packagings (phase 3); bazel --jobs=12/14 builds
+active_jobs_at_start: idle (load 0.08)
+average_cpu_utilization: "mean 1-min load 11.67 / 16 cores (73%) over the sim+build window; peak 25.34"
+sampler: provenance/cpu_samples.log (30 s cadence)
+start_time: 2026-09-07T19:12-07:00
+total_wall_time: "see compute_utilization_report.md (finalized at close)"
+notes:
+  - six scene audits + metric source trace ran as 7 concurrent subagents
+  - the five obstacle-scene smokes ran as 5 fully isolated concurrent trios
+    (unique LCM udpm ports 7811-7815, per-run output/tmp dirs, setsid process
+    groups); open_task ran alone as the metric gate
+  - packaging (postprocess + 3D render) for 4 scenes ran concurrently
