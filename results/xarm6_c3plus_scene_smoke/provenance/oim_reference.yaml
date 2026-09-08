@@ -1,0 +1,25 @@
+# Upstream OIM source authority for scene sync + evaluation metrics
+# Recorded 2026-09-07 (Agent B, scene smoke phase). Supersedes the a954f00 pin:
+# upstream added the slalom task (80a6fde) after that pin was taken.
+upstream:
+  name: Object-Informed-Manipulation-MJX
+  url: https://github.com/NikolaRaicevic2001/Object-Informed-Manipulation-MJX
+  local_checkout: /root/push_anything_ADMM/external/Object-Informed-Manipulation-MJX
+  read_only_worktree: /root/push_anything_ADMM/external/oim_upstream_main
+  branch: main
+  commit: d6d80a65ba6a45079e1384ba879e54d50d25bc39
+  commit_subject: "Merge remote-tracking branch 'origin/feat/upgrade-c3' into merge-c3-into-main"
+  pose_source: examples/poses/{open_table,single_obstacle,shelf_gap,ycb_clutter,icra_sign,slalom}.yaml
+port:
+  name: dairlib (oim_c++_anything lineage)
+  local_checkout: /root/push_anything_ADMM/external/oim_c++_anything
+  baseline_branch: oim_c++_anything (== standalone/oim_c++_anything tip)
+  baseline_commit: dca28c1f4
+  work_branch: feature/oim-scene-sync-metrics
+  worktree: /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics
+notes:
+  - eval_metric.jpg referenced by the task brief was not found anywhere on this
+    machine; metric definitions are source-traced from oim/utils at the commit
+    above (costs.py, metrics.py, eval_plots.py) instead, per the brief's own
+    "do not infer formulas from appearance" rule.
+  - upstream scene name open_table -> canonical output scene name open_task.

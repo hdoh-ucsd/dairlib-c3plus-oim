@@ -1,0 +1,86 @@
+# Upstream authority: /root/push_anything_ADMM/external/oim_upstream_main @ d6d80a6
+# Sources:
+#   oim/models/xarm6_pusht_tabletop/ycb_clutter.xml (sim scene)
+#   oim/models/xarm6_pusht_tabletop/tee.xml (T block + table + T-table friction pairs)
+#   oim/models/xarm6_pusht_tabletop/common.xml (defaults: geom friction 0.5, tabletop_obstacle class)
+#   oim/utils/scenes.py (planner obstacle field, lines 636-650)
+#   examples/poses/ycb_clutter.yaml (5 start/goal pairs)
+#   examples/pusht/ycb_clutter.py (Experiment(world="3d", scene="ycb_clutter"))
+# Disambiguation: examples/pusht/clutter.py + examples/poses/clutter.yaml are a
+# DIFFERENT (box_clutter) scene; the authoritative scene here is ycb_clutter.
+# Table top is at z=0 (tee.xml:55, table box top face).
+
+scene: ycb_clutter
+world: "3d"
+sim_mjcf: oim/models/xarm6_pusht_tabletop/ycb_clutter.xml
+planner_scene: oim/utils/scenes.py:636-650 (_tee_scene "ycb_clutter")
+
+manipulated_object:
+  name: block (T)
+  file: tee.xml:105-122
+  geoms:
+    crossbar: {type: box, half_size: [0.0445, 0.0099, 0.0298], pos: [0.0, 0.0099, 0.0], mass: 0.05}  # tee.xml:120
+    stem:     {type: box, half_size: [0.0099, 0.0397, 0.0298], pos: [0.0, -0.0397, 0.0], mass: 0.05} # tee.xml:121
+  total_mass: 0.1  # tee.xml:22 comment "2.0 kg -> 0.1 kg"
+  body_z: 0.0298   # geom half-height; bottom face on table top z=0
+  table_friction_pairs:  # tee.xml:150-151
+    mu: 0.3  # condim=3, friction="0.3 0.3 0.005 0.0001 0.0001"
+  joints: planar slides + yaw hinge, NO frictionloss (tee.xml:102-104)
+
+obstacles:  # all STATIC (bare worldbody geoms, class tabletop_obstacle), friction 0.5 (common.xml:50 default), mass n/a (static)
+  obs_box:
+    file: ycb_clutter.xml:63
+    type: box
+    half_size: [0.05, 0.05, 0.05]
+    pos: [0.35, 0.0, 0.05]        # x y yaw=0
+    note: shared with single_obstacle (_TABLETOP_CUBE, scenes.py:213)
+    planner_shape: Box(center=[0.35, 0.0], half_extents=[0.05, 0.05])  # scenes.py:639
+  spam_can:  # PRESENT (verified in current xml + scenes.py, not assumed)
+    file: ycb_clutter.xml:68-69
+    type: mesh
+    visual_mesh: assets/spam_can.obj    # ycb_clutter.xml:51, maxhullvert=32
+    collision_mesh: assets/spam_can.obj  # MJX collides its convex hull
+    scale: 1.0
+    mesh_bbox: [0.1021, 0.0601, 0.0835]
+    pos: [0.60, -0.16, 0.0418]    # bbox center; yaw=0
+    planner_shape: _SPAM_CAN 8-vertex Polygon (scenes.py:248-256, 0.94 of true footprint hull)
+  domino_sugar:
+    file: ycb_clutter.xml:78-79
+    type: box  # dominoSugar.urdf declares a box, NOT a mesh (faithful reading)
+    half_size: [0.0875, 0.0475, 0.0300]  # pre-rotated: URDF 0.06x0.095x0.175 laid on side (-90deg about y)
+    pos: [0.22, 0.20, 0.0300]     # yaw=0
+    planner_shape: Box(center=[0.22, 0.20], half_extents=[0.0875, 0.0475])  # scenes.py:648
+  mustard_bottle:  # PRESENT (verified in current xml + scenes.py, not assumed)
+    file: ycb_clutter.xml:85-86
+    type: mesh
+    visual_mesh: assets/mustard_bottle.obj   # ycb_clutter.xml:52-53, maxhullvert=32
+    collision_mesh: assets/mustard_bottle.obj
+    scale: 1.0
+    mesh_bbox: [0.0972, 0.0666, 0.1913]
+    pos: [0.15, -0.18, 0.0957]    # bbox center; yaw=0
+    planner_shape: _MUSTARD_BOTTLE 8-vertex Polygon (scenes.py:258-266, 0.93 of true footprint hull)
+
+planner_only_obstacles:
+  robot_base_disc:
+    shape: Circle(center=[0.0, 0.0], radius=0.09)  # scenes.py:333 (_ROBOT_BASE_RADIUS), appended by _tee_scene:363-371
+    note: xarm6 embodiment only (dropped for point robot, scenes.py:135-145)
+
+planner_obstacle_field_count: 5  # 4 physical + robot base disc (xarm6)
+
+nominal_task:  # _tee_scene, scenes.py:358-359
+  object_start: [0.381, 0.400, 0.0]
+  goal: [0.381, -0.400, 3.141593]
+
+pose_pairs:  # examples/poses/ycb_clutter.yaml:13-25 [x, y, yaw]
+  starts:
+    "1": [0.3810, 0.4000, 0.0000]
+    "2": [0.3660, 0.4310, 0.0579]
+    "3": [0.3910, 0.4370, -0.4082]
+    "4": [0.3610, 0.3570, 0.3282]
+    "5": [0.4060, 0.3830, 0.2806]
+  goals:
+    "1": [0.3810, -0.4000, 3.1416]
+    "2": [0.3970, -0.4310, 3.2400]
+    "3": [0.4040, -0.3930, 2.7924]
+    "4": [0.3860, -0.4240, 2.7704]
+    "5": [0.3590, -0.4240, 2.7338]

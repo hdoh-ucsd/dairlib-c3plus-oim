@@ -1,0 +1,60 @@
+# C++ port counterpart: examples/sampling_c3/matched_open_table_xarm6_t1..t5
+# Worktree: /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics
+# t{n} encodes start/goal pair n. Quats are wxyz; yaw = 2*atan2(qz, qw).
+
+scene: matched_open_table_xarm6_t1..t5
+object_model: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf   # sim_params.yaml:1-2
+geometry:   # push_t_oimscale_m01.sdf
+  crossbar_box: [0.089, 0.0198, 0.0596]   # sdf:13, pose y=0.0099 (sdf:12)
+  stem_box: [0.0198, 0.0794, 0.0596]      # sdf:28, link pose y=-0.0397 (sdf:21)
+mass:
+  crossbar: 0.0528504   # sdf:8  (uniform-density split, NOT upstream's 0.05/0.05)
+  stem: 0.0471496       # sdf:24
+  total: 0.1000
+com_y_body_frame: -0.01349   # vs upstream -0.0149 (1.4 mm difference)
+inertia: explicit per-link box inertias at the uniform-density masses (sdf:9,25)
+
+start_goal_encoding:
+  start: sim_params.yaml q_init_object [qw qx qy qz x y z]
+  goal:  goal_params.yaml fixed_target_position + fixed_target_orientation (wxyz)
+starts:   # file: matched_open_table_xarm6_t{n}/parameters/sim_params.yaml:17
+  "1": {x: 0.381, y: 0.400, quat: [1, 0, 0, 0], yaw: 0.000000}
+  "2": {x: 0.366, y: 0.431, quat: [0.999581, 0, 0, 0.028946], yaw: 0.057900}
+  "3": {x: 0.391, y: 0.437, quat: [0.979244, 0, 0, -0.202686], yaw: -0.408200}
+  "4": {x: 0.361, y: 0.357, quat: [0.986566, 0, 0, 0.163364], yaw: 0.328199}
+  "5": {x: 0.406, y: 0.383, quat: [0.990174, 0, 0, 0.13984], yaw: 0.280600}
+goals:    # file: matched_open_table_xarm6_t{n}/parameters/goal_params.yaml:30-31
+  "1": {x: 0.381, y: -0.400, quat: [-3.67321e-06, 0, 0, 1], yaw: 3.141600}
+  "2": {x: 0.397, y: -0.431, quat: [-0.0491838, 0, 0, 0.99879], yaw: 3.240000}
+  "3": {x: 0.404, y: -0.393, quat: [0.173711, 0, 0, 0.984797], yaw: 2.792399}
+  "4": {x: 0.386, y: -0.424, quat: [0.184533, 0, 0, 0.982826], yaw: 2.770399}
+  "5": {x: 0.359, y: -0.424, quat: [0.202486, 0, 0, 0.979285], yaw: 2.733801}
+
+success_thresholds:   # goal_params.yaml:10-11 (all 5 dirs identical)
+  position_success_threshold: 0.02   # m  -- TIGHTER than upstream 0.05
+  orientation_success_threshold: 0.1 # rad -- matches upstream
+
+friction:
+  sim: --matched_mu flag, examples/sampling_c3/franka_sim.cc:65,151-198
+    object_mu: 0.3, ground/platform_mu: 0.3, ee_mu: 1.5, obstacle_mu: 1.5
+    Drake harmonic pairs -> object-table 0.3 (matches upstream 0.3),
+    ee-object 0.5 (matches upstream default-geom 0.5)
+  planner: sampling_c3plus_options.yaml:47 mu_per_pair_type [0.4165, 1, 0.4615]
+    (ee-ground, ee-T, T-ground) -- anything-lineage defaults, NOT matched to
+    0.3/0.5; same in every matched_* scene (consistent family divergence).
+
+obstacles:
+  scenario_params.yaml:2-3: obstacles: []   # empty, no placeholder
+  scenario_params.yaml:4: obstacle_cost_weight: 0.0
+  obstacle_model: absent (optional; franka_sim.cc:132-138 only parses it when
+    has_value) -> no obstacle body enters the sim plant
+  planner: every obstacle branch in
+    systems/controllers/sampling_based_c3_controller.cc (:1200, :2076, :2236,
+    :2342, :2522) is guarded by !scenario_params.obstacles.empty() -- with []
+    no (0,0,0) placeholder can reach planner or collision logic; env-var
+    SAMPLING_C3_OBSTACLE_MODE paths (cc:883) only add mechanisms, never geometry.
+
+frame:
+  Drake world with xArm6 base at origin (same as upstream xarm_device frame);
+  object z 0.0008 in state (resting_object_height -0.009, goal_params.yaml:13)
+  -- x/y/yaw are the compared planar quantities.

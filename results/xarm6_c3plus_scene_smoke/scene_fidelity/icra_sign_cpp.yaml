@@ -1,0 +1,45 @@
+# C++ port: worktree oim-scene-sync-metrics @ dca28c1f4
+# AUDITED TASK: examples/sampling_c3/open_table_c_ira_obstacles_xarm6
+# NOTE: this task is NOT a port of upstream icra_sign. It is a C-object push
+# with a 3-letter (I,R,A) slalom obstacle field. The actual faithful sign
+# port in this tree is examples/sampling_c3/anything_icra_c_v5 (panda/anything
+# lineage, scene_icra_sign.sdf, 7 glyph hulls + base disc), noted at bottom.
+scene: open_table_c_ira_obstacles_xarm6
+frame: xArm6 robot base frame, table top z = -0.029
+object:  # pushed C
+  sim_model: examples/sampling_c3/urdf/C_shape_texture/C_shape_texture.sdf  # sim_params.yaml:1
+  planner_model: examples/sampling_c3/urdf/C_shape_texture/C_shape_texture_controller.sdf  # sampling_c3_controller_params.yaml:19
+  geometry_source: push-anything scanned letter C mesh + VHACD convex pieces (not upstream 3-box C)
+  footprint_bbox: 0.1605 x 0.1206 m, 0.0539 m thick  # measured from C_shape_texture.obj vertices
+  mass: 0.05             # C_shape_texture.sdf:8
+  inertia: {ixx: 7.5171432e-05, iyy: 1.4291713e-04, izz: 2.0129405e-04,
+            ixy: -3.9771422e-06, ixz: 6.9713696e-08, iyz: -6.9171532e-07}  # C_shape_texture.sdf:10-15
+  mu_table: 0.3          # drake:mu_dynamic, C_shape_texture.sdf:41 et seq.
+  resting_z: -0.005982   # sim_params.yaml:17, goal_params.yaml:13
+obstacles:
+  sim_model: examples/sampling_c3/urdf/scene_ira_letter_obstacles.sdf  # scenario_params.yaml:8
+  generator: scripts/gen_ira_obstacles.py (VHACD pieces of push-anything letters, static)
+  glyphs:  # ONLY 3, slalom layout — not the "ICRA 2026" row
+    I_shape_texture: {pose: [0.30, 0.15, -0.0078], yaw: 1.5708}  # scene_ira_letter_obstacles.sdf:9
+    R_shape_texture: {pose: [0.55, 0.10, -0.0102], yaw: 0.0}     # sdf:152
+    A_shape_video:   {pose: [0.38, -0.18, -0.0056], yaw: 0.6}    # sdf:295
+  planner_registration:  # scenario_params.yaml:2-5 — 3 discs r=0.085
+    - [0.30, 0.15, 0.085]
+    - [0.55, 0.10, 0.085]
+    - [0.38, -0.18, 0.085]
+  obstacle_cost: {weight: 5000.0, decay: 0.04}  # scenario_params.yaml:6-7
+  robot_base_disc: ABSENT
+start:  # single fixed start (no 5-variant sweep)
+  q_init_object: [1.0, 0, 0, 0, 0.30, 0.40, -0.005982]  # sim_params.yaml:17 (yaw 0)
+goal:  # single fixed goal (no 5-variant sweep)
+  fixed_target_position: [0.50, -0.40, -0.005982]        # goal_params.yaml:30
+  fixed_target_orientation: [0.70710678, 0, 0, 0.70710678]  # yaw +pi/2, goal_params.yaml:31
+success_thresholds: {position: 0.02, orientation: 0.1}   # goal_params.yaml:10-11 (tighter than upstream 0.05)
+# --- faithful sign port present elsewhere in this tree ---
+faithful_port_candidate: examples/sampling_c3/anything_icra_c_v5
+  # scenario_params.yaml: scenario_name icra_sign; 8 planner obstacles =
+  # 7 glyph discs at (0.5, {-0.55,-0.25,-0.10,0.15,0.30,0.45,0.60}) + base
+  # disc (0,0,r=0.09); exact 10-vertex hulls via SAMPLING_C3_OBS_POLYS;
+  # sim obstacles examples/sampling_c3/urdf/scene_icra_sign.sdf (7 extruded
+  # upstream hulls, poses matching upstream row exactly); pushed object
+  # push_c_glyph.sdf. Not an xArm6 task dir.

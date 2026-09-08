@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!-- OIM slalom scene in the OIM-NATIVE frame (rigid identity registration).
+     Upstream: oim/models/xarm6_pusht_tabletop/slalom.xml + scenes.py:588-599
+     at d6d80a6. Six static axis-aligned fins forming three gates at
+     y = +0.22 / 0.00 / -0.22 with 0.240 m openings (near/far/near):
+       fin_1_near half (0.10, 0.02, 0.035) at (0.05,  0.22)
+       fin_1_far  half (0.18, 0.02, 0.035) at (0.57,  0.22)
+       fin_2_near half (0.095,0.02, 0.035) at (0.245, 0.00)
+       fin_2_far  half (0.085,0.02, 0.035) at (0.665, 0.00)
+       fin_3_near half (0.10, 0.02, 0.035) at (0.05, -0.22)
+       fin_3_far  half (0.18, 0.02, 0.035) at (0.57, -0.22)
+     Fins are 0.07 m tall (half the family's usual 0.14) — deliberate
+     upstream choice. Table top z = -0.029 -> centre z = 0.006. -->
+<sdf version="1.7">
+  <model name="scene_slalom">
+    <static>true</static>
+    <link name="fin_1_near"><pose>0.05 0.22 0.006 0 0 0</pose>
+      <visual name="fin_1_near_v"><geometry><box><size>0.20 0.04 0.07</size></box></geometry>
+        <material><diffuse>0.85 0.35 0.1 1.0</diffuse></material></visual>
+      <collision name="fin_1_near_c"><geometry><box><size>0.20 0.04 0.07</size></box></geometry></collision>
+    </link>
+    <link name="fin_1_far"><pose>0.57 0.22 0.006 0 0 0</pose>
+      <visual name="fin_1_far_v"><geometry><box><size>0.36 0.04 0.07</size></box></geometry>
+        <material><diffuse>0.85 0.35 0.1 1.0</diffuse></material></visual>
+      <collision name="fin_1_far_c"><geometry><box><size>0.36 0.04 0.07</size></box></geometry></collision>
+    </link>
+    <link name="fin_2_near"><pose>0.245 0.0 0.006 0 0 0</pose>
+      <visual name="fin_2_near_v"><geometry><box><size>0.19 0.04 0.07</size></box></geometry>
+        <material><diffuse>0.85 0.35 0.1 1.0</diffuse></material></visual>
+      <collision name="fin_2_near_c"><geometry><box><size>0.19 0.04 0.07</size></box></geometry></collision>
+    </link>
+    <link name="fin_2_far"><pose>0.665 0.0 0.006 0 0 0</pose>
+      <visual name="fin_2_far_v"><geometry><box><size>0.17 0.04 0.07</size></box></geometry>
+        <material><diffuse>0.85 0.35 0.1 1.0</diffuse></material></visual>
+      <collision name="fin_2_far_c"><geometry><box><size>0.17 0.04 0.07</size></box></geometry></collision>
+    </link>
+    <link name="fin_3_near"><pose>0.05 -0.22 0.006 0 0 0</pose>
+      <visual name="fin_3_near_v"><geometry><box><size>0.20 0.04 0.07</size></box></geometry>
+        <material><diffuse>0.85 0.35 0.1 1.0</diffuse></material></visual>
+      <collision name="fin_3_near_c"><geometry><box><size>0.20 0.04 0.07</size></box></geometry></collision>
+    </link>
+    <link name="fin_3_far"><pose>0.57 -0.22 0.006 0 0 0</pose>
+      <visual name="fin_3_far_v"><geometry><box><size>0.36 0.04 0.07</size></box></geometry>
+        <material><diffuse>0.85 0.35 0.1 1.0</diffuse></material></visual>
+      <collision name="fin_3_far_c"><geometry><box><size>0.36 0.04 0.07</size></box></geometry></collision>
+    </link>
+  </model>
+</sdf>

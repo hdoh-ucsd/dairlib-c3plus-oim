@@ -1,0 +1,52 @@
+# Upstream OIM (MJX Python, commit d6d80a6) open_table scene definition.
+# Sources (all under /root/push_anything_ADMM/external/oim_upstream_main):
+#   examples/poses/open_table.yaml            (5 starts / 5 goals)
+#   oim/utils/scenes.py:336-424 (_tee_scene), :203-208 (footprint), :333, :562
+#   oim/models/xarm6_pusht_tabletop/tee.xml   (block geometry, mass, friction)
+#   oim/models/xarm6_pusht_tabletop/tee_start.xml (start keyframe)
+#   oim/models/xarm6_pusht_tabletop/common.xml:50 (default geom mu 0.5)
+#   oim/configs/robots/xarm6.yaml:108-109     (success thresholds)
+
+scene: open_table
+object: T-block (measured lab T, re-scaled family 2026-08-25)
+geometry:
+  crossbar_half_extents_xy: [0.0445, 0.0099]   # full 0.089 x 0.0198 m
+  stem_half_extents_xy: [0.0099, 0.0397]       # full 0.0198 x 0.0794 m
+  crossbar_center_y: 0.0099
+  stem_center_y: -0.0397
+  half_height: 0.0298                          # full height 0.0596 m
+  body_z: 0.0298                               # bottom face on table top z=0
+mass_total: 0.1          # kg; tee.xml: crossbar 0.05 + stem 0.05 (EQUAL per-geom)
+inertia: computed by MuJoCo from per-geom box shape at 0.05 kg each
+com_y_body_frame: -0.0149   # 0.5*0.0099 + 0.5*(-0.0397), equal geom masses
+friction:
+  object_table_mu: 0.3      # explicit <pair> in tee.xml, condim=3
+  ee_object_mu: 0.5         # default geom friction 0.5 (common.xml:50), MuJoCo pair
+  limit_surface_radius: 0.0422   # measured, scenes.py:385
+table:
+  size: 0.800 x 1.523 m, top at z = 0, x span [-0.05, 0.75], y span [-0.7615, 0.7615]
+frame:
+  world = xArm6 base frame ("xarm_device"); base at origin, yaw 0, base_z -0.0111
+  corridor: start y=+0.4 -> goal y=-0.4, 0.8 m push, 180-deg flip
+obstacles: []   # none in the planner field except the robot base disc
+robot_base_disc:  # in ObstacleField only (planner analytic path), not a scene obstacle
+  center: [0.0, 0.0]
+  radius: 0.09
+success_thresholds:   # oim/configs/robots/xarm6.yaml:108-109
+  goal_pos_tol: 0.05     # m
+  goal_theta_tol: 0.1    # rad
+scene_default_start: [0.381, 0.400, 0.0]
+scene_default_goal: [0.381, -0.400, 3.1416]
+
+starts:   # [x, y, yaw]  examples/poses/open_table.yaml
+  "1": [0.3810, 0.4000, 0.0000]
+  "2": [0.3660, 0.4310, 0.0579]
+  "3": [0.3910, 0.4370, -0.4082]
+  "4": [0.3610, 0.3570, 0.3282]
+  "5": [0.4060, 0.3830, 0.2806]
+goals:
+  "1": [0.3810, -0.4000, 3.1416]
+  "2": [0.3970, -0.4310, 3.2400]
+  "3": [0.4040, -0.3930, 2.7924]
+  "4": [0.3860, -0.4240, 2.7704]
+  "5": [0.3590, -0.4240, 2.7338]
