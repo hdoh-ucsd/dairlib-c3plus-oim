@@ -1,0 +1,24 @@
+# open_task: T-push on open table, no obstacles.
+# Footprint derived from examples/sampling_c3/urdf/push_t_oimscale_m01.sdf:
+#   crossbar box 0.089 x 0.0198 centered at (0, 0.0099) in object frame
+#   stem box 0.0198 x 0.0794, link pose (0, -0.0397) -> spans y in [-0.0794, 0]
+# Block height 0.0596 -> half height 0.0298; resting mid-height = 0.0298.
+# Pusher radius 0.0195 = end_effector_tip sphere in end_effector_full.urdf.
+goal: [0.381, -0.4, 3.1416]
+object_channel_substring: G_shape_video
+footprint:
+  - [-0.0445, 0.0198]
+  - [-0.0445, 0.0]
+  - [-0.0099, 0.0]
+  - [-0.0099, -0.0794]
+  - [0.0099, -0.0794]
+  - [0.0099, 0.0]
+  - [0.0445, 0.0]
+  - [0.0445, 0.0198]
+pusher_radius: 0.0195
+block_half_height: 0.0298
+tip_target_z: 0.0298
+obstacles: {}
+tip_floor_branch: real
+control_dt: 0.1
+boundary_sample_spacing: 0.002

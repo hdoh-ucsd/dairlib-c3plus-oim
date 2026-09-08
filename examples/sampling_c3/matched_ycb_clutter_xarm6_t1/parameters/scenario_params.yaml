@@ -8,6 +8,7 @@ obstacles:
 - [0.22, 0.20, 0.0996]    # domino_sugar box, laid on its side
 - [0.60, -0.16, 0.0520]   # spam_can hull
 - [0.15, -0.18, 0.0491]   # mustard_bottle hull
+- [0.0, 0.0, 0.09]        # robot base disc (planner-only, upstream scenes.py Circle r=0.09)
 obstacle_cost_weight: 5000.0
 obstacle_cost_decay: 0.04
 obstacle_model: examples/sampling_c3/urdf/scene_ycb_clutter_oimframe.sdf

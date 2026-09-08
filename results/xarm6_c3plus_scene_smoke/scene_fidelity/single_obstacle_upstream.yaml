@@ -1,0 +1,56 @@
+# Upstream (oim_upstream_main @ d6d80a6) single_obstacle scene extraction.
+# All provenance paths relative to /root/push_anything_ADMM/external/oim_upstream_main.
+scene: single_obstacle   # IsaacGym sim_task02 "push the tee, avoiding an obstacle"
+frame: world origin = xArm6 base; table long axis = y; corridor y=+0.4 -> -0.4
+entry_point: examples/pusht/single_obstacle.py  # Experiment(world="3d", scene="single_obstacle")
+
+object:
+  type: T-block (tee)
+  model: oim/models/xarm6_pusht_tabletop/tee.xml
+  crossbar_half_extents: [0.0445, 0.0099, 0.0298]   # tee.xml:120
+  stem_half_extents: [0.0099, 0.0397, 0.0298]       # tee.xml:121, stem at local (0,-0.0397)
+  geom_masses: [0.05, 0.05]                          # tee.xml:120-121 (explicit per-geom)
+  total_mass: 0.1                                    # scenes.py:376 (mass=0.1)
+  mu_table_contact: 0.3                              # tee.xml:150-151 pair friction; scenes.py:377
+  limit_surface_radius: 0.0422                       # scenes.py:385
+  body_z: 0.0298                                     # bottom face on table z=0
+
+obstacle:
+  count: 1  # sim; planner obstacle field adds robot-base disc (see planner section)
+  geometry: box (cube)
+  half_extents_xyz: [0.05, 0.05, 0.05]   # single_obstacle.xml:28 size="0.05 0.05 0.05"
+  pose_xyz: [0.35, 0.0, 0.05]            # single_obstacle.xml:28 (bottom on table z=0)
+  orientation: identity (axis-aligned)
+  height: 0.10                            # tall enough that the pusher stick can hit it
+  friction: MuJoCo default geom mu 0.5 (class tabletop_obstacle; pair with T governed by geom mu)
+  static: true (worldbody geom, no joint)
+
+planner_obstacle_field:   # oim/utils/scenes.py
+  - {type: box, center: [0.35, 0.0], half_extents: [0.05, 0.05]}   # scenes.py:213 _TABLETOP_CUBE, used at :564
+  - {type: circle, center: [0.0, 0.0], radius: 0.09}               # scenes.py:333,371 robot mounted base
+                                                                    # (dropped for the base-less "point" embodiment only)
+
+nominal_task:              # scenes.py:358-359 (_tee_scene)
+  object_start: [0.381, 0.400, 0.0]
+  goal: [0.381, -0.400, 3.141592653589793]
+
+starts:                    # examples/poses/single_obstacle.yaml (x, y, yaw)
+  1: [0.3810, 0.4000, 0.0000]
+  2: [0.3660, 0.4310, 0.0579]
+  3: [0.3910, 0.4370, -0.4082]
+  4: [0.3610, 0.3570, 0.3282]
+  5: [0.4060, 0.3830, 0.2806]
+goals:
+  1: [0.3810, -0.4000, 3.1416]
+  2: [0.3970, -0.4310, 3.2400]
+  3: [0.4040, -0.3930, 2.7924]
+  4: [0.3860, -0.4240, 2.7704]
+  5: [0.3590, -0.4240, 2.7338]
+
+success:                   # oim/configs/robots/xarm6.yaml:108-109; checked in experiment.py:1367-1374
+  goal_pos_tol: 0.05       # pos_err < 0.05 m
+  goal_theta_tol: 0.1      # theta_err < 0.1 rad
+
+robot:
+  arm: xArm6, base at world origin, base_z = -0.0111  # scenes.py:397-400
+  arm_start_deg: [0.0, -45.0, -45.0, 0.0, 90.0]       # scenes.py:400 (5-joint home)

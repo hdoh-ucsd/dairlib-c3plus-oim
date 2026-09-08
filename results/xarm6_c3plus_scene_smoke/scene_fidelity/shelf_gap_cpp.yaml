@@ -1,0 +1,51 @@
+# C++ port shelf_gap scene (matched_shelf_gap_xarm6_t1..t5), worktree oim-scene-sync-metrics.
+# All paths relative to repo root; provenance file:line noted.
+scene: shelf_gap
+frame:
+  note: "OIM-native frame, rigid identity registration (scene_shelf_gap_oimframe.sdf header). Table top at z=-0.029; resting_object_height -0.009 (goal_params.yaml:13)."
+
+object:
+  model: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf   # sim_params.yaml:1
+  crossbar: {size: [0.089, 0.0198, 0.0596], pos_y: 0.0099, mass: 0.0528504}  # sdf:7-13
+  stem:     {size: [0.0198, 0.0794, 0.0596], pos_y: -0.0397, mass: 0.0471496} # sdf:21-28
+  total_mass: 0.1000                                          # 0.0528504+0.0471496
+  inertia: explicit per-link (sdf:9,25); uniform-density split, NOT upstream's 0.05/0.05
+  friction_in_sdf: none                                       # no <surface> block -> Drake default
+  planner_mu_per_pair_type: [0.4165, 1, 0.4615]               # t1/parameters/sampling_c3_options.yaml:41 (same in c3plus_options.yaml:47)
+
+obstacles_sim:
+  model: examples/sampling_c3/urdf/scene_shelf_gap_oimframe.sdf  # scenario_params.yaml:10
+  shelf_big:   {size: [0.26, 0.16, 0.14], pose: [0.62, 0.0, 0.041]}  # sdf:15-19; x span [0.49,0.75]
+  shelf_small: {size: [0.10, 0.16, 0.14], pose: [0.24, 0.0, 0.041]}  # sdf:20-24; x span [0.19,0.29]
+  gap_width_sim: 0.200
+
+obstacles_planner:                    # t1..t5 parameters/scenario_params.yaml:2-7 (identical across trials)
+  representation: circles [x, y, radius]
+  circles:
+    - [0.62, -0.053, 0.133]           # big shelf, 3 circles circumscribing box
+    - [0.62,  0.000, 0.133]
+    - [0.62,  0.053, 0.133]
+    - [0.24, -0.040, 0.064]           # small shelf, 2 circles
+    - [0.24,  0.040, 0.064]
+  obstacle_cost_weight: 5000.0        # scenario_params.yaml:8
+  obstacle_cost_decay: 0.04           # scenario_params.yaml:9
+  robot_base_disc: ABSENT             # upstream planner adds Circle r=0.09 @ origin (scenes.py:371)
+  gap_width_planner: 0.183            # inner circle surfaces: 0.24+0.064=0.304 to 0.62-0.133=0.487
+
+poses:                                # sim_params.yaml:17 (q_init_object, wxyz quat), goal_params.yaml:30-31
+  starts:                             # yaw = 2*atan2(qz, qw)
+    "1": [0.381, 0.400, 0.000000]     # t1 sim_params.yaml:17 [1,0,0,0]
+    "2": [0.366, 0.431, 0.057908]     # t2 sim_params.yaml:17 [0.999581,0,0,0.028946]
+    "3": [0.391, 0.437, -0.408204]    # t3 sim_params.yaml:17 [0.979244,0,0,-0.202686]
+    "4": [0.361, 0.357, 0.328205]     # t4 sim_params.yaml:17 [0.986566,0,0,0.163364]
+    "5": [0.406, 0.383, 0.280594]     # t5 sim_params.yaml:17 [0.990174,0,0,0.13984]
+  goals:
+    "1": [0.381, -0.400, 3.141600]    # t1 goal_params.yaml:30-31 [-3.67321e-06,0,0,1]
+    "2": [0.404, -0.393, 2.792397]    # t2 [0.173711,0,0,0.984797]
+    "3": [0.363, -0.410, 3.568397]    # t3 [-0.211788,0,0,0.977316]
+    "4": [0.367, -0.391, 2.733798]    # t4 [0.202486,0,0,0.979285]
+    "5": [0.404, -0.418, 3.389203]    # t5 [-0.123488,0,0,0.992346]
+
+success:
+  position_success_threshold: 0.02    # t1 goal_params.yaml:11 — STRICTER than upstream 0.05
+  orientation_success_threshold: 0.1  # t1 goal_params.yaml:12 — matches upstream

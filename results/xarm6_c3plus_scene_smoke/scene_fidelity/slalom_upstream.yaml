@@ -1,0 +1,103 @@
+# slalom — upstream OIM scene definition, extracted at commit d6d80a6
+# (scene introduced by 80a6fde "[New Task] slalom task added"; files touched:
+#  README.md, examples/poses/slalom.yaml, examples/pusht/slalom.py,
+#  oim/configs/sweeps/{ablation,launch,object_only}.yaml,
+#  oim/models/xarm6_pusht_tabletop/slalom.xml, slalom_point.xml,
+#  oim/utils/scenes.py)
+# All coordinates: ROBOT BASE FRAME — xArm6 base at world origin (0,0),
+# table long axis = y, corridor runs +y -> -y at x = 0.381.
+# Provenance paths are relative to external/oim_upstream_main.
+
+scene: slalom
+entry_point: examples/pusht/slalom.py            # Experiment(world="3d", scene="slalom")
+scene_spec: oim/utils/scenes.py:613-623          # "slalom": _tee_scene(...)
+mjcf: oim/models/xarm6_pusht_tabletop/slalom.xml # geoms lines 85-90
+
+object:
+  type: lab T-block (same as all _tee_scene tabletop scenes)
+  footprint:                                   # scenes.py:203-208 _TABLETOP_TEE_FOOTPRINT
+    crossbar_half: [0.0445, 0.0099]            # 0.089 x 0.0198 m
+    stem_half: [0.0099, 0.0397]                # 0.0198 x 0.0794 m
+    crossbar_y: 0.0099
+    stem_y: -0.0397
+  greatest_width: 0.131                        # slalom.xml:23
+  min_width: 0.089                             # crossbar
+  height: 0.0596                               # slalom.xml:56
+  mass: 0.1                                    # scenes.py:376
+  mu_table: 0.3                                # scenes.py:377; tee.xml:150-151 pair friction 0.3, condim=3
+  limit_surface_radius: 0.0422                 # scenes.py:385 (measured)
+
+corridor:
+  object_start_nominal: [0.381, 0.400, 0.0]    # scenes.py:359
+  goal_nominal: [0.381, -0.400, 3.14159]       # scenes.py:358 (180-deg flip about z)
+
+# ---------------------------------------------------------------------------
+# Obstacles: 6 static fins (3 gates) + robot base disc (planner-only).
+# Gate openings 0.240 m, alternating near/far/near; consecutive openings
+# overlap 0.050 m in x. slalom.xml:19-21:
+#   gate 1  y = +0.22  opening x in [0.15, 0.39]  (near side)
+#   gate 2  y =  0.00  opening x in [0.34, 0.58]  (far side)
+#   gate 3  y = -0.22  opening x in [0.15, 0.39]  (near side)
+# NOTE: slalom.py's docstring says y=+-0.21 / 0.200 m openings — that text is
+# STALE; the authoritative numbers are scenes.py:588-599 + slalom.xml (0.22 /
+# 0.240), which tests/test_scenes.py cross-checks against the compiled MJCF.
+obstacles:
+  # planner Boxes: scenes.py:616-621 (center, half_extents, angle=0)
+  # sim geoms:     slalom.xml:85-90  (box, size = half extents, z-center 0.035)
+  - {name: fin_1_near, type: box, center_xy: [0.05,  0.22], half_extents_xy: [0.10,  0.02], yaw: 0.0, half_height: 0.035, z_center: 0.035, top_z: 0.07, static: true}
+  - {name: fin_1_far,  type: box, center_xy: [0.57,  0.22], half_extents_xy: [0.18,  0.02], yaw: 0.0, half_height: 0.035, z_center: 0.035, top_z: 0.07, static: true}
+  - {name: fin_2_near, type: box, center_xy: [0.245, 0.00], half_extents_xy: [0.095, 0.02], yaw: 0.0, half_height: 0.035, z_center: 0.035, top_z: 0.07, static: true}
+  - {name: fin_2_far,  type: box, center_xy: [0.665, 0.00], half_extents_xy: [0.085, 0.02], yaw: 0.0, half_height: 0.035, z_center: 0.035, top_z: 0.07, static: true}
+  - {name: fin_3_near, type: box, center_xy: [0.05, -0.22], half_extents_xy: [0.10,  0.02], yaw: 0.0, half_height: 0.035, z_center: 0.035, top_z: 0.07, static: true}
+  - {name: fin_3_far,  type: box, center_xy: [0.57, -0.22], half_extents_xy: [0.18,  0.02], yaw: 0.0, half_height: 0.035, z_center: 0.035, top_z: 0.07, static: true}
+  # planner-only (no sim geom; the physical base shell is part of the arm model)
+  - {name: robot_base, type: circle, center_xy: [0.0, 0.0], radius: 0.09, static: true, planner_only: true}  # scenes.py:333,371 (shell max radius 0.0912)
+
+obstacle_notes:
+  fin_height: 0.07   # HALF the family's usual 0.14 — object still blocked (block 0.0596), arm crosses fins repeatedly (slalom.xml:54-64)
+  fin_thickness_y: 0.04
+  clear_band_between_gates_y: 0.18
+  table_x_span: [-0.05, 0.75]   # gates 1/3 span it outright; gate-2 near fin stops at x=0.15 (0.059 m slot vs base shell, impassable)
+
+friction:
+  # common.xml:50 default geom: friction="0.5 0.005 0.0001" (sliding/torsional/rolling)
+  default_geom_mu: 0.5           # applies to obstacles (tabletop_obstacle class adds only rgba) and EE stick
+  table_object_pair_mu: 0.3      # tee.xml:150-151 explicit <pair> condim=3, mu 0.3 0.3
+  object_mass: 0.1
+  # MJX pair friction (no explicit pair) = max of the two geoms' -> EE-T effectively 0.5.
+  sim_options: {timestep: 0.01, integrator: implicitfast, gravity: [0,0,-9.81]}  # common.xml:45
+
+arm:
+  robot: xarm6 (5-joint use in port; upstream full model with base shell)
+  base_pos_xy: [0.0, 0.0]        # scenes.py:397
+  base_yaw_deg: 0.0
+  base_z: -0.0111                # scenes.py:399 measured mount offset
+
+success:                          # oim/configs/robots/xarm6.yaml:108-109
+  goal_pos_tol: 0.05             # m
+  goal_theta_tol: 0.1            # rad
+
+# ---------------------------------------------------------------------------
+# 5 starts / 5 goals — examples/poses/slalom.yaml (x, y, yaw); jitter tighter
+# than open-corridor scenes (nearest fin 0.22 m from corridor end).
+starts:
+  "1": [0.3810, 0.4000, 0.0000]    # scene's original start, 8.1 cm clear
+  "2": [0.3660, 0.4310, 0.0579]    # 11.3 cm
+  "3": [0.3910, 0.4370, -0.4082]   # 12.2 cm
+  "4": [0.3610, 0.3700, 0.3282]    # 5.3 cm
+  "5": [0.4060, 0.3930, 0.2806]    # 7.4 cm
+goals:
+  "1": [0.3810, -0.4000, 3.1416]   # scene's original goal, 8.1 cm clear
+  "2": [0.4040, -0.3930, 2.7924]   # 7.5 cm
+  "3": [0.3630, -0.4100, 3.5684]   # 10.7 cm
+  "4": [0.3670, -0.3800, 2.7338]   # 6.3 cm
+  "5": [0.4040, -0.4180, 3.3892]   # 9.9 cm
+
+frame_convention: >
+  Robot base frame: arm base IS the world origin (scenes.py:386-399); +x away
+  from the arm across the table (table x in [-0.05, 0.75]), corridor along y
+  at x = 0.381 from +0.4 to -0.4; yaw about +z, start yaw 0, goal yaw pi
+  (180-degree flip). Table top at z = 0 in the MJX model (base_z = -0.0111
+  mount offset). The C++ port's oimframe scenes use the SAME xy frame with
+  table/platform top at z = -0.029 (see scene_shelf_gap_oimframe.sdf), so
+  fin z-centers there are 0.035 - 0.029 = 0.006.
