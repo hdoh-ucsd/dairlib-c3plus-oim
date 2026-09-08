@@ -1,0 +1,16 @@
+run_id: xarm6_c3plus_ycb_clutter_s05_to_g05
+scenario: ycb_clutter
+demo: matched_ycb_clutter_xarm6_t5
+goal:
+- 0.381
+- -0.4
+- 3.1416
+files:
+- xarm6_c3plus_ycb_clutter_s05_to_g05_metrics.csv
+- xarm6_c3plus_ycb_clutter_s05_to_g05_eval_metrics.png
+- xarm6_c3plus_ycb_clutter_s05_to_g05_result.json
+git_commit: dd3568ced224cbc12682800797fc89c3c8d569f8
+tolerances:
+  pos_tol: 0.05
+  ang_tol: 0.1
+generated: '2026-09-08T00:08:37.436832'
