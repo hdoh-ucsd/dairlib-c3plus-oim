@@ -1,0 +1,14 @@
+[VALIDATE] final-row errors reproduce independently: PASS
+[VALIDATE] result JSON final errors equal CSV final row: PASS
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair03/xarm6_c3plus_ycb_clutter_s03_to_g03_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair03/xarm6_c3plus_ycb_clutter_s03_to_g03_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair03/xarm6_c3plus_ycb_clutter_s03_to_g03_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair03/xarm6_c3plus_ycb_clutter_s03_to_g03_manifest.yaml
+  frame 400/418
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair03/xarm6_c3plus_ycb_clutter_s03_to_g03.mp4 (418 frames @ 10 fps)
+-rw-r--r-- 1 root root  365140 Sep  7 22:17 xarm6_c3plus_ycb_clutter_s03_to_g03.mp4
+-rw-r--r-- 1 root root  147540 Sep  7 22:16 xarm6_c3plus_ycb_clutter_s03_to_g03_eval_metrics.png
+-rw-r--r-- 1 root root     429 Sep  7 22:16 xarm6_c3plus_ycb_clutter_s03_to_g03_manifest.yaml
+-rw-r--r-- 1 root root 1060319 Sep  7 22:16 xarm6_c3plus_ycb_clutter_s03_to_g03_metrics.csv
+-rw-r--r-- 1 root root     377 Sep  7 22:16 xarm6_c3plus_ycb_clutter_s03_to_g03_result.json
+PACKAGE DONE ycb_clutter

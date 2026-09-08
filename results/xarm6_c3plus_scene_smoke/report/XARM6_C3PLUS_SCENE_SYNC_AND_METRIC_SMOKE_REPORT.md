@@ -146,6 +146,36 @@ smoke tooling only, inherited from an older render script. Fixed in
 All six runs were re-postprocessed and re-rendered from the original traces
 (no re-simulation needed; trajectories unchanged).
 
+## 30-trial pair campaign (2026-09-07, third pass — user-directed)
+
+All remaining start→goal pairs (s02–s05 for every scene, 24 trials) were run
+at the same protocol as the smoke tier (200 s cap, upstream 0.05 m/0.1 rad
+success, `--matched_mu`, exact planner geometry env), through **5 parallel
+lanes** (unique udpm ports 7841+/7871+, isolated dirs/process groups; machine
+load ≈17/16 during waves). Twelve new task dirs were generated for
+ycb_clutter/icra_sign/slalom pairs 2–5 (`tools/scene_smoke/gen_pair_dirs.py`,
+poses verbatim from upstream `examples/poses` at d6d80a6; the upstream
+base-disc was also added to the pre-existing single_obstacle/shelf_gap t2–t5
+planner lists for parity with t1).
+
+Full per-trial table: `metrics/pair_campaign_summary.csv` (30 rows = 6 scenes
+× 5 pairs). Every trial produced the complete artifact package under
+`runs/<scene>/pair0N/`.
+
+**Successes at the 200 s cap: 1/30** — open_task pair 1 (49.0 s). Closest
+misses: shelf_gap pair 2 (final 0.0489 m/0.268 rad — just outside both
+gates), icra pair 4 (0.248 m), open_task pair 4 (0.224 m). ycb and slalom
+show uniform ~0.55–0.79 m finals with near-π orientation error — acquisition
++ first-rotation phases consume the whole cap, consistent with the matched
+benchmark's short-cap C3+ behavior (bb55b1ec7). A future statistically
+meaningful campaign should raise the cap substantially.
+
+Incidents: the dir generator initially truncated
+`sampling_c3_controller_params.yaml` (write-before-read bug — 12 trials ran
+empty and were regenerated + rerun); icra pair 4's shared start arm pose
+clipped the rotated C at spawn (topple guard at t=1.7 s) and was re-IK'd to
+tip (0.291, 0.448) — the pair-4 dir carries its own `q_init_franka`.
+
 ## Verdict
 
 SIX_SCENE_METRIC_SMOKE_VALIDATED

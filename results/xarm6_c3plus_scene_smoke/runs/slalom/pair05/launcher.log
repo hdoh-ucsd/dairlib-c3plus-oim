@@ -1,0 +1,2 @@
+FINAL {"first_success_t": null, "control_steps": 2264, "best_pos_err": 0.8101386272839387, "best_ang_err": 3.1085839663204053, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE matched_slalom_xarm6_t5 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/slalom/pair05
