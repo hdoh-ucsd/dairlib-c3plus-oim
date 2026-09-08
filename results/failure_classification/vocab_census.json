@@ -1,0 +1,7 @@
+{
+ "Switching to C# because reached repositioning target": 1796,
+ "Repositioning after not making progress in C#": 1693,
+ "Repositioning because found good sample": 161,
+ "Crossed cost switching threshold.": 15,
+ "abort: Failure at systems/controllers/sampling_based_c#_controller.cc:# in CheckForWorkspaceLimitViolations(): condition 'std::pow(lcs_x_curr->get_data()[#], #)": 2
+}
