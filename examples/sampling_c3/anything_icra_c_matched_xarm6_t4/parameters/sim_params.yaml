@@ -1,0 +1,18 @@
+object_model: examples/sampling_c3/urdf/push_c_glyph.sdf
+object_models: [examples/sampling_c3/urdf/push_c_glyph.sdf]
+
+franka_publish_rate: 1000
+object_publish_rate: 10
+actuator_delay: 0.000
+
+visualize_drake_sim: false
+publish_efforts: true
+
+dt: 0.0001
+realtime_rate: 1
+
+# 5-joint xArm6 (joint6 welded out): IK-recomputed so end_effector_tip starts
+# at [0.3266, 0.4007, 0.0732] with the tool vertical (tool z-axis = world +z).
+q_init_franka: [0.972422, 0.310762, -1.230368, 0.06679, 0.916921]
+q_init_object: [0.986566, 0, 0, 0.163364, 0.291, 0.3534, -0.016]
+q_init_objects: [[0.986566, 0, 0, 0.163364, 0.291, 0.3534, -0.016]]

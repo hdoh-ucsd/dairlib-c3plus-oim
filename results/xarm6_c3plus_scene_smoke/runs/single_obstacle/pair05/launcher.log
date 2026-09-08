@@ -1,0 +1,2 @@
+FINAL {"first_success_t": null, "control_steps": 5253, "best_pos_err": 0.4789336495947296, "best_ang_err": 1.610418354907071, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE matched_single_obstacle_xarm6_t5 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/single_obstacle/pair05

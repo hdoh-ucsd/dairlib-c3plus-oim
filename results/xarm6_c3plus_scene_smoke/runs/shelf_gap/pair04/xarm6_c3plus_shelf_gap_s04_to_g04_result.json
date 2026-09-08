@@ -1,0 +1,13 @@
+{
+  "run_id": "xarm6_c3plus_shelf_gap_s04_to_g04",
+  "scenario": "shelf_gap",
+  "success": false,
+  "t_success": null,
+  "first_success_t": null,
+  "final_position_error": 0.42690768766690607,
+  "final_orientation_error": 0.13502630751579936,
+  "best_pos_err": 0.4511224061713411,
+  "best_ang_err": 0.5062102705887348,
+  "n_control_steps": 7114,
+  "sim_time_end": 106.211
+}

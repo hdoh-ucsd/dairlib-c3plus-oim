@@ -1,0 +1,13 @@
+{
+  "run_id": "xarm6_c3plus_single_obstacle_s03_to_g03",
+  "scenario": "single_obstacle",
+  "success": false,
+  "t_success": null,
+  "first_success_t": null,
+  "final_position_error": 0.49593134466236416,
+  "final_orientation_error": 1.5437955898393276,
+  "best_pos_err": 0.4747992382482787,
+  "best_ang_err": 1.1922947075067996,
+  "n_control_steps": 5028,
+  "sim_time_end": 87.618
+}

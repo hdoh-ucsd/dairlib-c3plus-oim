@@ -1,0 +1,3 @@
+/root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/tools/scene_smoke/run_scene_smoke.sh: line 33: 2055290 Aborted                 (core dumped) setsid "$BIN/franka_sampling_c3_controller" --is_simulation=true --demo_name="$DEMO" --robot_model=xarm6 --lcm_url="$URL" > "$OUT/planner.log" 2>&1
+FINAL {"first_success_t": null, "control_steps": 702, "best_pos_err": 0.5985715018509391, "best_ang_err": 2.7829120846769237, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE matched_shelf_gap_xarm6_t3 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair03
