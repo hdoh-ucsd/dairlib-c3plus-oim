@@ -1,2 +1,0 @@
-FINAL {"first_success_t": null, "control_steps": 1812, "best_pos_err": 0.6527062221375834, "best_ang_err": 0.5493539140712165, "pos_tol": 0.05, "ang_tol": 0.1}
-RUN DONE anything_icra_c_matched_xarm6_t2 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/icra_sign/pair02
