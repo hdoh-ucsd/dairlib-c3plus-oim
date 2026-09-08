@@ -1,2 +1,2 @@
-FINAL {"first_success_t": null, "control_steps": 7307, "best_pos_err": 0.27302531080984566, "best_ang_err": 0.03727983154960235, "pos_tol": 0.05, "ang_tol": 0.1}
+FINAL {"first_success_t": null, "control_steps": 23525, "best_pos_err": 0.07374062318901556, "best_ang_err": 0.06018011870885731, "pos_tol": 0.05, "ang_tol": 0.1}
 RUN DONE matched_shelf_gap_xarm6_t5 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair05

@@ -4,11 +4,11 @@ WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-s
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/single_obstacle/pair05/xarm6_c3plus_single_obstacle_s05_to_g05_eval_metrics.png
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/single_obstacle/pair05/xarm6_c3plus_single_obstacle_s05_to_g05_result.json
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/single_obstacle/pair05/xarm6_c3plus_single_obstacle_s05_to_g05_manifest.yaml
-  frame 700/761
-wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/single_obstacle/pair05/xarm6_c3plus_single_obstacle_s05_to_g05.mp4 (761 frames @ 10 fps)
--rw-r--r-- 1 root root 1275471 Sep  8 00:01 xarm6_c3plus_single_obstacle_s05_to_g05.mp4
--rw-r--r-- 1 root root  273737 Sep  8 00:01 xarm6_c3plus_single_obstacle_s05_to_g05_eval_metrics.png
--rw-r--r-- 1 root root     453 Sep  8 00:01 xarm6_c3plus_single_obstacle_s05_to_g05_manifest.yaml
--rw-r--r-- 1 root root 4610311 Sep  8 00:01 xarm6_c3plus_single_obstacle_s05_to_g05_metrics.csv
--rw-r--r-- 1 root root     385 Sep  8 00:01 xarm6_c3plus_single_obstacle_s05_to_g05_result.json
+  frame 1000/1020
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/single_obstacle/pair05/xarm6_c3plus_single_obstacle_s05_to_g05.mp4 (1020 frames @ 10 fps)
+-rw-r--r-- 1 root root 374052 Sep  8 10:21 xarm6_c3plus_single_obstacle_s05_to_g05.mp4
+-rw-r--r-- 1 root root 179802 Sep  8 10:20 xarm6_c3plus_single_obstacle_s05_to_g05_eval_metrics.png
+-rw-r--r-- 1 root root    453 Sep  8 10:20 xarm6_c3plus_single_obstacle_s05_to_g05_manifest.yaml
+-rw-r--r-- 1 root root 745914 Sep  8 10:20 xarm6_c3plus_single_obstacle_s05_to_g05_metrics.csv
+-rw-r--r-- 1 root root    383 Sep  8 10:20 xarm6_c3plus_single_obstacle_s05_to_g05_result.json
 PACKAGE DONE single_obstacle

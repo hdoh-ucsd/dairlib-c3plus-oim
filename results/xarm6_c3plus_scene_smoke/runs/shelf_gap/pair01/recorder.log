@@ -1,1 +1,2 @@
-FINAL {"first_success_t": null, "control_steps": 1127, "best_pos_err": 0.522767626612476, "best_ang_err": 2.6879142377930116, "pos_tol": 0.05, "ang_tol": 0.1}
+SUCCESS t=186.20
+FINAL {"first_success_t": 186.2, "control_steps": 13440, "best_pos_err": 0.03654378909804547, "best_ang_err": 0.008235182906126681, "pos_tol": 0.05, "ang_tol": 0.1}

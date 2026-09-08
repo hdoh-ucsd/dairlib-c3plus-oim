@@ -1,4 +1,37 @@
-# xArm6 C3+ pair campaign — SR report (2-lane validated tier)
+# 600 s tier (2026-09-08, 2 lanes) — CURRENT CANONICAL TIER
+
+All 30 cases rerun at a **600 s cap** (2 lanes; the 200 s tier below is kept
+for comparison; its raw runs are archived at `runs_200s_2lane/`). Two scoring
+conventions are reported and both live in `metrics/pair_campaign_summary.csv`:
+- **SR(trace)** — benchmark-canonical: instantaneous latch of pos<0.05 m ∧
+  ang<0.1 rad on the 0.1 s state trace (same criterion as the matched
+  benchmark's score_all.py). **Headline SR.**
+- SR(step-CSV) — conservative: a per-control-step metrics row must satisfy
+  both. Differs when the object sweeps through tolerance mid-rotation and
+  overshoots before the cap (open p3/p5 here: latched at 125.8 s/114.0 s,
+  then drifted 0.37/0.48 rad in the 5 s settle window).
+
+| scene | SR(trace) 600 s | SR 200 s | success times (s) / best notes | mean solves/s |
+|---|---|---|---|---|
+| open_task | **5/5** | 2/5 | 38.1, 79.1, 125.8, 60.2, 114.0 | 72 |
+| shelf_gap | **1/5** | 0/5 | p1 @ 186.2; p5 best 0.07 m/0.06 rad (never simultaneous) | 45 |
+| single_obstacle | 0/5 | 0/5 | p3 rotation solved (0.02 rad) at 0.47 m | 25 |
+| icra_sign | 0/5 | 0/5 | p2/p4/p5 best 0.24–0.28 m with rotation 0.01–0.13 rad | 24 |
+| ycb_clutter | 0/5 | 0/5 | 0.54–0.80 m, ang 2.0–3.0 rad remaining | 38 |
+| slalom | 0/5 | 0/5 | 0.50–0.75 m, never through gate 1 | 39 |
+| **overall** | **6/30 (20%)** | 2/30 | | 40 |
+
+Reading: the cap was the binding constraint exactly where predicted —
+open_task went 2/5 → **5/5** (two wins beyond 200 s) and shelf_gap landed its
+first success at 186 s. The remaining obstacle scenes plateau at healthy
+solve rates: icra/single now solve orientation and close to 0.24–0.47 m but
+hit last-decimeter fixed points; ycb/slalom still spend 600 s in
+acquisition/first rotation — genuine solver-dynamics limits (F4/F1 classes
+from the benchmark), no longer time or load artifacts.
+
+---
+
+# xArm6 C3+ pair campaign — SR report (200 s, 2-lane tier — superseded)
 2026-09-08 · branch `feature/oim-scene-sync-metrics` · 30 trials
 (6 scenes × paired starts/goals 1–5, upstream OIM d6d80a6 poses).
 

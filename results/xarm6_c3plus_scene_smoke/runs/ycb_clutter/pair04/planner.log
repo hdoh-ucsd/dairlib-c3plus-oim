@@ -1,26 +1,26 @@
 Setting C3 and LCS factory options for pose and position tracking.
 Setting C3 and LCS factory options for pose and position tracking.
-[2026-09-07 23:39:06.870] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:112: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.870] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:113: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.870] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:114: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.870] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:115: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.870] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:116: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.870] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:117: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.870] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:118: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.897] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:137: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.897] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:136: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.935] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:142: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.935] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:141: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.951] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:147: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.951] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:146: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.964] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'stiffness' found in a 'joint' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.964] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'springref' found in a 'joint' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.964] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.964] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:151: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.985] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:202: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.985] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:201: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.990] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:212: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
-[2026-09-07 23:39:06.990] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:259: warning: The tag 'velocity' found as a child of 'actuator' is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.255] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:112: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.255] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:113: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.255] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:114: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.255] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:115: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.255] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:116: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.255] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:117: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.255] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:118: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.280] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:137: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.280] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:136: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.319] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:142: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.319] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:141: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.335] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:147: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.336] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:146: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.350] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'stiffness' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.350] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'springref' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.350] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.350] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:151: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.366] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:202: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.366] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:201: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.372] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:212: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-08 09:11:15.372] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:259: warning: The tag 'velocity' found as a child of 'actuator' is currently unsupported and will be ignored.
 Before target generator
 Before muxes
 [OBS-POLY] 2 exact convex-polygon obstacles configured
@@ -34,8 +34,8 @@ Constructing subscriber for FRANKA_STATE_SIMULATION
 ACTIVE CHANNEL: FRANKA_STATE_SIMULATION
 constructed loop
 After LcmHandleSubscriptionsUntil
-[2026-09-07 23:39:10.704] [console] [info] Waiting for the first lcm input messages
-[2026-09-07 23:39:10.704] [console] [info] sampling_c3_controller_matched_ycb_clutter_xarm6_t4 started
+[2026-09-08 09:11:19.050] [console] [info] Waiting for the first lcm input messages
+[2026-09-08 09:11:19.050] [console] [info] sampling_c3_controller_matched_ycb_clutter_xarm6_t4 started
 Detected goal change!
 Repositioning after not making progress in C3
 Switching to C3 because reached repositioning target
@@ -52,13 +52,205 @@ Switching to C3 because reached repositioning target
 Repositioning after not making progress in C3
 Switching to C3 because reached repositioning target
 Repositioning after not making progress in C3
-[REPOS-V1.1] reposition timeout -> back to C3
-Repositioning after not making progress in C3
 Switching to C3 because reached repositioning target
 Repositioning after not making progress in C3
 Switching to C3 because reached repositioning target
 Repositioning after not making progress in C3
-[REPOS-V1.1] reposition timeout -> back to C3
+Switching to C3 because reached repositioning target
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
+!!! WARNING !!! Unsuccessful sample buffer overflow
+Repositioning after not making progress in C3
+Switching to C3 because reached repositioning target
 !!! WARNING !!! Unsuccessful sample buffer overflow
 Repositioning after not making progress in C3
 Switching to C3 because reached repositioning target

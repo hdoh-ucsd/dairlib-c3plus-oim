@@ -1,0 +1,16 @@
+run_id: xarm6_c3plus_shelf_gap_s03_to_g03
+scenario: shelf_gap
+demo: matched_shelf_gap_xarm6_t3
+goal:
+- 0.381
+- -0.4
+- 3.1416
+files:
+- xarm6_c3plus_shelf_gap_s03_to_g03_metrics.csv
+- xarm6_c3plus_shelf_gap_s03_to_g03_eval_metrics.png
+- xarm6_c3plus_shelf_gap_s03_to_g03_result.json
+git_commit: dd3568ced224cbc12682800797fc89c3c8d569f8
+tolerances:
+  pos_tol: 0.05
+  ang_tol: 0.1
+generated: '2026-09-08T00:02:46.703753'

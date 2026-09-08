@@ -4,11 +4,11 @@ WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-s
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair05/xarm6_c3plus_shelf_gap_s05_to_g05_eval_metrics.png
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair05/xarm6_c3plus_shelf_gap_s05_to_g05_result.json
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair05/xarm6_c3plus_shelf_gap_s05_to_g05_manifest.yaml
-  frame 700/702
-wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair05/xarm6_c3plus_shelf_gap_s05_to_g05.mp4 (702 frames @ 10 fps)
--rw-r--r-- 1 root root 1284609 Sep  8 00:03 xarm6_c3plus_shelf_gap_s05_to_g05.mp4
--rw-r--r-- 1 root root  276047 Sep  8 00:03 xarm6_c3plus_shelf_gap_s05_to_g05_eval_metrics.png
--rw-r--r-- 1 root root     417 Sep  8 00:03 xarm6_c3plus_shelf_gap_s05_to_g05_manifest.yaml
--rw-r--r-- 1 root root 3794166 Sep  8 00:03 xarm6_c3plus_shelf_gap_s05_to_g05_metrics.csv
--rw-r--r-- 1 root root     374 Sep  8 00:03 xarm6_c3plus_shelf_gap_s05_to_g05_result.json
+  frame 900/962
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/shelf_gap/pair05/xarm6_c3plus_shelf_gap_s05_to_g05.mp4 (962 frames @ 10 fps)
+-rw-r--r-- 1 root root  1848662 Sep  8 10:29 xarm6_c3plus_shelf_gap_s05_to_g05.mp4
+-rw-r--r-- 1 root root   284080 Sep  8 10:29 xarm6_c3plus_shelf_gap_s05_to_g05_eval_metrics.png
+-rw-r--r-- 1 root root      417 Sep  8 10:29 xarm6_c3plus_shelf_gap_s05_to_g05_manifest.yaml
+-rw-r--r-- 1 root root 12278624 Sep  8 10:29 xarm6_c3plus_shelf_gap_s05_to_g05_metrics.csv
+-rw-r--r-- 1 root root      379 Sep  8 10:29 xarm6_c3plus_shelf_gap_s05_to_g05_result.json
 PACKAGE DONE shelf_gap

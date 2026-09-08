@@ -1,0 +1,13 @@
+{
+  "run_id": "xarm6_c3plus_icra_sign_s02_to_g02",
+  "scenario": "icra_sign",
+  "success": false,
+  "t_success": null,
+  "first_success_t": null,
+  "final_position_error": 0.39170441889523117,
+  "final_orientation_error": 1.3878839524092674,
+  "best_pos_err": 0.4125317692919438,
+  "best_ang_err": 1.263291834049696,
+  "n_control_steps": 4779,
+  "sim_time_end": 100.821999
+}

@@ -4,11 +4,11 @@ WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-s
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair05/xarm6_c3plus_ycb_clutter_s05_to_g05_eval_metrics.png
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair05/xarm6_c3plus_ycb_clutter_s05_to_g05_result.json
 WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair05/xarm6_c3plus_ycb_clutter_s05_to_g05_manifest.yaml
-  frame 600/682
-wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair05/xarm6_c3plus_ycb_clutter_s05_to_g05.mp4 (682 frames @ 10 fps)
--rw-r--r-- 1 root root 1031246 Sep  8 00:09 xarm6_c3plus_ycb_clutter_s05_to_g05.mp4
--rw-r--r-- 1 root root  234435 Sep  8 00:08 xarm6_c3plus_ycb_clutter_s05_to_g05_eval_metrics.png
--rw-r--r-- 1 root root     429 Sep  8 00:08 xarm6_c3plus_ycb_clutter_s05_to_g05_manifest.yaml
--rw-r--r-- 1 root root 3886220 Sep  8 00:08 xarm6_c3plus_ycb_clutter_s05_to_g05_metrics.csv
--rw-r--r-- 1 root root     374 Sep  8 00:08 xarm6_c3plus_ycb_clutter_s05_to_g05_result.json
+  frame 900/933
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/xarm6_c3plus_scene_smoke/runs/ycb_clutter/pair05/xarm6_c3plus_ycb_clutter_s05_to_g05.mp4 (933 frames @ 10 fps)
+-rw-r--r-- 1 root root   632415 Sep  8 10:45 xarm6_c3plus_ycb_clutter_s05_to_g05.mp4
+-rw-r--r-- 1 root root   138940 Sep  8 10:44 xarm6_c3plus_ycb_clutter_s05_to_g05_eval_metrics.png
+-rw-r--r-- 1 root root      429 Sep  8 10:44 xarm6_c3plus_ycb_clutter_s05_to_g05_manifest.yaml
+-rw-r--r-- 1 root root 11926662 Sep  8 10:44 xarm6_c3plus_ycb_clutter_s05_to_g05_metrics.csv
+-rw-r--r-- 1 root root      375 Sep  8 10:44 xarm6_c3plus_ycb_clutter_s05_to_g05_result.json
 PACKAGE DONE ycb_clutter
