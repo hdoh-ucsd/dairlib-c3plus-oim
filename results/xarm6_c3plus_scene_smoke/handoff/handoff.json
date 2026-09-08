@@ -1,0 +1,14 @@
+{
+  "verdict": "SIX_SCENE_METRIC_SMOKE_VALIDATED",
+  "branch": "feature/oim-scene-sync-metrics",
+  "pushed_to": "standalone/feature/oim-scene-sync-metrics (hdoh-ucsd/dairlib-c3plus-oim)",
+  "upstream_commit": "d6d80a65ba6a45079e1384ba879e54d50d25bc39",
+  "baseline_commit": "dca28c1f4",
+  "phantom_contact_observations": "No phantom-contact or penetration events were flagged during the ycb_clutter or shelf_gap smoke runs at the packaging level; no timestamps to hand to the forensic task from this phase. min_obstacle_clearance is logged per control step in each *_metrics.csv if the forensic task wants to re-scan.",
+  "campaign_todos": [
+    "instantiate pair-2..5 task dirs for ycb_clutter, icra_sign (anything_icra_c_matched_xarm6_t{2..5}), slalom (poses already in scene_fidelity/*_upstream.yaml)",
+    "pick a campaign cap well above 200 s for obstacle scenes",
+    "score at upstream tolerance 0.05 m / 0.1 rad (the C++ internal 0.02 m gate is stricter and was left frozen)"
+  ],
+  "run_recipe": "tools/scene_smoke/run_scene_smoke.sh + env_<scene>.sh + package_run.sh; binaries: worktree bazel-bin (built at dca28c1f4)"
+}
