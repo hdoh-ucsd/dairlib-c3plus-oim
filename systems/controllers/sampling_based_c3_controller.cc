@@ -179,7 +179,7 @@ inline double YawWXYZ(double w, double x, double y, double z) {
 // "inverse_square"); it stays the EXACT nonlinear value (never the QP approx).
 // ---------------------------------------------------------------------------
 enum class ObsInner { kNone, kExpPsd, kInvSqPsd };
-enum class ObsRank { kExp, kInvSq };
+enum class ObsRank { kExp, kInvSq, kReluFootprint };
 struct ObsExtConfig {
   ObsInner inner = ObsInner::kNone;
   ObsRank rank = ObsRank::kExp;
@@ -187,6 +187,13 @@ struct ObsExtConfig {
   double eps_rho = 1e-8;    // numerical epsilon in rho_bar = sqrt(r.r + eps^2)
   double d_ref = 0.05;      // reciprocal-square calibration clearance
   double recip_min_denom = 0.005;
+  // Footprint-aware ReLU ranking variant (SAMPLING_C3_RANK_OBS_MODE=
+  // relu_footprint): J_obs_relu = relu_w * sum_k max(0,(eps-d_k)/eps)^2 with
+  // d_k = min footprint signed distance to all obstacles (RouteFootprintSdf).
+  // Active ONLY when the mode is selected AND relu_w > 0; default path is
+  // bit-identical to the frozen baseline.
+  double relu_eps = 0.01;   // SAMPLING_C3_OBS_RELU_EPS (m)
+  double relu_w = 0.0;      // SAMPLING_C3_OBS_RELU_W (must be set to activate)
   bool nonpen = false;          // legacy QP-halfspace nonpen (qp_halfspace_legacy)
   bool lcs_contact = false;     // obstacle as frictionless LCS contact (lcs_contact)
   int n_obs_slots = 2;          // N_closest fixed obstacle-contact slots
@@ -876,6 +883,15 @@ inline ObsExtConfig& ObsCfg() {
     }
     const char* rm = std::getenv("SAMPLING_C3_RANK_OBS_MODE");
     if (rm && std::string(rm) == "inverse_square") c.rank = ObsRank::kInvSq;
+    if (rm && std::string(rm) == "relu_footprint") {
+      c.rank = ObsRank::kReluFootprint;
+      const char* re = std::getenv("SAMPLING_C3_OBS_RELU_EPS");
+      if (re) c.relu_eps = std::atof(re);
+      const char* rw = std::getenv("SAMPLING_C3_OBS_RELU_W");
+      if (rw) c.relu_w = std::atof(rw);
+      std::cout << "[OBS-RANK] relu_footprint eps=" << c.relu_eps
+                << " w=" << c.relu_w << std::endl;
+    }
     const char* tr = std::getenv("SAMPLING_C3_OBS_TRUST");
     if (tr) c.trust = std::atof(tr);
     // Preferred selector. "qp_halfspace_legacy" == old SAMPLING_C3_OBJ_NONPEN=1;
@@ -2519,8 +2535,28 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     // In lcs_contact mode NO obstacle objective is applied anywhere: obstacle
     // behavior comes only from the augmented LCS contact (J_rank has no
     // obstacle-potential contribution).
-    if (scenario.obstacle_cost_weight > 0.0 && !scenario.obstacles.empty() &&
-        !ObsCfg().lcs_contact) {
+    if (ObsCfg().rank == ObsRank::kReluFootprint && ObsCfg().relu_w > 0.0 &&
+        !scenario.obstacles.empty()) {
+      // Footprint-aware ReLU ranking term (experimental variant; env-gated).
+      // d_k = min signed distance of the orientation-aware object footprint
+      // to every obstacle (exact boxes/polys/discs via ObsSdfPoint). Applied
+      // in every obstacle mode, including lcs_contact, by design of the
+      // RELU experimental condition.
+      const double eps = ObsCfg().relu_eps;
+      double obstacle_cost = 0.0;
+      for (const VectorXd& xk : cost_trajectory_pair.second) {
+        const double qw = xk(3), qx = xk(4), qy = xk(5), qz = xk(6);
+        const double yaw =
+            std::atan2(2.0 * (qw * qz + qx * qy),
+                       1.0 - 2.0 * (qy * qy + qz * qz));
+        const double d =
+            RouteFootprintSdf(xk(7), xk(8), yaw, scenario.obstacles);
+        const double r = std::max(0.0, (eps - d) / eps);
+        obstacle_cost += ObsCfg().relu_w * r * r;
+      }
+      all_sample_costs_[i] += obstacle_cost;
+    } else if (scenario.obstacle_cost_weight > 0.0 &&
+               !scenario.obstacles.empty() && !ObsCfg().lcs_contact) {
       double obstacle_cost = 0.0;
       const ObsRank rmode = ObsCfg().rank;  // default kExp == frozen baseline
       for (const VectorXd& xk : cost_trajectory_pair.second) {

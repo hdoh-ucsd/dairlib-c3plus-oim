@@ -1,0 +1,20 @@
+# Faithful OIM 'icra_sign': seven fixed glyphs spell "ICRA 2026" with the C
+# slot empty; the pushed object is the C glyph (see push_c_glyph.sdf).
+# Discs below are the CIRCUMSCRIBED fallback per glyph (max hull-vertex
+# radius); the exact 10-vertex hulls are supplied via SAMPLING_C3_OBS_POLYS
+# (see results_icra_port/obstacles/obs_polys_env.txt) and override indices
+# 0-6. Index 7 is the upstream planner-only robot-base circle (scenes.py
+# _ROBOT_BASE_RADIUS = 0.09) and stays a true disc.
+scenario_name: icra_sign
+obstacles:
+  - [0.5, -0.55, 0.0533]   # I
+  - [0.5, -0.25, 0.0719]   # R
+  - [0.5, -0.10, 0.0755]   # A
+  - [0.5, 0.15, 0.0663]    # 2
+  - [0.5, 0.30, 0.0515]    # 0
+  - [0.5, 0.45, 0.0663]    # 2b
+  - [0.5, 0.60, 0.0583]    # 6
+  - [0.0, 0.0, 0.09]       # robot base (planner-only, upstream Circle)
+obstacle_cost_weight: 5000.0
+obstacle_cost_decay: 0.04
+obstacle_model: examples/sampling_c3/urdf/scene_icra_sign.sdf

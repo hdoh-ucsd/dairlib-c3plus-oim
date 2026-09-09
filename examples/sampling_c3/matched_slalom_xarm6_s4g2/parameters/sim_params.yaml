@@ -1,0 +1,18 @@
+object_model: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf
+object_models: [examples/sampling_c3/urdf/push_t_oimscale_m01.sdf]
+
+franka_publish_rate: 1000
+object_publish_rate: 10
+actuator_delay: 0.000
+
+visualize_drake_sim: false
+publish_efforts: true
+
+dt: 0.0001
+realtime_rate: 1
+
+# 5-joint xArm6 (joint6 welded out): IK-recomputed so end_effector_tip starts
+# at [0.3266, 0.4007, 0.0732] with the tool vertical (tool z-axis = world +z).
+q_init_franka: [0.888666, 0.258649, -1.158786, 0.00013, 0.900238]
+q_init_object: [0.986566, 0, 0, 0.163364, 0.361, 0.37, 0.0008]
+q_init_objects: [[0.986566, 0, 0, 0.163364, 0.361, 0.37, 0.0008]]

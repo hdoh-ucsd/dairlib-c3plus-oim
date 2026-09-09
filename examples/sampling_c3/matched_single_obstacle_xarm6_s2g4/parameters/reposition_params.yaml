@@ -1,0 +1,38 @@
+# Repositioning trajectory type options (defined as RepositioningTrajectoryType
+# enum in reposition_params.h):
+#   0. kSpline:           move from current to target with spline that distorts
+#                         around the object.
+#   1. kSpherical:        move away from object to a radius, along the spherical
+#                         surface to outside target, then in to target.
+#   2. kCircular:         (planar) move away from object to a planar radius,
+#                         along the circle to outside target, then in to target.
+#   3. kPiecewiseLinear:  move up to waypoint height, over to above target, then
+#                         down.
+traj_type: 3
+
+### Parameters used for multiple repositioning trajectory types.
+speed: 0.18    # m/s
+
+# Thresholds for switching to straight line trajectories.
+use_straight_line_traj_under_spline: 0.12             # xyz meters for spline
+use_straight_line_traj_within_angle: 0.3              # rad for circle/sphere
+use_straight_line_traj_under_piecewise_linear: 0.008  # xy meters for PWL
+
+# Spline-specific parameters.
+spline_width: 0.17
+
+# Spherical-specific parameters.
+sphere_radius: 0.18
+
+# Circular-specific parameters.
+circle_radius: 0.20
+circle_height: 0.00
+
+# Piecewise-linear-specific parameters.
+# xArm6 safe lift height (robot-specific, sanctioned as "different safe lift height"):
+# the xArm6's z tracking lags the PWL, so at traverse onset the sphere bottom skims the
+# T top (0.0306) and scoops it over at mu_eff=1.0 (measured topples t~8 s, rounds 2-3).
+# 0.10 buys ~4 cm of lag margin. Panda keeps 0.06.
+pwl_waypoint_height: 0.10
+
+max_tilt_angle: 20
