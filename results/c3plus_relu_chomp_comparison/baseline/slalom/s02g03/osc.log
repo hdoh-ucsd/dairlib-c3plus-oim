@@ -1,0 +1,421 @@
+Setting C3 and LCS factory options for pose and position tracking.
+[2026-09-09 07:11:25.386] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:112: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.386] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:113: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.386] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:114: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.386] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:115: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.386] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:116: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.386] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:117: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.386] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:118: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.422] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:137: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.422] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:136: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.449] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:142: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.449] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:141: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.459] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:147: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.459] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:146: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.470] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'stiffness' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.470] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'springref' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.470] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.470] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:151: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.486] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:202: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.486] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:201: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.491] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:212: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-09 07:11:25.491] [console] [warning] /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:259: warning: The tag 'velocity' found as a child of 'actuator' is currently unsupported and will be ignored.
+PRELIFT_RELEASE system enabled (channel OBJECT_G_shape_video_STATE_SIMULATION)
+Error: /usr/lib/x86_64-linux-gnu/graphviz/config6a is zero sized, or other read error.
+Format: "svg" not recognized. Use one of:
+rm: cannot remove '../diagrams/sampling_c3_xarm6_five_joint_controller': No such file or directory
+XARM6_5J executor active: Kc=4.0 alpha=2.0 lambda=0.05 kv=[300,300,200,200,200] efforts=[50,50,32,32,32] qdot_limit=0.5
+Constructing subscriber for FRANKA_STATE_SIMULATION
+ACTIVE CHANNEL: FRANKA_STATE_SIMULATION
+[2026-09-09 07:11:25.503] [console] [info] Waiting for the first lcm input messages
+[2026-09-09 07:11:28.845] [console] [info] sampling_c3_xarm6_five_joint_controller started
+XARM6_5J t=0 p_des=0.326682 0.400795  0.07331 p_tip=0.326609 0.400718  0.13286 |qdot_cmd|=0.64384 v_des=0 0 0 v_task= 0.000292091  0.000306663      -0.2382  2.83679e-05 -0.000285466
+XARM6_5J t=1 p_des=0.317953 0.354131   -0.004 p_tip=  0.318277   0.352931 0.00775253 |qdot_cmd|=0.611192 v_des=-0.0797774  -0.129428          0 v_task=-0.0810722  -0.124628 -0.0470101  0.0399942 -0.0348513
+XARM6_5J t=2 p_des=0.293344 0.305504   -0.004 p_tip=  0.29415  0.306424 -0.003075 |qdot_cmd|=0.0917234 v_des=   -0.013149 -0.000175146            0 v_task= -0.0163724 -0.00385737 -0.00370001   0.0195809   -0.018411
+XARM6_5J t=3 p_des=  0.28933  0.308534 0.0593884 p_tip= 0.290339  0.309548 0.0608536 |qdot_cmd|=0.663538 v_des=   0    0 0.18 v_task=-0.00403632 -0.00405621     0.17414  -0.0174967   0.0163111
+XARM6_5J t=4 p_des= 0.297568  0.400003 0.0990834 p_tip= 0.296844  0.401435 0.0981358 |qdot_cmd|=0.631039 v_des=  0.023194   0.169118 0.00929902 v_task= 0.0260909   0.163391  0.0130894 -0.0286509  0.0188516
+XARM6_5J t=5 p_des= 0.306642   0.46697 0.0509768 p_tip= 0.305615  0.466043 0.0495064 |qdot_cmd|=0.494933 v_des=0.00207067    0.01193  -0.179592 v_task=  0.0061777   0.0156374   -0.173711 -0.00448942  0.00213278
+XARM6_5J t=6 p_des=0.387218 0.407931   -0.004 p_tip=   0.387729    0.408145 -0.00283418 |qdot_cmd|=0.359031 v_des=  0.103177 0.00366396          0 v_task=   0.101133  0.00280805 -0.00466328  0.00537006 -0.00210164
+XARM6_5J t=7 p_des=0.449347 0.388311   -0.004 p_tip=   0.449417    0.388498 -0.00370543 |qdot_cmd|=0.592662 v_des=    -0.14 -0.105343         0 v_task=  -0.140282   -0.106092 -0.00117829 -0.00740756    0.010307
+XARM6_5J t=8 p_des=0.368345 0.391915   -0.004 p_tip=    0.36895    0.391341 -0.00324812 |qdot_cmd|=0.0653931 v_des=-0.0203268  0.0214524          0 v_task= -0.0227476   0.0237469 -0.00300751   0.0106759  -0.0114721
+XARM6_5J t=9 p_des= 0.36396 0.397306   -0.004 p_tip=  0.364019   0.397144 -0.0039694 |qdot_cmd|=0.00547124 v_des=-8.85999e-07  5.79095e-06            0 v_task=-0.000236581  0.000654084 -0.000122414   0.00281698  -0.00285591
+PRELIFT_RELEASE=START t=9.672 tip=   0.363971    0.397297 -0.00399001 object=  0.403806   0.353408 0.00079904 dist=0.0592708
+XARM6_5J t=10 p_des=   0.349719    0.412687 -0.00406952 p_tip=   0.356458      0.4053 -0.00406952 |qdot_cmd|=0.0753706 v_des=0 0 0 v_task=  -0.0269595    0.0295497            0  0.000178433 -0.000686492
+PRELIFT_RELEASE=DONE t=10.962 tip=    0.33935    0.423186 -0.00429693 object=   0.403803    0.353392 0.000798999 dist=0.0950023
+XARM6_5J t=11 p_des=   0.339905    0.422264 -0.00170654 p_tip=    0.339057     0.422626 -0.000747859 |qdot_cmd|=0.513531 v_des=   0    0 0.18 v_task=  0.0033941 -0.00145069    0.176165  0.00171233 -0.00188632
+XARM6_5J t=12 p_des= 0.340613   0.39659 0.0915706 p_tip= 0.341242  0.397301 0.0897732 |qdot_cmd|=0.482858 v_des=-0.000862849   -0.0104056    -0.179697 v_task=-0.00337844  -0.0132527   -0.172507 -0.00769184  0.00735716
+XARM6_5J t=13 p_des=0.348028 0.355086   -0.004 p_tip=   0.348815    0.354999 0.000757554 |qdot_cmd|=0.245461 v_des=-0.0152804  -0.051453          0 v_task=-0.0184285 -0.0511066 -0.0190302  0.0210496 -0.0193006
+XARM6_5J t=14 p_des=0.345323 0.347088   -0.004 p_tip=   0.345218    0.347379 -0.00376237 |qdot_cmd|=0.0175297 v_des= 0.000774352 -0.000330087            0 v_task= 0.00119384 -0.00149187 -0.00095053  0.00730868  -0.0070105
+PRELIFT_RELEASE=START t=14.758 tip=   0.345743    0.346956 -0.00396648 object=   0.403796    0.353345 0.000798992 dist=0.058403
+XARM6_5J t=15 p_des=   0.328428     0.34578 -0.00355405 p_tip=   0.338378    0.346778 -0.00355405 |qdot_cmd|=0.144711 v_des=0 0 0 v_task= -0.0398002 -0.00399318           0  0.00335231 -0.00348477
+XARM6_5J t=16 p_des=  0.307047    0.34632 -0.0022271 p_tip=  0.310694   0.346584 -0.0022271 |qdot_cmd|=0.0546418 v_des=0 0 0 v_task= -0.0145881 -0.00105709           0  0.00409959 -0.00416568
+PRELIFT_RELEASE=DONE t=16.191 tip=   0.309028    0.346598 -0.00214834 object=  0.403793   0.353328 0.00079904 dist=0.0950034
+XARM6_5J t=17 p_des= 0.322493  0.354962 0.0972002 p_tip= 0.323216  0.354912 0.0965514 |qdot_cmd|=0.614361 v_des= 0.130901 0.0772632 0.0279979 v_task=  0.128009  0.0774625  0.0305932 -0.0275194  0.0253245
+XARM6_5J t=18 p_des= 0.394717  0.397162 0.0841423 p_tip=0.393813 0.396206 0.081851 |qdot_cmd|=0.462218 v_des=0.00935479 0.00649654  -0.179639 v_task= 0.0129712  0.0103197  -0.170474 -0.0196236  0.0202696
+XARM6_5J t=19 p_des=0.375209 0.393528   -0.004 p_tip=    0.375787      0.39402 -0.000407584 |qdot_cmd|=0.121375 v_des=-0.0286202 0.00385075          0 v_task=-0.0309301 0.00188573 -0.0143697  0.0122193 -0.0120116
+XARM6_5J t=20 p_des=0.363941 0.397275   -0.004 p_tip=   0.364149    0.397166 -0.00381632 |qdot_cmd|=0.0120696 v_des=1.19149e-06 1.52438e-05           0 v_task=-0.000830396  0.000453446 -0.000734705   0.00488487  -0.00469023
+PRELIFT_RELEASE=START t=20.781 tip=  0.363969   0.397279 -0.0039733 object=   0.403784    0.353271 0.000798969 dist=0.0593465
+XARM6_5J t=21 p_des=   0.352282        0.41 -0.00402495 p_tip=   0.359004    0.402596 -0.00402495 |qdot_cmd|=0.0749834 v_des=0 0 0 v_task= -0.0268861   0.0296165           0 0.000949244  -0.0012439
+XARM6_5J t=22 p_des=   0.338098    0.424633 -0.00427134 p_tip=   0.339814    0.422769 -0.00427134 |qdot_cmd|=0.0198586 v_des=0 0 0 v_task= -0.00686038   0.00745505            0 -0.000753657 -7.82612e-06
+PRELIFT_RELEASE=DONE t=22.069 tip=  0.339442   0.423154 -0.0042772 object=   0.403782    0.353255 0.000798972 dist=0.0950026
+XARM6_5J t=23 p_des= 0.338856  0.395672 0.0998113 p_tip=0.339607 0.393857  0.10011 |qdot_cmd|=0.641571 v_des=-0.0211386  -0.176845 0.00189608 v_task= -0.0241424   -0.169584 0.000700491   -0.011562   0.0110046
+XARM6_5J t=24 p_des=0.346342 0.357132   -0.004 p_tip=  0.346145   0.357018 0.00474439 |qdot_cmd|=0.251832 v_des=0.00215058  -0.064787          0 v_task=0.00293523 -0.0643309 -0.0349776  0.0227224 -0.0205869
+XARM6_5J t=25 p_des=0.344999 0.347172   -0.004 p_tip=   0.344778    0.347532 -0.00363278 |qdot_cmd|=0.0202386 v_des=  0.00096807 -0.000459373            0 v_task=  0.0018526 -0.00190091 -0.00146889  0.00830767 -0.00793358
+PRELIFT_RELEASE=START t=25.978 tip=    0.34561    0.346934 -0.00397338 object=   0.403774    0.353207 0.000798905 dist=0.058501
+XARM6_5J t=26 p_des=   0.335127    0.345867 -0.00391538 p_tip=    0.34507     0.34693 -0.00391538 |qdot_cmd|=0.144625 v_des=0 0 0 v_task= -0.0397733  -0.0042527           0  0.00222116 -0.00217506
+XARM6_5J t=27 p_des=  0.307034   0.346078 -0.0024091 p_tip=  0.314283   0.346611 -0.0024091 |qdot_cmd|=0.103552 v_des=0 0 0 v_task= -0.0289979 -0.00213324           0  0.00441155 -0.00456655
+PRELIFT_RELEASE=DONE t=27.407 tip=   0.308995     0.34665 -0.00216918 object=   0.403771    0.353188 0.000799034 dist=0.0950017
+XARM6_5J t=28 p_des= 0.309549  0.346895 0.0811418 p_tip= 0.310403  0.347896 0.0821438 |qdot_cmd|=0.60482 v_des=   0    0 0.18 v_task=-0.00341667 -0.00400161    0.175992  -0.0243383   0.0215262
+XARM6_5J t=29 p_des= 0.396888   0.38458 0.0988643 p_tip=0.397637 0.384348 0.097777 |qdot_cmd|=0.612287 v_des= 0.150003 0.0765381 0.0115987 v_task=  0.147007  0.0774642  0.0159478 -0.0294699  0.0320338
+XARM6_5J t=30 p_des=0.407827 0.389156   -0.004 p_tip=  0.407739   0.389911 0.00778447 |qdot_cmd|=0.322847 v_des=-0.0710767  -0.015723          0 v_task=-0.0707265 -0.0187433 -0.0471379  0.0105494 -0.0109384
+XARM6_5J t=31 p_des=0.367697 0.395615   -0.004 p_tip=   0.368365    0.394937 -0.00323077 |qdot_cmd|=0.0890571 v_des= -0.024537 0.00484461          0 v_task= -0.0272081  0.00755376 -0.00307691  0.00999939  -0.0100731
+XARM6_5J t=32 p_des=0.363922 0.397235   -0.004 p_tip=   0.364001    0.397195 -0.00394808 |qdot_cmd|=0.00706611 v_des=-1.49149e-07 -1.74664e-06            0 v_task=-0.000316796    0.0001602 -0.000207699   0.00304393  -0.00294064
+PRELIFT_RELEASE=START t=32.2 tip=   0.363969    0.397221 -0.00396617 object=  0.403762    0.35313 0.00079896 dist=0.0593926
+XARM6_5J t=33 p_des=   0.338739    0.424243 -0.00418093 p_tip=   0.345486    0.416862 -0.00418093 |qdot_cmd|=0.0766264 v_des=0 0 0 v_task=  -0.0269899     0.029522            0   -0.0003477 -0.000518697
+PRELIFT_RELEASE=DONE t=33.487 tip=   0.339506    0.423097 -0.00426652 object=    0.40376    0.353114 0.000799054 dist=0.0950054
+XARM6_5J t=34 p_des=0.340123 0.422414 0.066861 p_tip= 0.340718  0.423253 0.0689995 |qdot_cmd|=0.50112 v_des=   0    0 0.18 v_task=-0.00237856 -0.00335869    0.171446  -0.0198797   0.0157886
+XARM6_5J t=35 p_des= 0.336578  0.377092 0.0402333 p_tip=  0.33651  0.377755 0.0394745 |qdot_cmd|=0.550014 v_des=-0.000686912  -0.00549536    -0.179915 v_task=-0.000416564  -0.00814904     -0.17688    0.0174358   -0.0149129
+XARM6_5J t=36 p_des=0.343921 0.347714   -0.004 p_tip=   0.344049    0.348476 -0.00258968 |qdot_cmd|=0.0443793 v_des= 0.00196789 -0.00140893           0 v_task= 0.00145584 -0.00445682 -0.00564128   0.0140075  -0.0132488
+XARM6_5J t=37 p_des=0.345403 0.346932   -0.004 p_tip=   0.345305     0.34703 -0.00392897 |qdot_cmd|=0.0083316 v_des= 0.000233822 -9.04946e-05            0 v_task= 0.000623908 -0.000481484 -0.000284131   0.00387576  -0.00373475
+PRELIFT_RELEASE=START t=37.416 tip=  0.345465   0.346933 -0.0039735 object=   0.403752    0.353065 0.000798988 dist=0.0586083
+XARM6_5J t=38 p_des=   0.317465    0.345844 -0.00303619 p_tip=    0.32743    0.346677 -0.00303619 |qdot_cmd|=0.142308 v_des=0 0 0 v_task= -0.0398609 -0.00333305           0  0.00387778  -0.0041128
+PRELIFT_RELEASE=DONE t=38.841 tip=   0.308956    0.346742 -0.00218053 object=   0.403749    0.353048 0.000798991 dist=0.0950027
+XARM6_5J t=39 p_des= 0.309486  0.346892 0.0171994 p_tip= 0.309462  0.347109 0.0191308 |qdot_cmd|=0.59253 v_des=   0    0 0.18 v_task= 9.46791e-05 -0.000865847     0.172275  -0.00357222   0.00287751
+XARM6_5J t=40 p_des= 0.344906  0.381235 0.0987742 p_tip= 0.345071  0.381369 0.0978556 |qdot_cmd|=0.613576 v_des=  0.11922     0.118 0.0122582 v_task=  0.118559   0.117463  0.0159326 -0.0294955  0.0268553
+XARM6_5J t=41 p_des=0.364165 0.399874   -0.004 p_tip= 0.364809  0.400521 0.0110311 |qdot_cmd|=0.183075 v_des=-0.00351542  -0.0127646           0 v_task= -0.0060918   -0.015353  -0.0601245  0.00979982 -0.00882023
+XARM6_5J t=42 p_des=0.363904 0.397224   -0.004 p_tip=   0.363932    0.397329 -0.00348089 |qdot_cmd|=0.0151529 v_des= 2.53397e-06 -5.19127e-05            0 v_task=-0.000108488 -0.000474365  -0.00207643   0.00533158   -0.0048406
+XARM6_5J t=43 p_des=0.363904 0.397197   -0.004 p_tip=   0.363916    0.397215 -0.00397072 |qdot_cmd|=0.0035877 v_des= 2.25428e-07 -5.06071e-06            0 v_task=-5.03997e-05 -7.58367e-05 -0.000117126   0.00152417  -0.00138853
+PRELIFT_RELEASE=START t=43.228 tip=   0.363914    0.397209 -0.00398235 object=   0.403741    0.352994 0.000798974 dist=0.0595081
+XARM6_5J t=44 p_des=0.363903 0.397191   -0.004 p_tip=  0.363886   0.397222 -0.0039949 |qdot_cmd|=0.00108323 v_des= 1.21067e-07 -2.15704e-06            0 v_task= 6.74109e-05 -0.000124588  -2.0409e-05  0.000421788  -0.00038133
+XARM6_5J t=45 p_des=0.363901 0.397189   -0.004 p_tip=   0.363902    0.397191 -0.00399871 |qdot_cmd|=0.000286633 v_des= 5.53656e-07 -1.63107e-06            0 v_task= -2.5666e-06 -1.30362e-05 -5.15928e-06  0.000116702 -0.000105684
+PRELIFT_RELEASE=START t=45.551 tip=   0.363901    0.397188 -0.00399932 object=   0.403736    0.352965 0.000798986 dist=0.059519
+XARM6_5J t=46 p_des=   0.346878    0.415595 -0.00412175 p_tip=     0.3536     0.40819 -0.00412175 |qdot_cmd|=0.0761365 v_des=0 0 0 v_task=  -0.0268855    0.0296171            0 -0.000752456  5.24132e-05
+PRELIFT_RELEASE=DONE t=46.834 tip=   0.339514    0.422959 -0.00432471 object=   0.403734    0.352949 0.000799012 dist=0.0950023
+XARM6_5J t=47 p_des=  0.34024   0.42189 0.0167466 p_tip= 0.340032  0.422746 0.0180444 |qdot_cmd|=0.511392 v_des=   0    0 0.18 v_task=0.000833497 -0.00342651    0.174809 -0.00551532  0.00405112
+XARM6_5J t=48 p_des=  0.39883  0.401636 0.0994796 p_tip= 0.400802  0.401724 0.0984199 |qdot_cmd|=0.525577 v_des=  0.170832  -0.036984 0.00521051 v_task=  0.162943 -0.0373362 0.00944925  -0.021441   0.024397
+XARM6_5J t=49 p_des=0.421337  0.38591   -0.004 p_tip=  0.421304   0.386499 0.00830411 |qdot_cmd|=0.580779 v_des=-0.118166 -0.043999         0 v_task= -0.118032 -0.0463549 -0.0492165  0.0144665 -0.0150706
+XARM6_5J t=50 p_des=0.367253 0.395391   -0.004 p_tip=   0.367933    0.394509 -0.00319159 |qdot_cmd|=0.0871403 v_des=-0.0240115 0.00639354          0 v_task= -0.0267297  0.00992338 -0.00323364   0.0125404  -0.0126021
+XARM6_5J t=51 p_des=0.363891  0.39717   -0.004 p_tip=   0.363966    0.397121 -0.00394555 |qdot_cmd|=0.00824164 v_des=4.68131e-07 -5.2818e-06           0 v_task=-0.000301123  0.000192105 -0.000217787   0.00364771  -0.00351333
+PRELIFT_RELEASE=START t=51.18 tip=   0.363939    0.397151 -0.00396229 object=   0.403725    0.352896 0.000799022 dist=0.05951
+XARM6_5J t=52 p_des=   0.338399    0.424592 -0.00418281 p_tip=   0.345027    0.417317 -0.00418281 |qdot_cmd|=0.0754779 v_des=0 0 0 v_task=  -0.0265088    0.0290983            0 -0.000213665 -0.000639474
+PRELIFT_RELEASE=DONE t=52.463 tip=   0.339609    0.422985 -0.00426032 object=   0.403723     0.35288 0.000798943 dist=0.0950017
+XARM6_5J t=53 p_des=0.340305 0.421931 0.070365 p_tip= 0.340903  0.422974 0.0724103 |qdot_cmd|=0.502599 v_des=   0    0 0.18 v_task=-0.00239201  -0.0041749    0.171819   -0.020568   0.0163769
+XARM6_5J t=54 p_des= 0.433376  0.393547 0.0889731 p_tip= 0.432398  0.393725 0.0873355 |qdot_cmd|=0.437239 v_des=    0.011181 -0.000451406    -0.179652 v_task=  0.0150927 -0.00116289   -0.173101   -0.015003   0.0192868
+XARM6_5J t=55 p_des=0.398612 0.382712   -0.004 p_tip=  0.397957   0.383855 0.00105091 |qdot_cmd|=0.406688 v_des=-0.112411 0.0089248         0 v_task= -0.109789  0.0043532 -0.0202036  0.0203374 -0.0217498
+XARM6_5J t=56 p_des=0.363882 0.397015   -0.004 p_tip=   0.364635    0.396259 -0.00365209 |qdot_cmd|=0.0216793 v_des=-4.61911e-05   0.00076218            0 v_task=-0.00305616  0.00378675 -0.00139162  0.00924668 -0.00920304
+PRELIFT_RELEASE=START t=56.815 tip=   0.363947    0.397126 -0.00395635 object=   0.403715    0.352826 0.000798978 dist=0.0595314
+XARM6_5J t=57 p_des=   0.353096    0.409054 -0.00399794 p_tip=   0.359786    0.401622 -0.00399794 |qdot_cmd|=0.0746981 v_des=0 0 0 v_task=  -0.026762   0.0297287           0  0.00219441 -0.00239032
+XARM6_5J t=58 p_des=   0.338318    0.424454 -0.00424386 p_tip=   0.340201    0.422391 -0.00424386 |qdot_cmd|=0.0217465 v_des=0 0 0 v_task= -0.00753408   0.00825379            0 -0.000465005 -0.000269677
+PRELIFT_RELEASE=DONE t=58.098 tip=   0.339648    0.422968 -0.00425228 object=   0.403712    0.352811 0.000798975 dist=0.0950059
+XARM6_5J t=59 p_des= 0.339014  0.397201 0.0998134 p_tip= 0.340067   0.39657 0.0997367 |qdot_cmd|=0.641973 v_des= -0.020346  -0.176969 0.00186562 v_task=-0.0245588  -0.174444 0.00217257  -0.012879  0.0119664
+XARM6_5J t=60 p_des=0.346592 0.358474   -0.004 p_tip=  0.346613   0.358555 0.00485742 |qdot_cmd|=0.287631 v_des=-0.00170002  -0.0731318           0 v_task=-0.00178215  -0.0734546  -0.0354297   0.0224869  -0.0202931
+XARM6_5J t=61 p_des=0.344677 0.347123   -0.004 p_tip=    0.34456    0.347514 -0.00361378 |qdot_cmd|=0.021793 v_des= 0.000695022 -0.000342386            0 v_task= 0.00116393 -0.00190519 -0.00154489  0.00852296  -0.0081459
+XARM6_5J t=62 p_des=0.345164 0.346898   -0.004 p_tip=   0.345133    0.346941 -0.00397151 |qdot_cmd|=0.00495776 v_des= 5.73324e-05 -1.43894e-05            0 v_task= 0.000179739 -0.000185879 -0.000113957   0.00228194  -0.00221104
+PRELIFT_RELEASE=START t=62.058 tip=   0.345143    0.346934 -0.00397471 object=   0.403704    0.352762 0.000799022 dist=0.0588502
+XARM6_5J t=63 p_des=   0.306921    0.346242 -0.00251765 p_tip=   0.315903    0.346846 -0.00251765 |qdot_cmd|=0.126348 v_des=0 0 0 v_task= -0.0359256 -0.00241603           0  0.00432024 -0.00450666
+PRELIFT_RELEASE=DONE t=63.474 tip=  0.308874   0.346943 -0.0022049 object=   0.403702    0.352744 0.000799028 dist=0.0950048
+XARM6_5J t=64 p_des= 0.309747  0.346897 0.0706565 p_tip= 0.310524  0.347934 0.0724974 |qdot_cmd|=0.594668 v_des=   0    0 0.18 v_task=-0.00310761 -0.00415041    0.172636  -0.0219016   0.0193578
+XARM6_5J t=65 p_des= 0.394573  0.379616 0.0989568 p_tip=0.394827 0.378966  0.09769 |qdot_cmd|=0.61436 v_des= 0.154735 0.0693582 0.0104318 v_task=  0.153718  0.0719583  0.0154992 -0.0285574  0.0314614
+XARM6_5J t=66 p_des=0.422821 0.389736   -0.004 p_tip=0.423325 0.390425 0.013396 |qdot_cmd|=0.393647 v_des=-0.0638304 -0.0433237          0 v_task= -0.0658442  -0.0460785  -0.0695839  0.00615548 -0.00621051
+XARM6_5J t=67 p_des=0.369898 0.394502   -0.004 p_tip=   0.370556    0.393503 -0.00294304 |qdot_cmd|=0.0931093 v_des=-0.0258012  0.0055178          0 v_task= -0.0284342  0.00951407 -0.00422782   0.0120142  -0.0122681
+XARM6_5J t=68 p_des=0.363862 0.397122   -0.004 p_tip=   0.363981    0.397039 -0.00393151 |qdot_cmd|=0.00864187 v_des= 5.47969e-07 -3.06983e-06            0 v_task=-0.000476773  0.000327844 -0.000273975    0.0037403  -0.00364229
+PRELIFT_RELEASE=START t=68.269 tip=    0.36392    0.397098 -0.00396209 object=   0.403692    0.352685 0.000798997 dist=0.0596186
+XARM6_5J t=69 p_des=   0.340407      0.4225 -0.00415835 p_tip=   0.347123    0.415091 -0.00415835 |qdot_cmd|=0.0765384 v_des=0 0 0 v_task=  -0.0268624    0.0296381            0 -0.000101008 -0.000704952
+PRELIFT_RELEASE=DONE t=69.55 tip=   0.339699    0.422892 -0.00426627 object=    0.40369    0.352669 0.000798905 dist=0.095006
+XARM6_5J t=70 p_des= 0.340565  0.421734 0.0575491 p_tip=0.341066 0.422802 0.059707 |qdot_cmd|=0.50117 v_des=   0    0 0.18 v_task=-0.00200394 -0.00426971    0.171368  -0.0175025   0.0138951
+XARM6_5J t=71 p_des= 0.336748  0.378261 0.0496342 p_tip= 0.336843  0.379045 0.0474658 |qdot_cmd|=0.527054 v_des=-0.00070267  -0.0056848   -0.179909 v_task=-0.0010804 -0.0088224  -0.171235  0.0149111 -0.0126106
+XARM6_5J t=72 p_des=0.343443 0.347829   -0.004 p_tip=   0.343828    0.348736 -0.00226561 |qdot_cmd|=0.0519699 v_des= 0.00177623 -0.00153171           0 v_task=0.000236537 -0.00516168 -0.00693756   0.0150576  -0.0142205
+XARM6_5J t=73 p_des=0.344896 0.346957   -0.004 p_tip=   0.34481   0.347075 -0.0039129 |qdot_cmd|=0.00952056 v_des= 0.000182809 -8.30482e-05            0 v_task= 0.000526857 -0.000556699 -0.000348409    0.0042549   -0.0040997
+PRELIFT_RELEASE=START t=73.512 tip=   0.344969    0.346955 -0.00397379 object=   0.403682     0.35262 0.000798955 dist=0.0589859
+XARM6_5J t=74 p_des=0.343871 0.347549   -0.004 p_tip=   0.342938    0.347456 -0.00374348 |qdot_cmd|=0.0159823 v_des=  0.00142702 -0.000896049            0 v_task=  0.00516038 -0.000524955   -0.0010261   0.00132174  -0.00130784
+XARM6_5J t=75 p_des=0.344924 0.346956   -0.004 p_tip=   0.344792    0.346979 -0.00400033 |qdot_cmd|=0.0016636 v_des=  0.00011825 -4.64643e-05            0 v_task= 0.000647499 -0.000139579  1.32808e-06  0.000236975 -0.000203404
+PRELIFT_RELEASE=START t=75.95 tip=   0.344988    0.346937 -0.00400096 object=   0.403678     0.35259 0.000798974 dist=0.0589617
+XARM6_5J t=76 p_des=   0.333612    0.345989 -0.00389732 p_tip=   0.343568    0.346927 -0.00389732 |qdot_cmd|=0.140557 v_des=0 0 0 v_task=  -0.0398236  -0.00375227            0  0.000257378 -0.000312714
+XARM6_5J t=77 p_des= 0.306862  0.346563 -0.002457 p_tip= 0.313136  0.346953 -0.002457 |qdot_cmd|=0.0887748 v_des=0 0 0 v_task= -0.0250925 -0.00155899           0  0.00374886 -0.00394828
+PRELIFT_RELEASE=DONE t=77.361 tip=   0.308831     0.34703 -0.00226553 object=   0.403675    0.352573 0.000799028 dist=0.0950061
+XARM6_5J t=78 p_des= 0.310329  0.347324 0.0863286 p_tip= 0.310991  0.348242 0.0880581 |qdot_cmd|=0.462708 v_des=0.0364722 0.0233124  0.136714 v_task=0.0338263 0.0196395  0.129796 -0.025905 0.0229822
+XARM6_5J t=79 p_des=0.387774 0.396402 0.099939 p_tip= 0.386983  0.395468 0.0984281 |qdot_cmd|=0.463004 v_des=0.00988721 0.00712013  -0.179587 v_task= 0.0130511  0.0108547  -0.173544 -0.0294375  0.0296591
+XARM6_5J t=80 p_des=0.375208 0.393503   -0.004 p_tip=  0.375868   0.394221 0.00111334 |qdot_cmd|=0.131349 v_des=-0.0293446 0.00318071          0 v_task= -0.0319854 0.000308186  -0.0204533   0.0117848  -0.0114702
+XARM6_5J t=81 p_des=0.363839 0.397085   -0.004 p_tip=   0.364069    0.396993 -0.00376591 |qdot_cmd|=0.0130133 v_des= 8.93431e-07 -7.93504e-06            0 v_task=-0.000918572  0.000359835 -0.000936346   0.00504144  -0.00481513
+PRELIFT_RELEASE=START t=81.898 tip=   0.363863    0.397085 -0.00397568 object=   0.403666    0.352518 0.000799041 dist=0.059754
+XARM6_5J t=82 p_des=   0.354952     0.40697 -0.00400326 p_tip=   0.361619    0.399517 -0.00400326 |qdot_cmd|=0.0749625 v_des=0 0 0 v_task= -0.0266694   0.0298118           0  0.00121385 -0.00132014
+XARM6_5J t=83 p_des=   0.338437    0.424299 -0.00427466 p_tip=   0.340883    0.421607 -0.00427466 |qdot_cmd|=0.0284817 v_des=0 0 0 v_task= -0.00978047    0.0107654            0 -0.000854759   1.6793e-06
+PRELIFT_RELEASE=DONE t=83.174 tip=   0.339751    0.422791 -0.00429297 object=  0.403664   0.352502 0.00079895 dist=0.0950019
+XARM6_5J t=84 p_des= 0.356296  0.415324 0.0979416 p_tip= 0.357517  0.415474 0.0971077 |qdot_cmd|=0.393311 v_des=  0.149794 -0.0545454  0.0205843 v_task=   0.14491 -0.0551465  0.0239198  -0.024093  0.0217685
+XARM6_5J t=85 p_des=0.394667 0.394501   -0.004 p_tip= 0.394573  0.395315 0.0121238 |qdot_cmd|=0.386401 v_des= -0.081652 -0.0225171          0 v_task=-0.0812751 -0.0257743 -0.0644951  0.0138807 -0.0131312
+XARM6_5J t=86 p_des=0.363933 0.396767   -0.004 p_tip=   0.365007    0.396289 -0.00317813 |qdot_cmd|=0.0329628 v_des=-0.00156208   0.0015858           0 v_task=-0.00585745  0.00349912 -0.00328746   0.0104227  -0.0100503
+XARM6_5J t=87 p_des= 0.36383 0.397057   -0.004 p_tip=   0.363891    0.397062 -0.00394797 |qdot_cmd|=0.00713721 v_des=-1.03897e-06 -5.02239e-06            0 v_task=-0.000245094 -2.42623e-05 -0.000208122   0.00298717  -0.00281168
+PRELIFT_RELEASE=START t=87.255 tip=   0.363865    0.397067 -0.00396931 object=   0.403656    0.352451 0.000798999 dist=0.0597823
+XARM6_5J t=88 p_des=   0.340054     0.42286 -0.00417831 p_tip=   0.346757    0.415438 -0.00417831 |qdot_cmd|=0.0767866 v_des=0 0 0 v_task=  -0.0268106    0.0296849            0 -0.000345539 -0.000488132
+PRELIFT_RELEASE=DONE t=88.53 tip=   0.339795    0.422772 -0.00428227 object=   0.403653    0.352435 0.000799039 dist=0.095001
+XARM6_5J t=89 p_des= 0.340612  0.421651 0.0618494 p_tip= 0.341143  0.422706 0.0626833 |qdot_cmd|=0.516135 v_des=   0    0 0.18 v_task=-0.00212492 -0.00422111    0.176664  -0.0182806    0.014537
+XARM6_5J t=90 p_des= 0.336542  0.376713 0.0472775 p_tip=   0.3366  0.377601 0.0461849 |qdot_cmd|=0.542714 v_des=-0.000677117  -0.00459588     -0.17994 v_task=-0.000908547  -0.00814574     -0.17557    0.0155994   -0.0132633
+XARM6_5J t=91 p_des=0.343434 0.347695   -0.004 p_tip=   0.343725    0.348633 -0.00233852 |qdot_cmd|=0.0500969 v_des= 0.00155583 -0.00115305           0 v_task=0.000391873 -0.00490379 -0.00664594   0.0147486  -0.0139392
+XARM6_5J t=92 p_des= 0.34464 0.346979   -0.004 p_tip=   0.344575    0.347088 -0.00391507 |qdot_cmd|=0.00942843 v_des= 0.000141039 -6.23405e-05            0 v_task= 0.000400787 -0.000499485 -0.000339708   0.00416834  -0.00401843
+PRELIFT_RELEASE=START t=92.522 tip=   0.344699    0.346982 -0.00397453 object=   0.403646    0.352386 0.000799046 dist=0.0591932
+XARM6_5J t=93 p_des=   0.320032    0.346211 -0.00321177 p_tip=   0.330005    0.346947 -0.00321177 |qdot_cmd|=0.141462 v_des=0 0 0 v_task= -0.0398915 -0.00294365           0  0.00353683 -0.00376895
+PRELIFT_RELEASE=DONE t=93.927 tip=   0.308779    0.347261 -0.00223704 object=   0.403643    0.352368 0.000799012 dist=0.0950017
+XARM6_5J t=94 p_des= 0.309534  0.346948 0.0048487 p_tip=  0.308814    0.34703 0.00655518 |qdot_cmd|=0.592893 v_des=   0    0 0.18 v_task=  0.00287876 -0.000329298     0.173174   0.00226384  -0.00235833
+XARM6_5J t=95 p_des=0.355855 0.324542 0.105332 p_tip=0.355736 0.325394 0.104268 |qdot_cmd|=0.52807 v_des=  0.0128533 -0.00413178   -0.179493 v_task=  0.0133299 -0.00753976   -0.175237  -0.0202976   0.0254049
+XARM6_5J t=96 p_des=0.345402 0.286108   -0.004 p_tip=  0.346049   0.286432 0.00272954 |qdot_cmd|=0.421019 v_des=-0.0543884 -0.0811361          0 v_task=-0.0569761 -0.0824319 -0.0269182  0.0206228 -0.0235177
+XARM6_5J t=97 p_des=0.330663 0.261729   -0.004 p_tip=   0.330889     0.26239 -0.00356437 |qdot_cmd|=0.112041 v_des=-0.0330033  0.0234987          0 v_task= -0.0339082   0.0208577 -0.00174252  0.00920513  -0.0112451
+XARM6_5J t=98 p_des=  0.330583   0.261608 0.00461203 p_tip=  0.330428   0.261764 0.00662692 |qdot_cmd|=0.657033 v_des=   0    0 0.18 v_task= 0.000623211  -0.00062518      0.17194   0.00062071 -0.000724011
+XARM6_5J t=99 p_des= 0.347004  0.306373 0.0991262 p_tip= 0.346252  0.306583 0.0979029 |qdot_cmd|=0.640593 v_des= 0.0611945   0.159956 0.00873779 v_task= 0.0642015   0.159115  0.0136312 -0.0254903  0.0268767
+XARM6_5J t=100 p_des= 0.381263  0.396968 0.0921033 p_tip= 0.379791  0.395542 0.0914321 |qdot_cmd|=0.484524 v_des=0.00432159 0.00914247  -0.179716 v_task= 0.0102126  0.0148432  -0.177031 -0.0246459  0.0221815
+XARM6_5J t=101 p_des=0.366243 0.396199   -0.004 p_tip=   0.367336    0.396396 0.000255126 |qdot_cmd|=0.114958 v_des=-0.0247315 0.00279845          0 v_task=-0.0291018 0.00201245 -0.0170205    0.01161 -0.0113026
+XARM6_5J t=102 p_des=0.363805 0.397016   -0.004 p_tip=   0.363894    0.397037 -0.00382647 |qdot_cmd|=0.0104119 v_des=-1.06997e-07 -6.88283e-06            0 v_task=-0.000358269 -9.32265e-05  -0.00069413   0.00409497  -0.00385414
+PRELIFT_RELEASE=START t=102.863 tip=    0.36382     0.39702 -0.00397964 object=   0.403626    0.352259 0.000798988 dist=0.0599005
+XARM6_5J t=103 p_des=   0.354151    0.407763 -0.00401629 p_tip=   0.360804    0.400298 -0.00401629 |qdot_cmd|=0.0752076 v_des=0 0 0 v_task= -0.0266154     0.02986           0 0.000870742 -0.00104699
+XARM6_5J t=104 p_des=   0.338531    0.424162 -0.00428935 p_tip=   0.340672    0.421796 -0.00428935 |qdot_cmd|=0.0251277 v_des=0 0 0 v_task= -0.00856432   0.00946222            0 -0.000911633  7.72393e-05
+PRELIFT_RELEASE=DONE t=104.136 tip=    0.33985    0.422659 -0.00430306 object=   0.403623    0.352243 0.000799021 dist=0.0950022
+XARM6_5J t=105 p_des= 0.339077  0.401658 0.0996373 p_tip= 0.340269   0.40046 0.0990592 |qdot_cmd|=0.644343 v_des=-0.0191856  -0.175326 0.00362733 v_task=-0.0239523  -0.170534 0.00593968 -0.0149883  0.0134909
+XARM6_5J t=106 p_des=0.344435 0.358974   -0.004 p_tip=  0.343576   0.359182 0.00783362 |qdot_cmd|=0.275962 v_des= 0.0121508 -0.0731859          0 v_task= 0.0155885 -0.0740151 -0.0473345  0.0235795 -0.0212398
+XARM6_5J t=107 p_des=0.344049 0.347224   -0.004 p_tip=   0.343947    0.347575 -0.00352257 |qdot_cmd|=0.0233831 v_des= 0.000592653 -0.000334233            0 v_task=0.000997993 -0.00173787 -0.00190971  0.00907101 -0.00866661
+XARM6_5J t=108 p_des=0.344464 0.347002   -0.004 p_tip= 0.344441  0.347045 -0.003967 |qdot_cmd|=0.0053895 v_des= 5.33365e-05 -1.57058e-05            0 v_task= 0.000145233 -0.000188494 -0.000131992   0.00244435  -0.00236776
+PRELIFT_RELEASE=START t=108.13 tip=   0.344458    0.347031 -0.00397484 object=  0.403615   0.352193 0.00079899 dist=0.0593823
+XARM6_5J t=109 p_des=   0.307414    0.346675 -0.00263909 p_tip=   0.317398    0.347247 -0.00263909 |qdot_cmd|=0.13889 v_des=0 0 0 v_task= -0.0399346 -0.00228648           0  0.00417801  -0.0043829
+PRELIFT_RELEASE=DONE t=109.526 tip=   0.308729    0.347458 -0.00225798 object=   0.403613    0.352176 0.000798995 dist=0.0950006
+XARM6_5J t=110 p_des=  0.30954  0.346999 0.0627633 p_tip=  0.31029  0.348107 0.0648091 |qdot_cmd|=0.59278 v_des=   0    0 0.18 v_task=-0.00299714 -0.00443481    0.171817  -0.0197426   0.0174042
+XARM6_5J t=111 p_des=0.372826 0.394145  0.10184 p_tip=0.373075 0.394085 0.102378 |qdot_cmd|=0.614365 v_des=0.0904112 0.0735843 0.0981723 v_task= 0.0894136  0.0738232  0.0960217 -0.0322093  0.0311426
+XARM6_5J t=112 p_des=0.368264 0.395601   -0.004 p_tip=  0.369064   0.396414 0.00280035 |qdot_cmd|=0.131601 v_des=-0.0263101 0.00312119          0 v_task=  -0.0295077 -0.000128754   -0.0272014    0.0116569   -0.0110116
+XARM6_5J t=113 p_des=0.363786 0.396988   -0.004 p_tip=   0.363886    0.397012 -0.00373912 |qdot_cmd|=0.0121044 v_des= 1.21428e-06 -1.70036e-05            0 v_task=-0.00040189 -0.00011191 -0.00104351  0.00465162 -0.00433105
+PRELIFT_RELEASE=START t=113.997 tip=     0.3638    0.396986 -0.00398008 object=   0.403604    0.352122 0.000798978 dist=0.0599762
+XARM6_5J t=114 p_des=   0.357163    0.404466 -0.00398021 p_tip=     0.3638    0.396986 -0.00398021 |qdot_cmd|=0.074919 v_des=0 0 0 v_task= -0.0265466   0.0299212           0  0.00130947 -0.00120803
+XARM6_5J t=115 p_des=   0.338622    0.424127 -0.00427293 p_tip=   0.341979    0.420407 -0.00427293 |qdot_cmd|=0.0391701 v_des=0 0 0 v_task=  -0.0134276    0.0148818            0 -0.000951753  2.84361e-05
+PRELIFT_RELEASE=DONE t=115.267 tip=   0.339905    0.422589 -0.00430679 object=  0.403602   0.352106 0.00079899 dist=0.0950007
+XARM6_5J t=116 p_des= 0.347607  0.419189 0.0948779 p_tip= 0.347883  0.419909 0.0944125 |qdot_cmd|=0.363927 v_des=  0.122596 -0.0394248  0.0512206 v_task=  0.121492 -0.0423083  0.0530825  -0.025198  0.0212264
+XARM6_5J t=117 p_des= 0.420433  0.395086 0.0430943 p_tip= 0.419427  0.394525 0.0407301 |qdot_cmd|=0.469536 v_des=   0.0108792 -0.000278569    -0.179671 v_task=  0.0149027  0.00196575   -0.170214  0.00312503 -0.00182045
+XARM6_5J t=118 p_des=0.377127 0.392111   -0.004 p_tip=   0.377817    0.391546 -0.00208087 |qdot_cmd|=0.116726 v_des=-0.0293863 0.00542597          0 v_task= -0.0321462  0.00768621 -0.00767652   0.0154095  -0.0156575
+XARM6_5J t=119 p_des=0.363777 0.396946   -0.004 p_tip=   0.364057     0.39673 -0.00385732 |qdot_cmd|=0.0132204 v_des=-5.04917e-07  2.57461e-05            0 v_task= -0.00112051  0.000889988 -0.000570719   0.00559083  -0.00545519
+PRELIFT_RELEASE=START t=119.482 tip=   0.363848    0.396924 -0.00395478 object=   0.403593    0.352054 0.000798943 dist=0.059942
+XARM6_5J t=120 p_des=0.363776 0.396945   -0.004 p_tip=   0.363744    0.397016 -0.00398146 |qdot_cmd|=0.0038083 v_des=-4.22565e-07 -1.59154e-06            0 v_task= 0.000128563 -0.000285875 -7.41519e-05   0.00154954  -0.00146197
+XARM6_5J t=121 p_des=0.363774 0.396943   -0.004 p_tip=   0.363777    0.396949 -0.00399551 |qdot_cmd|=0.00102469 v_des=  5.9058e-07 -4.21037e-06            0 v_task=-1.30864e-05 -3.11495e-05 -1.79488e-05  0.000428608 -0.000396791
+XARM6_5J t=122 p_des=0.363787 0.397236   -0.004 p_tip=   0.363756     0.39723 -0.00352769 |qdot_cmd|=0.00703096 v_des=-0.000188193  -0.00142478            0 v_task= -6.5519e-05   -0.0014005  -0.00188924  0.000349255 -0.000326925
+XARM6_5J t=123 p_des=0.363771 0.396935   -0.004 p_tip=   0.363772    0.396946 -0.00398249 |qdot_cmd|=0.000621642 v_des= 6.28331e-07 -2.54339e-06            0 v_task=-4.49474e-06 -4.65115e-05 -7.00236e-05  0.000201987 -0.000182838
+XARM6_5J t=124 p_des=0.36377 0.39693  -0.004 p_tip=    0.36377    0.396932 -0.00399883 |qdot_cmd|=0.000153289 v_des= -3.4848e-07 -1.79379e-07            0 v_task=-3.83703e-06 -6.58175e-06  -4.6891e-06   5.9294e-05 -5.38714e-05
+PRELIFT_RELEASE=START t=124.139 tip=    0.36377    0.396931 -0.00399911 object=   0.403585    0.351996 0.000798978 dist=0.0600363
+XARM6_5J t=125 p_des=   0.338692    0.424085 -0.00427012 p_tip=   0.344116    0.418058 -0.00427012 |qdot_cmd|=0.0631205 v_des=0 0 0 v_task= -0.0216957   0.0241054           0 -0.00129328 0.000272799
+PRELIFT_RELEASE=DONE t=125.407 tip=   0.339912    0.422491 -0.00433865 object=   0.403582     0.35198 0.000799021 dist=0.0950029
+XARM6_5J t=126 p_des= 0.340719  0.421339 0.0782188 p_tip= 0.341315  0.422356 0.0804488 |qdot_cmd|=0.501293 v_des=   0    0 0.18 v_task=-0.00238694 -0.00406817     0.17108  -0.0226267   0.0181086
+XARM6_5J t=127 p_des= 0.411745  0.396281 0.0551301 p_tip= 0.410788  0.395999 0.0528494 |qdot_cmd|=0.466898 v_des=   0.0114524 -0.000578245    -0.179634 v_task=   0.0152811  0.000549568    -0.170511 -2.81174e-06   0.00167242
+XARM6_5J t=128 p_des=0.375255 0.392832   -0.004 p_tip=   0.376016    0.392576 -0.00179594 |qdot_cmd|=0.118684 v_des=-0.0289094 0.00510729          0 v_task= -0.0319523  0.00613162 -0.00881625   0.0151694   -0.015129
+XARM6_5J t=129 p_des= 0.36376 0.396917   -0.004 p_tip=   0.363992    0.396777 -0.00385749 |qdot_cmd|=0.0129949 v_des= 1.2517e-06 7.95091e-06           0 v_task=-0.000924179  0.000567628 -0.000570031   0.00541565  -0.00522456
+PRELIFT_RELEASE=START t=129.614 tip=   0.363805    0.396916 -0.00396539 object=   0.403574    0.351928 0.000798954 dist=0.0600454
+XARM6_5J t=130 p_des= 0.36376 0.396912   -0.004 p_tip=   0.363693    0.397022 -0.00398169 |qdot_cmd|=0.00385028 v_des= 9.10915e-07 -4.04196e-06            0 v_task= 0.000265499 -0.000443476 -7.32291e-05     0.001499  -0.00140774
+XARM6_5J t=131 p_des=0.363757 0.396912   -0.004 p_tip=   0.363759     0.39692 -0.00399563 |qdot_cmd|=0.000990181 v_des= 6.63658e-07 -3.13915e-06            0 v_task=-7.50708e-06 -3.42617e-05 -1.74971e-05  0.000415422 -0.000383047
+PRELIFT_RELEASE=START t=131.936 tip=  0.363758   0.396907 -0.0039986 object=   0.403569      0.3519 0.000798962 dist=0.0600881
+XARM6_5J t=132 p_des=0.363756 0.396903   -0.004 p_tip=   0.363559    0.397125 -0.00400046 |qdot_cmd|=0.00229071 v_des= 4.38338e-07 -3.60664e-06            0 v_task= 0.000790734 -0.000889508  1.84204e-06  9.58188e-05 -0.000103516
+XARM6_5J t=133 p_des=0.363754 0.396901   -0.004 p_tip=   0.363749    0.396909 -0.00399938 |qdot_cmd|=0.000140992 v_des= 1.69604e-07 -2.23673e-06            0 v_task= 2.04699e-05 -3.57693e-05 -2.49495e-06  3.56291e-05 -3.03599e-05
+XARM6_5J t=134 p_des=0.363752 0.396896   -0.004 p_tip=   0.363753    0.396897 -0.00399978 |qdot_cmd|=3.81777e-05 v_des=-1.9115e-06 2.57215e-06           0 v_task=-3.90571e-06 -1.71644e-06 -8.92719e-07  1.11391e-05 -9.74369e-06
+PRELIFT_RELEASE=START t=134.244 tip=   0.363753    0.396897 -0.00399984 object=   0.403565    0.351872 0.000798971 dist=0.0601024
+XARM6_5J t=135 p_des=   0.339761     0.42302 -0.00423731 p_tip=   0.346437    0.415575 -0.00423731 |qdot_cmd|=0.0774727 v_des=0 0 0 v_task= -0.0267031   0.0297816           0 -0.00121176 0.000242003
+PRELIFT_RELEASE=DONE t=135.51 tip=   0.339962    0.422427 -0.00434156 object=   0.403563    0.351856 0.000798988 dist=0.0950018
+XARM6_5J t=136 p_des= 0.340732  0.421423 0.0633932 p_tip= 0.341291  0.422409 0.0655929 |qdot_cmd|=0.501154 v_des=   0    0 0.18 v_task=-0.00223558 -0.00394108    0.171201  -0.0192776   0.0153656
+XARM6_5J t=137 p_des=0.360755  0.31845 0.105163 p_tip= 0.36081  0.31777 0.105384 |qdot_cmd|=0.38136 v_des=0.000723552   -0.103396   0.0517717 v_task=0.000502999   -0.100676   0.0508863  0.00650507  -0.0032182
+XARM6_5J t=138 p_des=0.344673 0.278121   -0.004 p_tip=  0.344959   0.277927 0.00396912 |qdot_cmd|=0.402148 v_des=-0.0471886 -0.0801379          0 v_task=-0.0483322 -0.0793613 -0.0318765  0.0275992 -0.0327509
+XARM6_5J t=139 p_des=0.330394 0.261639   -0.004 p_tip=    0.33117    0.261688 -0.00354287 |qdot_cmd|=0.0448567 v_des= 0.0144802 -0.0112181          0 v_task=  0.0113764  -0.0114156 -0.00182851   0.0104821  -0.0130076
+XARM6_5J t=140 p_des=   0.330449    0.261482 -0.00290772 p_tip=   0.330123    0.261115 -0.00273325 |qdot_cmd|=0.646698 v_des=   0    0 0.18 v_task=0.00130623 0.00146532   0.179302 0.00474534 -0.0059524
+XARM6_5J t=141 p_des= 0.346605  0.295852 0.0988979 p_tip=0.346429 0.296878 0.097871 |qdot_cmd|=0.636678 v_des= 0.072743   0.15252 0.0110214 v_task= 0.0734472   0.148416  0.0151288 -0.0253693  0.0281088
+XARM6_5J t=142 p_des=0.390014  0.38918 0.102036 p_tip=0.389801 0.389753   0.1027 |qdot_cmd|=0.615066 v_des=0.0576737 0.0977337 0.0933971 v_task= 0.0585265  0.0954423  0.0907404 -0.0324524  0.0308497
+XARM6_5J t=143 p_des=0.378922 0.392447   -0.004 p_tip=  0.379516   0.393378 0.00252218 |qdot_cmd|=0.150472 v_des=-0.0320866 0.00155886          0 v_task= -0.0344604 -0.00216666  -0.0260887   0.0120237  -0.0121714
+XARM6_5J t=144 p_des=0.363735 0.396867   -0.004 p_tip=    0.36408    0.396678 -0.00369064 |qdot_cmd|=0.0153382 v_des= 2.7652e-06 2.64506e-05           0 v_task= -0.0013792 0.000783645 -0.00123743  0.00583866 -0.00567073
+PRELIFT_RELEASE=START t=144.965 tip=   0.363761    0.396872 -0.00397409 object=   0.403544     0.35174 0.000799012 dist=0.0601629
+XARM6_5J t=145 p_des=   0.356483    0.405097 -0.00398708 p_tip=   0.363098    0.397598 -0.00398708 |qdot_cmd|=0.0749833 v_des=0 0 0 v_task= -0.0264588   0.0299988           0  0.00159368 -0.00156982
+XARM6_5J t=146 p_des=    0.33878    0.423941 -0.00427378 p_tip=   0.341731     0.42065 -0.00427378 |qdot_cmd|=0.0346446 v_des=0 0 0 v_task=  -0.0118048     0.013163            0 -0.000855258 -3.24056e-05
+PRELIFT_RELEASE=DONE t=146.231 tip=   0.340067    0.422411 -0.00430139 object=   0.403542    0.351724 0.000798953 dist=0.0950038
+XARM6_5J t=147 p_des= 0.340194  0.413642 0.0968359 p_tip= 0.341138  0.412442 0.0968016 |qdot_cmd|=0.561433 v_des=-0.0149596   -0.14654  0.0326981 v_task=-0.0187376  -0.141741  0.0328352 -0.0209317  0.0175999
+XARM6_5J t=148 p_des=0.342538 0.366902   -0.004 p_tip=0.342466 0.366426 0.012092 |qdot_cmd|=0.305875 v_des= 0.0440322 -0.0863449          0 v_task= 0.0443183 -0.0844395 -0.0643682  0.0232762 -0.0206009
+XARM6_5J t=149 p_des=0.343864 0.346694   -0.004 p_tip=   0.343814      0.3472 -0.00334098 |qdot_cmd|=0.0288737 v_des= 0.000830669 -0.000513525            0 v_task= 0.00103056  -0.0025372 -0.00263608   0.0104171 -0.00994493
+XARM6_5J t=150 p_des=0.344448 0.346361   -0.004 p_tip=   0.344417    0.346421 -0.00395778 |qdot_cmd|=0.00635229 v_des=6.77394e-05 -3.2865e-05           0 v_task=  0.00019005 -0.000272526 -0.000168861   0.00283727  -0.00274893
+PRELIFT_RELEASE=START t=150.189 tip=   0.344449    0.346393 -0.00397191 object=   0.403534    0.351675 0.000798983 dist=0.0593209
+XARM6_5J t=151 p_des=   0.309322    0.345907 -0.00272025 p_tip=   0.319304    0.346517 -0.00272025 |qdot_cmd|=0.139539 v_des=0 0 0 v_task= -0.0399255 -0.00243986           0  0.00415423 -0.00437255
+PRELIFT_RELEASE=DONE t=151.59 tip=   0.308652    0.346745 -0.00224728 object=   0.403532    0.351658 0.000798984 dist=0.0950063
+XARM6_5J t=152 p_des= 0.309417  0.346353 0.0543928 p_tip= 0.310092  0.347411 0.0556195 |qdot_cmd|=0.605026 v_des=   0    0 0.18 v_task=-0.00269974 -0.00423343    0.175093  -0.0170048   0.0149674
+XARM6_5J t=153 p_des=0.365504 0.393714 0.100548 p_tip=0.365231 0.393335 0.100632 |qdot_cmd|=0.620164 v_des=0.0930119 0.0836527  0.119617 v_task= 0.0941026  0.0851669    0.11928 -0.0313794  0.0295764
+XARM6_5J t=154 p_des=0.364111 0.396798   -0.004 p_tip=  0.364941    0.39752 0.00312578 |qdot_cmd|=0.0981364 v_des=-0.00558479 0.000566367           0 v_task=-0.00890343 -0.00232078  -0.0285031   0.0113848  -0.0105473
+XARM6_5J t=155 p_des=0.363717 0.396842   -0.004 p_tip=  0.363765   0.396891 -0.0037396 |qdot_cmd|=0.0111718 v_des= 1.87901e-06 -2.21913e-05            0 v_task=-0.000192921 -0.000219262  -0.00104159   0.00431897  -0.00397087
+XARM6_5J t=156 p_des=0.363716 0.396824   -0.004 p_tip=   0.363728    0.396839 -0.00398128 |qdot_cmd|=0.00286133 v_des= 1.60553e-07 -4.39396e-06            0 v_task=-4.63369e-05 -6.13507e-05 -7.48796e-05   0.00121287    -0.001112
+PRELIFT_RELEASE=START t=156.007 tip=   0.363728    0.396838 -0.00398155 object=   0.403523    0.351603 0.000798971 dist=0.0602488
+XARM6_5J t=157 p_des=   0.338832    0.423871 -0.00428062 p_tip=   0.342191    0.420118 -0.00428062 |qdot_cmd|=0.0395032 v_des=0 0 0 v_task= -0.0134363   0.0150127           0 -0.00100004  7.1058e-05
+PRELIFT_RELEASE=DONE t=157.269 tip=   0.340105    0.422328 -0.00431569 object=    0.40352    0.351588 0.000798999 dist=0.0950037
+XARM6_5J t=158 p_des= 0.347055  0.419278 0.0943121 p_tip=0.348006 0.419686 0.094386 |qdot_cmd|=0.354428 v_des=  0.117533 -0.0363624  0.0569707 v_task=   0.11373 -0.0379943  0.0566753 -0.0252142  0.0212445
+XARM6_5J t=159 p_des= 0.428832  0.393175 0.0531003 p_tip= 0.427872  0.392704 0.0508519 |qdot_cmd|=0.4598 v_des=     0.01065 -0.000294827    -0.179684 v_task=   0.0144917   0.00158664    -0.170691 -0.000410843   0.00219921
+XARM6_5J t=160 p_des=0.377924 0.390258   -0.004 p_tip=   0.378622    0.389313 -0.00152548 |qdot_cmd|=0.1049 v_des=-0.0282181  0.0121415          0 v_task= -0.0310116   0.0159204 -0.00989808   0.0179845  -0.0185631
+XARM6_5J t=161 p_des=0.363706 0.396816   -0.004 p_tip=  0.364053   0.396515 -0.0038394 |qdot_cmd|=0.0146637 v_des=1.05151e-06 1.68555e-05           0 v_task= -0.00138344   0.00122081 -0.000642412   0.00623802  -0.00612402
+PRELIFT_RELEASE=START t=161.571 tip=   0.363774     0.39679 -0.00395799 object=   0.403512    0.351535 0.000799028 dist=0.0602258
+XARM6_5J t=162 p_des=0.363706 0.396808   -0.004 p_tip=   0.363661    0.396896 -0.00397954 |qdot_cmd|=0.00428555 v_des= 1.47672e-06 -7.22597e-06            0 v_task= 0.000180003 -0.000360928 -8.18253e-05   0.00172559  -0.00163532
+XARM6_5J t=163 p_des=0.363704 0.396803   -0.004 p_tip= 0.363708   0.39681 -0.003995 |qdot_cmd|=0.0011193 v_des=1.13692e-06 1.85708e-06           0 v_task=-1.30448e-05  -2.6586e-05 -1.99988e-05   0.00047836 -0.000443623
+PRELIFT_RELEASE=START t=163.911 tip=   0.363705      0.3968 -0.00399841 object=  0.403508   0.351505 0.00079901 dist=0.0602984
+XARM6_5J t=164 p_des=   0.355163    0.406428 -0.00402651 p_tip=    0.36177    0.398921 -0.00402651 |qdot_cmd|=0.075733 v_des=0 0 0 v_task=  -0.0264292     0.030025            0 -5.40682e-05 -0.000123248
+XARM6_5J t=165 p_des=   0.338813    0.423769 -0.00432409 p_tip=   0.341215    0.421086 -0.00432409 |qdot_cmd|=0.0286104 v_des=0 0 0 v_task=-0.00960823   0.0107346           0 -0.00124561 0.000329784
+PRELIFT_RELEASE=DONE t=165.172 tip=   0.340111    0.422254 -0.00434378 object=   0.403505    0.351491 0.000798975 dist=0.0950068
+XARM6_5J t=166 p_des=  0.35688  0.412884 0.0982144 p_tip= 0.357195  0.413195 0.0972891 |qdot_cmd|=0.358801 v_des=   0.14414 -0.0742594  0.0178556 v_task=  0.142879 -0.0755008   0.021557 -0.0234264  0.0213394
+XARM6_5J t=167 p_des=0.369484 0.396147   -0.004 p_tip=  0.370081   0.397198 0.00579463 |qdot_cmd|=0.173447 v_des= -0.0289732 -0.00238728           0 v_task= -0.0313595 -0.00658953  -0.0391785   0.0158724  -0.0144718
+XARM6_5J t=168 p_des=0.363695 0.396802   -0.004 p_tip=   0.363809    0.396869 -0.00362421 |qdot_cmd|=0.0168859 v_des=  2.4074e-06 -3.05464e-05            0 v_task=-0.000455436 -0.000297946  -0.00150315   0.00645489  -0.00592606
+XARM6_5J t=169 p_des=0.363695 0.396781   -0.004 p_tip=   0.363713    0.396802 -0.00397227 |qdot_cmd|=0.00427885 v_des= 9.60683e-07 -5.14097e-06            0 v_task=-7.45222e-05 -8.76158e-05 -0.000110916   0.00181358  -0.00166221
+PRELIFT_RELEASE=START t=169.083 tip=  0.363711   0.396799 -0.0039765 object=   0.403498    0.351442 0.000799021 dist=0.0603341
+XARM6_5J t=170 p_des=   0.338941     0.42383 -0.00425801 p_tip=    0.34326    0.418986 -0.00425801 |qdot_cmd|=0.0506458 v_des=0 0 0 v_task=  -0.0172775    0.0193767            0 -0.000852622 -7.85278e-05
+PRELIFT_RELEASE=DONE t=170.343 tip=   0.340182    0.422262 -0.00430869 object=  0.403495   0.351427 0.00079895 dist=0.0950065
+XARM6_5J t=171 p_des= 0.342789  0.420859 0.0882839 p_tip= 0.342316  0.421847 0.0888318 |qdot_cmd|=0.377611 v_des= 0.0600691 -0.0184521   0.117161 v_task= 0.0619615 -0.0224042   0.114969 -0.0244197  0.0197201
+XARM6_5J t=172 p_des= 0.431884  0.392441 0.0692369 p_tip= 0.430935  0.392226 0.0669518 |qdot_cmd|=0.447143 v_des=  0.0110082 -0.00044322   -0.179663 v_task=  0.0148013 0.000414448   -0.170522 -0.00608103  0.00884379
+XARM6_5J t=173 p_des=0.385142 0.386891   -0.004 p_tip=    0.385457     0.386046 -0.000554236 |qdot_cmd|=0.230438 v_des=-0.0705867  0.0178573          0 v_task=-0.0718475  0.0212376 -0.0137831  0.0198087 -0.0208412
+XARM6_5J t=174 p_des=0.363684 0.396734   -0.004 p_tip=   0.364161    0.396242 -0.00377356 |qdot_cmd|=0.0171402 v_des=1.89398e-06 0.000192149           0 v_task=  -0.0019066   0.00216186 -0.000905766    0.0074596  -0.00738975
+PRELIFT_RELEASE=START t=174.695 tip=   0.363747    0.396737 -0.00395875 object=   0.403487    0.351373 0.000798963 dist=0.0603081
+XARM6_5J t=175 p_des=   0.350288    0.411779 -0.00403847 p_tip=   0.356897    0.404274 -0.00403847 |qdot_cmd|=0.0755523 v_des=0 0 0 v_task= -0.0264359    0.030019           0  0.00146284 -0.00183713
+PRELIFT_RELEASE=DONE t=175.955 tip=   0.340239    0.422246 -0.00427815 object=   0.403484    0.351357 0.000798994 dist=0.0950006
+XARM6_5J t=176 p_des=    0.341053     0.421107 -0.000913349 p_tip=   0.340018    0.421675 0.000290414 |qdot_cmd|=0.510657 v_des=   0    0 0.18 v_task=  0.0041393 -0.00227237    0.175185  0.00168018  -0.0018589
+XARM6_5J t=177 p_des= 0.383492  0.402764 0.0995612 p_tip= 0.385269  0.402668 0.0988406 |qdot_cmd|=0.653206 v_des=  0.160319 -0.0486717   0.171932 v_task=   0.15321 -0.0482851   0.174815 -0.0206486  0.0222954
+XARM6_5J t=178 p_des=0.382428 0.392021   -0.004 p_tip=  0.383199   0.393126 0.00370265 |qdot_cmd|=0.18263 v_des= -0.0355253 -0.00087077           0 v_task= -0.0386091 -0.00528759  -0.0308106   0.0164037  -0.0158595
+XARM6_5J t=179 p_des=0.363675 0.396734   -0.004 p_tip=   0.364222    0.396434 -0.00359762 |qdot_cmd|=0.0205545 v_des= 3.5118e-06 0.000145516           0 v_task=-0.00218137  0.00134411 -0.00160954  0.00780567 -0.00748868
+XARM6_5J t=180 p_des=0.363675 0.396751   -0.004 p_tip=   0.363712    0.396763 -0.00396805 |qdot_cmd|=0.00523206 v_des=  1.5032e-07 -1.02341e-05            0 v_task= -0.00014527 -5.57861e-05 -0.000127781   0.00219828  -0.00206239
+PRELIFT_RELEASE=START t=180.02 tip=    0.36371    0.396763 -0.00396928 object=   0.403476    0.351307 0.000799034 dist=0.0603954
+XARM6_5J t=181 p_des=   0.338993    0.423761 -0.00426214 p_tip=   0.342459    0.419866 -0.00426214 |qdot_cmd|=0.0407862 v_des=0 0 0 v_task=  -0.0138634    0.0155797            0 -0.000741653 -0.000149541
+PRELIFT_RELEASE=DONE t=181.279 tip=   0.340259    0.422211 -0.00429868 object=  0.403474   0.351292 0.00079895 dist=0.0950034
+XARM6_5J t=182 p_des= 0.346827   0.41893 0.0942582 p_tip= 0.346756  0.419523 0.0938535 |qdot_cmd|=0.330314 v_des=  0.111089 -0.0518227  0.0574179 v_task=  0.111375 -0.0541931  0.0590367 -0.0249011  0.0208542
+XARM6_5J t=183 p_des=0.382531 0.396202   -0.004 p_tip= 0.382865  0.396979 0.0131053 |qdot_cmd|=0.274673 v_des=-0.0425081 -0.0179513          0 v_task=-0.0438451 -0.0210591 -0.0684211  0.0142271 -0.0130184
+XARM6_5J t=184 p_des=0.363666  0.39674   -0.004 p_tip=    0.36412    0.396615 -0.00329408 |qdot_cmd|=0.0250337 v_des= 5.1514e-06 7.49759e-05           0 v_task=-0.00181311 0.000574696 -0.00282369  0.00892704 -0.00838195
+XARM6_5J t=185 p_des=0.363667 0.396731   -0.004 p_tip=   0.363703    0.396751 -0.00395539 |qdot_cmd|=0.00604516 v_des=-1.59877e-07  1.17488e-06            0 v_task=-0.000142432 -7.98134e-05 -0.000178458    0.0025503  -0.00236514
+PRELIFT_RELEASE=START t=185.241 tip=    0.36369    0.396747 -0.00397303 object=   0.403466    0.351243 0.000798993 dist=0.0604387
+XARM6_5J t=186 p_des=   0.339783    0.423077 -0.00420701 p_tip=   0.346416    0.415594 -0.00420701 |qdot_cmd|=0.0774179 v_des=0 0 0 v_task=  -0.0265331    0.0299331            0 -0.000545653 -0.000319611
+PRELIFT_RELEASE=DONE t=186.498 tip=  0.340271    0.42217 -0.0043056 object=   0.403464    0.351228 0.000798962 dist=0.0950059
+XARM6_5J t=187 p_des= 0.341111  0.421002 0.0651111 p_tip= 0.341669  0.422085 0.0672102 |qdot_cmd|=0.502311 v_des=   0    0 0.18 v_task=-0.00223133 -0.00433246    0.171604  -0.0194704   0.0155589
+XARM6_5J t=188 p_des=0.358552 0.315464 0.100459 p_tip=0.359127 0.313934  0.10163 |qdot_cmd|=0.553452 v_des= 0.00225653   -0.175391 -0.00459417 v_task=-4.29323e-05    -0.169268   -0.0092746   0.00699316  -0.00367548
+XARM6_5J t=189 p_des=0.346995 0.270523   -0.004 p_tip=  0.347567   0.270277 0.00596908 |qdot_cmd|=0.36446 v_des=-0.0322538 -0.0779132          0 v_task=-0.0345445 -0.0769308 -0.0398763  0.0277141 -0.0338463
+XARM6_5J t=190 p_des=0.331358 0.260597   -0.004 p_tip=   0.331464    0.261077 -0.00350182 |qdot_cmd|=0.118575 v_des=-0.0349551  0.0255832          0 v_task= -0.0353765   0.0236612 -0.00199273   0.0105696  -0.0132174
+XARM6_5J t=191 p_des=0.330851 0.260919   -0.004 p_tip=    0.33098    0.260888 -0.00395665 |qdot_cmd|=0.0366141 v_des=  0.0126815 -0.00931778           0 v_task=   0.0121636   -0.0091926 -0.000173408   0.00285716  -0.00359608
+XARM6_5J t=192 p_des= 0.332769  0.288197 0.0987582 p_tip= 0.331529  0.289684 0.0976884 |qdot_cmd|=0.575148 v_des=0.00546435   0.167493  0.0124177 v_task= 0.0104249   0.161544  0.0166968 -0.0256871  0.0272981
+XARM6_5J t=193 p_des= 0.334812  0.366498 0.0434044 p_tip=  0.33373  0.365516 0.0427365 |qdot_cmd|=0.579703 v_des=0.00284535  0.0139909  -0.179433 v_task=   0.007174   0.0179227   -0.176761  0.00408416 -0.00510909
+XARM6_5J t=194 p_des=0.343182   0.3469   -0.004 p_tip=   0.343164    0.347426 -0.00259644 |qdot_cmd|=0.0338183 v_des= 0.000810665 -0.000562619            0 v_task=0.000884212 -0.00266428 -0.00561425  0.00965029 -0.00933425
+XARM6_5J t=195 p_des=0.343769 0.346519   -0.004 p_tip=   0.343732    0.346581 -0.00393491 |qdot_cmd|=0.00633335 v_des= 7.79369e-05 -4.31019e-05            0 v_task= 0.000227309 -0.000294464 -0.000260364   0.00277208  -0.00269979
+PRELIFT_RELEASE=START t=195.466 tip=   0.343798    0.346523 -0.00397913 object=   0.403447    0.351117 0.000799022 dist=0.0598257
+XARM6_5J t=196 p_des=0.343813 0.346491   -0.004 p_tip=   0.343744    0.346491 -0.00399424 |qdot_cmd|=0.00122384 v_des=3.88107e-06 3.96653e-06           0 v_task= 0.000282216  4.66921e-06 -2.30489e-05  0.000736237 -0.000719413
+XARM6_5J t=197 p_des=0.343811 0.346506   -0.004 p_tip=    0.34381    0.346504 -0.00399892 |qdot_cmd|=0.000361434 v_des=-5.0383e-06 9.99915e-06           0 v_task=-2.14822e-06  1.90152e-05 -4.33087e-06  0.000184785 -0.000181243
+PRELIFT_RELEASE=START t=197.786 tip=   0.343805    0.346519 -0.00399963 object=   0.403442    0.351089 0.000798994 dist=0.0598121
+XARM6_5J t=198 p_des=0.343781 0.346499   -0.004 p_tip=   0.343573    0.346496 -0.00399538 |qdot_cmd|=0.00264296 v_des=-3.56456e-06 -8.01565e-06            0 v_task= 0.000828083  3.67118e-06 -1.84771e-05  9.41939e-05 -9.81334e-05
+XARM6_5J t=199 p_des=0.343779 0.346511   -0.004 p_tip=   0.343771    0.346506 -0.00400112 |qdot_cmd|=0.000172304 v_des=-2.54142e-06  1.05742e-05            0 v_task=2.95273e-05 3.04607e-05 4.49443e-06 2.88087e-06 -1.5576e-06
+XARM6_5J t=200 p_des= 0.34377 0.346531   -0.004 p_tip=   0.343771    0.346528 -0.00400027 |qdot_cmd|=8.48893e-05 v_des=-2.06908e-06  1.23203e-05            0 v_task=-5.00606e-06   2.7618e-05  1.07703e-06 -2.50004e-06  2.20528e-06
+PRELIFT_RELEASE=START t=200.071 tip=    0.34377    0.346529 -0.00400025 object=   0.403438     0.35106 0.000798992 dist=0.0598396
+XARM6_5J t=201 p_des=   0.306534    0.346704 -0.00262498 p_tip=   0.314896    0.347079 -0.00262498 |qdot_cmd|=0.115245 v_des=0 0 0 v_task= -0.0334495 -0.00149982           0  0.00356864 -0.00382024
+PRELIFT_RELEASE=DONE t=201.449 tip=   0.308506    0.347304 -0.00235099 object=  0.403435   0.351043 0.00079904 dist=0.095003
+XARM6_5J t=202.001 p_des=0.309218 0.346818 0.074662 p_tip= 0.310049  0.347811 0.0761406 |qdot_cmd|=0.599767 v_des=   0    0 0.18 v_task=-0.00332381 -0.00397257    0.174086  -0.0229945   0.0203168
+XARM6_5J t=203.001 p_des= 0.361669  0.328724 0.0388992 p_tip= 0.360792  0.328085 0.0365866 |qdot_cmd|=0.566295 v_des=   0.0125719 -0.000488173     -0.17956 v_task=  0.0160774  0.00206982   -0.170309  0.00841861 -0.00783084
+XARM6_5J t=204.001 p_des=0.332036 0.268653   -0.004 p_tip=   0.333037    0.268901 -0.00185546 |qdot_cmd|=0.18359 v_des=-0.00505833   -0.044291           0 v_task=-0.00906213  -0.0452822 -0.00857815   0.0176929  -0.0209839
+XARM6_5J t=205.001 p_des=0.331403 0.260448   -0.004 p_tip=   0.331472    0.260742 -0.00385602 |qdot_cmd|=0.0343795 v_des=  0.0109832 -0.00802719           0 v_task=   0.0107088  -0.00920305 -0.000575934   0.00553732  -0.00681559
+XARM6_5J t=206.001 p_des= 0.331141  0.260884 0.0670273 p_tip= 0.332268  0.261909 0.0686516 |qdot_cmd|=0.666823 v_des=   0    0 0.18 v_task= -0.0045071 -0.00409725    0.173503  -0.0201859    0.025531
+XARM6_5J t=207.001 p_des=0.381251 0.333321 0.099037 p_tip= 0.381017  0.333525 0.0977762 |qdot_cmd|=0.617501 v_des=  0.101349   0.136946 0.00962995 v_task= 0.102286  0.136131 0.0146732 -0.026357 0.0289054
+XARM6_5J t=208.001 p_des= 0.423116  0.390331 0.0691877 p_tip= 0.421989  0.389239 0.0667858 |qdot_cmd|=0.459442 v_des=0.00728114 0.00860314  -0.179647 v_task= 0.0117884  0.0129718  -0.170039 -0.0144566  0.0151805
+XARM6_5J t=209.002 p_des=0.387451 0.388565   -0.004 p_tip=    0.387307     0.388517 -0.000906229 |qdot_cmd|=0.251347 v_des=-0.0732732 0.00812573          0 v_task=-0.0726952 0.00831546 -0.0123751  0.0138784 -0.0148758
+XARM6_5J t=210.002 p_des=0.363623 0.396621   -0.004 p_tip=   0.364319    0.396079 -0.00374699 |qdot_cmd|=0.017179 v_des=2.11946e-07 0.000192907           0 v_task=-0.00278345  0.00236222 -0.00101204  0.00650388 -0.00654118
+PRELIFT_RELEASE=START t=210.653 tip=   0.363718    0.396609 -0.00395266 object=   0.403417     0.35093 0.000798975 dist=0.0605203
+XARM6_5J t=211.002 p_des=   0.349302    0.412803 -0.00404795 p_tip=   0.355885    0.405275 -0.00404795 |qdot_cmd|=0.0759111 v_des=0 0 0 v_task= -0.0263323     0.03011           0  0.00113954 -0.00159518
+PRELIFT_RELEASE=DONE t=211.907 tip=   0.340433    0.422039 -0.00428002 object=   0.403415    0.350914 0.000798989 dist=0.0950025
+XARM6_5J t=212.002 p_des=  0.341213   0.420903 0.00584567 p_tip=  0.340566   0.421629 0.00765106 |qdot_cmd|=0.504639 v_des=   0    0 0.18 v_task= 0.00258751  -0.0029036    0.172778 -0.00127122 0.000574037
+XARM6_5J t=213.002 p_des= 0.356124  0.370968 0.0999951 p_tip=0.355624 0.369228 0.100832 |qdot_cmd|=0.533348 v_des=  0.0227176   -0.178511 4.92252e-05 v_task=  0.0247169    -0.17155 -0.00329836  -0.0051436  0.00753653
+XARM6_5J t=214.002 p_des=0.360324 0.315713   -0.004 p_tip= 0.361205  0.315368 0.0159358 |qdot_cmd|=0.560556 v_des=-0.0258439      -0.14          0 v_task=-0.0293701  -0.138618 -0.0797433  0.0260376 -0.0283049
+XARM6_5J t=215.002 p_des=0.332573 0.261701   -0.004 p_tip=   0.333242    0.262469 -0.00276376 |qdot_cmd|=0.0804045 v_des=0.00464419 -0.0142738          0 v_task= 0.00196819  -0.0173457 -0.00494495   0.0167058  -0.0204034
+XARM6_5J t=216.002 p_des=0.331051 0.260642   -0.004 p_tip=   0.331227    0.260708 -0.00390533 |qdot_cmd|=0.0342481 v_des=   0.011803 -0.00867813           0 v_task=   0.0110997  -0.00894367 -0.000378686   0.00476266  -0.00592577
+XARM6_5J t=217.002 p_des=0.331319 0.260441   -0.004 p_tip=   0.331174      0.2605 -0.00392613 |qdot_cmd|=0.0348023 v_des=  0.0109918 -0.00803123           0 v_task=   0.0115704  -0.00827004 -0.000295478   0.00191974   -0.0024108
+XARM6_5J t=218.002 p_des=0.331568  0.26025   -0.004 p_tip=   0.331406    0.260358 -0.00399823 |qdot_cmd|=0.108472 v_des=-0.0355727  0.0261793          0 v_task=  -0.0349241    0.0257467 -7.08511e-06  0.000490747 -0.000603456
+XARM6_5J t=219.002 p_des= 0.331025  0.260645 0.0410345 p_tip= 0.332086  0.261517 0.0431868 |qdot_cmd|=0.665581 v_des=   0    0 0.18 v_task=-0.00424348  -0.0034895    0.171391  -0.0148304   0.0187537
+XARM6_5J t=220.002 p_des=0.360494 0.322221 0.100806 p_tip=  0.35983  0.321826 0.0991753 |qdot_cmd|=0.534818 v_des=0.0065395 0.0113232 -0.179524 v_task=0.00919486  0.0129032     -0.173 -0.0242573  0.0255779
+XARM6_5J t=221.002 p_des=0.346629 0.288725   -0.004 p_tip=  0.347111   0.288905 0.00211856 |qdot_cmd|=0.399732 v_des=-0.053147 -0.076781         0 v_task=-0.0550772 -0.0775007 -0.0244743  0.0184998 -0.0216231
+XARM6_5J t=222.002 p_des=0.331403 0.260592   -0.004 p_tip=   0.331955    0.261075 -0.00357366 |qdot_cmd|=0.0399227 v_des=  0.0104741 -0.00883856           0 v_task= 0.00826745  -0.0107715 -0.00170537  0.00891376  -0.0109762
+XARM6_5J t=223.002 p_des=  0.331551   0.260238 0.00480662 p_tip= 0.331449  0.260315 0.0058909 |qdot_cmd|=0.656199 v_des=   0    0 0.18 v_task= 0.000410158 -0.000308203     0.175663  0.000817335 -0.000982746
+XARM6_5J t=224.002 p_des= 0.355014  0.296432 0.0990024 p_tip= 0.355156  0.297369 0.0978692 |qdot_cmd|=0.628618 v_des= 0.0942514   0.141509 0.00997624 v_task=0.0936821  0.137764  0.014509 -0.025086 0.0288154
+XARM6_5J t=225.003 p_des= 0.409255  0.379601 0.0988448 p_tip= 0.408944  0.379716 0.0974995 |qdot_cmd|=0.609393 v_des= 0.100696  0.135037 0.0115521 v_task=   0.10194   0.134575  0.0169331 -0.0314975  0.0327724
+XARM6_5J t=226.003 p_des=0.402409 0.386507   -0.004 p_tip=  0.402576   0.387694 0.00535237 |qdot_cmd|=0.291241 v_des= -0.0710585 -0.00202961           0 v_task= -0.0717265 -0.00677757  -0.0374095   0.0117172  -0.0127596
+XARM6_5J t=227.003 p_des=0.365497 0.395737   -0.004 p_tip=   0.366155    0.394957 -0.00334477 |qdot_cmd|=0.0887374 v_des=-0.0246097  0.0038575          0 v_task= -0.0272411  0.00697591 -0.00262094  0.00915548  -0.0092915
+XARM6_5J t=228.003 p_des=0.363594 0.396588   -0.004 p_tip=   0.363664    0.396563 -0.00395643 |qdot_cmd|=0.0063276 v_des= -1.1231e-06 -5.01928e-07            0 v_task=-0.000281069   0.00010022 -0.000174293   0.00268479  -0.00259941
+PRELIFT_RELEASE=START t=228.057 tip=  0.363655    0.39657 -0.0039612 object=  0.403384   0.350715 0.00079899 dist=0.0606714
+XARM6_5J t=229.003 p_des=   0.339251    0.423478 -0.00425202 p_tip=   0.343006    0.419218 -0.00425202 |qdot_cmd|=0.0444421 v_des=0 0 0 v_task=  -0.0150171    0.0170415            0 -0.000629141 -0.000261209
+PRELIFT_RELEASE=DONE t=229.307 tip=   0.340499    0.421915 -0.00429418 object=  0.403381   0.350699 0.00079901 dist=0.0950047
+XARM6_5J t=230.003 p_des= 0.345303  0.419286 0.0926702 p_tip= 0.344982  0.419925 0.0924233 |qdot_cmd|=0.317386 v_des= 0.0918316 -0.0543341  0.0732984 v_task= 0.0931175 -0.0568909  0.0742857 -0.0247373   0.020444
+XARM6_5J t=231.003 p_des=0.370052  0.39723   -0.004 p_tip= 0.370569  0.398113 0.0101557 |qdot_cmd|=0.218376 v_des= -0.0312856 -0.00970596           0 v_task=-0.0333522 -0.0132392 -0.0566229  0.0154378 -0.0138664
+XARM6_5J t=232.003 p_des=0.363586 0.396597   -0.004 p_tip=   0.363705     0.39669 -0.00347818 |qdot_cmd|=0.0194411 v_des= 3.52046e-06 -4.09829e-05            0 v_task=-0.000473182  -0.00041572   -0.0020873   0.00717231  -0.00655697
+XARM6_5J t=233.003 p_des=0.363587 0.396568   -0.004 p_tip=   0.363607    0.396591 -0.00396587 |qdot_cmd|=0.00477694 v_des=-4.22812e-07  1.00513e-06            0 v_task= -8.2404e-05 -9.10986e-05 -0.000136516    0.0020302  -0.00185716
+PRELIFT_RELEASE=START t=233.186 tip=   0.363602    0.396586 -0.00397672 object=   0.403374    0.350652 0.000798978 dist=0.0607595
+XARM6_5J t=234.003 p_des=   0.339316    0.423482 -0.00424233 p_tip=   0.345109    0.416895 -0.00424233 |qdot_cmd|=0.0684071 v_des=0 0 0 v_task=  -0.0231718    0.0263495            0 -0.000783058 -0.000136969
+PRELIFT_RELEASE=DONE t=234.433 tip=     0.3405    0.421859 -0.00431951 object=   0.403371    0.350636 0.000799021 dist=0.0950023
+XARM6_5J t=235.003 p_des= 0.341381   0.42064 0.0752894 p_tip= 0.341967  0.421686 0.0771606 |qdot_cmd|=0.505196 v_des=   0    0 0.18 v_task=-0.00234243 -0.00418533    0.172515  -0.0217775   0.0174814
+XARM6_5J t=236.003 p_des=0.359285 0.307504 0.105602 p_tip=0.359958 0.306885 0.105663 |qdot_cmd|=0.321502 v_des=0.000412084  -0.0897396   0.0337191 v_task=-0.00227964  -0.0872617   0.0334757  0.00782123 -0.00481002
+XARM6_5J t=237.003 p_des= 0.34476 0.265906   -0.004 p_tip=  0.345302   0.266329 0.00337079 |qdot_cmd|=0.334593 v_des=-0.0458933 -0.0529378          0 v_task=-0.0480621 -0.0546291 -0.0294832  0.0269024 -0.0331439
+XARM6_5J t=238.003 p_des= 0.33167 0.260098   -0.004 p_tip=   0.331595    0.260641 -0.00361655 |qdot_cmd|=0.118457 v_des=-0.0360067  0.0264502          0 v_task= -0.0357089   0.0242756 -0.00153381  0.00954901  -0.0119581
+XARM6_5J t=239.003 p_des=0.331495 0.260193   -0.004 p_tip=   0.331202    0.260064 -0.00284524 |qdot_cmd|=0.0413698 v_des=   0.010271 -0.00736287           0 v_task=  0.0114397 -0.00684634 -0.00461906  0.00379548 -0.00477812
+XARM6_5J t=240.003 p_des=0.331672  0.26006   -0.004 p_tip=   0.331493    0.260169 -0.00395923 |qdot_cmd|=0.0315124 v_des= 0.00968517 -0.00703977           0 v_task=  0.0104019 -0.00747412 -0.00016309  0.00113543  -0.0014268
+XARM6_5J t=241.003 p_des=0.331157  0.26043   -0.004 p_tip=   0.331105     0.26048 -0.00399448 |qdot_cmd|=0.0352028 v_des=  0.0112201 -0.00824241           0 v_task=   0.0114315  -0.00844456 -2.20923e-05  0.000318479 -0.000414533
+XARM6_5J t=242.003 p_des= 0.333804  0.263486 0.0910801 p_tip= 0.333862  0.263822 0.0917797 |qdot_cmd|=0.452387 v_des=0.0274587 0.0857072 0.0900016 v_task= 0.0272243  0.0843614  0.0872034 -0.0259661  0.0325449
+XARM6_5J t=243.003 p_des= 0.366388  0.371508 0.0990557 p_tip=  0.36569   0.37178 0.0978484 |qdot_cmd|=0.620936 v_des=  0.062004   0.158887 0.00944327 v_task= 0.0647938   0.157799  0.0142725 -0.0285703  0.0257588
+XARM6_5J t=244.003 p_des=0.370902 0.395666   -0.004 p_tip=  0.371432   0.396592 0.00881968 |qdot_cmd|=0.189331 v_des= -0.0302166 -0.00411252           0 v_task= -0.0323365 -0.00781957  -0.0512787   0.0105628  -0.0104405
+XARM6_5J t=245.003 p_des=0.363564 0.396552   -0.004 p_tip=  0.363683   0.396581 -0.0035359 |qdot_cmd|=0.0156225 v_des= 2.86976e-06 -3.88106e-05            0 v_task=-0.000473221 -0.000155022   -0.0018564    0.0056422  -0.00531051
+XARM6_5J t=246.003 p_des=0.363564 0.396527   -0.004 p_tip=   0.363581    0.396543 -0.00397149 |qdot_cmd|=0.00380394 v_des= 4.39497e-07 -4.31794e-07            0 v_task= -6.7449e-05 -6.43984e-05 -0.000114039    0.0016122  -0.00149476
+PRELIFT_RELEASE=START t=246.207 tip=   0.363577    0.396539 -0.00398153 object=   0.403349    0.350491 0.000798945 dist=0.0608457
+XARM6_5J t=247.003 p_des=0.363563 0.396522   -0.004 p_tip=   0.363547    0.396553 -0.00399459 |qdot_cmd|=0.00114722 v_des= 9.19109e-07 -5.74617e-07            0 v_task= 6.63386e-05 -0.000126687 -2.16441e-05  0.000447681 -0.000408073
+XARM6_5J t=248.003 p_des=0.363562 0.396517   -0.004 p_tip=   0.363562    0.396521 -0.00399859 |qdot_cmd|=0.000309051 v_des=  9.4466e-08 -4.24995e-07            0 v_task=-3.43846e-06 -1.44059e-05 -5.64711e-06  0.000124422 -0.000113127
+PRELIFT_RELEASE=START t=248.553 tip=   0.363561    0.396518 -0.00399928 object=   0.403344    0.350462 0.000798988 dist=0.0608587
+XARM6_5J t=249.003 p_des=   0.346851    0.415269 -0.00414489 p_tip=   0.353422     0.40773 -0.00414489 |qdot_cmd|=0.0771833 v_des=0 0 0 v_task=  -0.0262824    0.0301535            0 -0.000839524  0.000128524
+PRELIFT_RELEASE=DONE t=249.797 tip=   0.340528    0.421722 -0.00435936 object=   0.403342    0.350448 0.000799049 dist=0.0950031
+XARM6_5J t=250.003 p_des= 0.341342  0.420533 0.0224991 p_tip= 0.341261  0.421515 0.0238489 |qdot_cmd|=0.511387 v_des=   0    0 0.18 v_task=0.000326224 -0.00392693    0.174601 -0.00749026  0.00571708
+XARM6_5J t=251.003 p_des=0.361457  0.35591 0.100071 p_tip=0.360942 0.354146 0.101254 |qdot_cmd|=0.527951 v_des=  0.0200088   -0.178172 -0.00070784 v_task=  0.0220687   -0.171119  -0.0054418 -0.00154861  0.00483344
+XARM6_5J t=252.003 p_des=0.359122 0.304992   -0.004 p_tip=  0.359634   0.304431 0.00723316 |qdot_cmd|=0.476956 v_des=-0.0763813 -0.0723814          0 v_task=-0.0784275  -0.070137 -0.0449326  0.0272905  -0.030284
+XARM6_5J t=253.003 p_des=0.332938 0.260986   -0.004 p_tip=   0.332998    0.261903 -0.00313419 |qdot_cmd|=0.153126 v_des=-0.0435964  0.0204464          0 v_task=  -0.043835   0.0167801 -0.00346324   0.0146338  -0.0178444
+XARM6_5J t=254.003 p_des=0.331362 0.260217   -0.004 p_tip=  0.331506   0.260276 -0.0039279 |qdot_cmd|=0.0303798 v_des=  0.0104772 -0.00766331           0 v_task=  0.00990098  -0.00790068 -0.000288409   0.00413027  -0.00513156
+XARM6_5J t=255.003 p_des= 0.344821  0.277847 0.0981226 p_tip= 0.344951  0.278621 0.0970127 |qdot_cmd|=0.624999 v_des=0.0957781  0.129693 0.0187741 v_task= 0.0952562   0.126597  0.0232135 -0.0249715   0.030252
+XARM6_5J t=256.003 p_des=0.346451 0.269637   -0.004 p_tip=  0.347294   0.269803 0.00661233 |qdot_cmd|=0.337112 v_des=-0.0295572 -0.0752628          0 v_task=-0.0329265 -0.0759283 -0.0424493  0.0167818 -0.0208653
+XARM6_5J t=257.003 p_des=0.332049  0.25974   -0.004 p_tip=   0.331995    0.260323 -0.00351077 |qdot_cmd|=0.119516 v_des=-0.0369537   0.026765          0 v_task=  -0.036737   0.0244355 -0.00195693  0.00783923 -0.00991306
+XARM6_5J t=258.003 p_des=0.331492 0.260095   -0.004 p_tip=   0.331466    0.260162 -0.00396687 |qdot_cmd|=0.0305369 v_des=  0.0100341 -0.00734646           0 v_task=   0.0101396  -0.00761335 -0.000132538   0.00217103  -0.00274872
+XARM6_5J t=259.003 p_des=0.347425  0.28653 0.098699 p_tip=0.347529 0.287562 0.097768 |qdot_cmd|=0.632566 v_des=0.0854844  0.143451 0.0130097 v_task= 0.0850695   0.139323  0.0167337 -0.0254265  0.0296034
+XARM6_5J t=260.003 p_des=0.351215 0.285413   -0.004 p_tip=  0.351375   0.284362 0.00817283 |qdot_cmd|=0.461443 v_des=-0.0756078 -0.0815665          0 v_task=-0.0762486 -0.0773639 -0.0486913  0.0168231  -0.020187
+XARM6_5J t=261.003 p_des=0.331374 0.260325   -0.004 p_tip=   0.331869    0.260875 -0.00335951 |qdot_cmd|=0.0413084 v_des=  0.0102076 -0.00817756           0 v_task= 0.00823081  -0.0103766 -0.00256195  0.00948739  -0.0118958
+XARM6_5J t=262.003 p_des=0.331751 0.259888   -0.004 p_tip=   0.331656    0.260022 -0.00395817 |qdot_cmd|=0.0288984 v_des=  0.0092308 -0.00671808           0 v_task=  0.00961169  -0.00725646 -0.000167326   0.00263061  -0.00330697
+XARM6_5J t=263.003 p_des=  0.33372  0.281981 0.0982527 p_tip= 0.332764  0.282551 0.0974641 |qdot_cmd|=0.561448 v_des=0.00400354   0.162478  0.0174731 v_task=0.00783117   0.160197  0.0206274 -0.0256886  0.0284696
+XARM6_5J t=264.003 p_des= 0.335339  0.369314 0.0582161 p_tip= 0.334306  0.368409 0.0567705 |qdot_cmd|=0.555159 v_des=0.00210329  0.0122567   -0.17957 v_task=  0.00623183    0.0158741    -0.173788  -0.00126519 -0.000503237
+XARM6_5J t=265.003 p_des=0.342434 0.347145   -0.004 p_tip=   0.343014    0.347838 -0.00203693 |qdot_cmd|=0.0469354 v_des= 0.000176776 -0.000397241            0 v_task=-0.00214321 -0.00317094 -0.00785227   0.0114642  -0.0110409
+XARM6_5J t=266.003 p_des=0.342688 0.346943   -0.004 p_tip=    0.34271    0.347006 -0.00390734 |qdot_cmd|=0.00834465 v_des= 3.37226e-05 -2.35869e-05            0 v_task=-5.48771e-05 -0.000274665 -0.000370644    0.0034266  -0.00333741
+PRELIFT_RELEASE=START t=266.589 tip=   0.342716    0.346954 -0.00397742 object=   0.403309     0.35024 0.000798978 dist=0.0606822
+XARM6_5J t=267.003 p_des=   0.319882    0.346995 -0.00333948 p_tip=   0.329874    0.347383 -0.00333948 |qdot_cmd|=0.137836 v_des=0 0 0 v_task= -0.0399699 -0.00155163           0  0.00301436 -0.00325706
+PRELIFT_RELEASE=DONE t=267.936 tip=   0.308319    0.348446 -0.00239202 object=   0.403307    0.350223 0.000799041 dist=0.0950042
+XARM6_5J t=268.003 p_des=  0.309007   0.347426 0.00358308 p_tip=  0.308285   0.348031 0.00547402 |qdot_cmd|=0.591753 v_des=   0    0 0.18 v_task= 0.00288984 -0.00241716    0.172436  0.00274191 -0.00277978
+XARM6_5J t=269.003 p_des= 0.331369   0.36549 0.0860009 p_tip= 0.330368  0.364459 0.0844905 |qdot_cmd|=0.540321 v_des=0.00872202 0.00719146  -0.179645 v_task= 0.0127274  0.0113151  -0.173603 -0.0172935  0.0159024
+XARM6_5J t=270.003 p_des=0.342319 0.347343   -0.004 p_tip=    0.342801     0.348249 -0.000401484 |qdot_cmd|=0.0647779 v_des=-0.000420025 -0.000995943            0 v_task=-0.00234692 -0.00461725  -0.0143941   0.0120159  -0.0111618
+XARM6_5J t=271.003 p_des=0.342595 0.346994   -0.004 p_tip=   0.342598    0.347067 -0.00385369 |qdot_cmd|=0.00932955 v_des= 5.07908e-05 -3.24279e-05            0 v_task= 3.96471e-05 -0.000323194 -0.000585253   0.00382144  -0.00366481
+PRELIFT_RELEASE=START t=271.753 tip=   0.342629    0.346994 -0.00397898 object=   0.403299    0.350176 0.000799022 dist=0.0607535
+XARM6_5J t=272.003 p_des=   0.324979    0.346818 -0.00358478 p_tip=    0.33497    0.347246 -0.00358478 |qdot_cmd|=0.138088 v_des=0 0 0 v_task= -0.0399634 -0.00171187           0  0.00238061 -0.00256042
+XARM6_5J t=273.003 p_des=  0.306312   0.348447 -0.0024339 p_tip=  0.309019   0.348495 -0.0024339 |qdot_cmd|=0.0396007 v_des=0 0 0 v_task=  -0.0108281 -0.000191289            0   0.00333807  -0.00342101
+PRELIFT_RELEASE=DONE t=273.098 tip=   0.308309    0.348539 -0.00240223 object=   0.403297     0.35016 0.000798995 dist=0.095002
+XARM6_5J t=274.003 p_des= 0.333562  0.356294 0.0984635 p_tip= 0.334911  0.355869 0.0974824 |qdot_cmd|=0.629146 v_des= 0.155788 0.0520371 0.0157509 v_task=  0.150392  0.0537383  0.0196755 -0.0265977  0.0259689
+XARM6_5J t=275.003 p_des=0.429467 0.387365 0.104677 p_tip=0.429639  0.38676 0.104333 |qdot_cmd|=0.465296 v_des=0.0744183 0.0344924 0.0352544 v_task= 0.0737303  0.0369128  0.0366319 -0.0323315  0.0377216
+XARM6_5J t=276.003 p_des=  0.4081 0.380101   -0.004 p_tip=  0.407199   0.381379 0.00284329 |qdot_cmd|=0.421269 v_des= -0.113115 0.00200175          0 v_task=  -0.109513 -0.00310968  -0.0273732    0.015516  -0.0170815
+XARM6_5J t=277.003 p_des=0.364168 0.395807   -0.004 p_tip=   0.365063    0.394869 -0.00348039 |qdot_cmd|=0.0436382 v_des=-0.0090567  0.0032137          0 v_task= -0.0126336  0.00696688 -0.00207845  0.00954223  -0.0097213
+PRELIFT_RELEASE=START t=277.989 tip=   0.363573     0.39639 -0.00396206 object=   0.403287      0.3501 0.000798999 dist=0.060992
+XARM6_5J t=278.003 p_des=   0.356856    0.404208 -0.00397008 p_tip=   0.363368    0.396619 -0.00397008 |qdot_cmd|=0.075122 v_des=0 0 0 v_task= -0.0260484   0.0303559           0  0.00265989 -0.00260809
+XARM6_5J t=279.003 p_des=   0.339473    0.423141 -0.00427274 p_tip=   0.342342    0.419857 -0.00427274 |qdot_cmd|=0.0343519 v_des=0 0 0 v_task=  -0.0114762    0.0131386            0 -0.000625633 -0.000221372
+PRELIFT_RELEASE=DONE t=279.23 tip=    0.34074    0.421593 -0.00430069 object=   0.403285    0.350084 0.000799012 dist=0.0950022
+XARM6_5J t=280.003 p_des= 0.352336   0.41633 0.0967255 p_tip= 0.352489     0.417 0.0958738 |qdot_cmd|=0.379571 v_des=  0.138335 -0.0504702  0.0327455 v_task=  0.137722 -0.0531483  0.0361519 -0.0246738  0.0214905
+XARM6_5J t=281.003 p_des= 0.410603  0.394707 0.0228477 p_tip= 0.409369  0.393953 0.0212812 |qdot_cmd|=0.494014 v_des=   0.0103326 -0.000119682    -0.178477 v_task=  0.0152704  0.00289745   -0.172211  0.00890689 -0.00807829
+XARM6_5J t=282.003 p_des=0.368009 0.394666   -0.004 p_tip=   0.368796    0.394074 -0.00276988 |qdot_cmd|=0.102482 v_des=-0.0265415 0.00457313          0 v_task= -0.0296887  0.00693822 -0.00492046   0.0124209  -0.0122371
+XARM6_5J t=283.003 p_des=0.363501 0.396409   -0.004 p_tip=   0.363605    0.396377 -0.00392358 |qdot_cmd|=0.00917734 v_des=-2.61997e-07 -5.25207e-06            0 v_task=-0.000418464  0.000120178  -0.00030568   0.00385643  -0.00368038
+PRELIFT_RELEASE=START t=283.34 tip=  0.363546   0.396411 -0.0039635 object=   0.403277    0.350033 0.000798993 dist=0.0610692
+XARM6_5J t=284.003 p_des=   0.342074    0.420557 -0.00417372 p_tip=   0.348627    0.413004 -0.00417372 |qdot_cmd|=0.0774854 v_des=0 0 0 v_task=  -0.0262154    0.0302118            0 -0.000118002 -0.000649332
+PRELIFT_RELEASE=DONE t=284.578 tip=   0.340776    0.421567 -0.00430509 object=   0.403275    0.350019 0.000798962 dist=0.0950013
+XARM6_5J t=285.003 p_des= 0.341555  0.420514 0.0550156 p_tip=  0.34205  0.421521 0.0562067 |qdot_cmd|=0.51234 v_des=   0    0 0.18 v_task=-0.00197733 -0.00402963    0.175236  -0.0165808   0.0132215
+XARM6_5J t=286.003 p_des=0.363585 0.332918 0.102465 p_tip=0.363376 0.333536 0.100902 |qdot_cmd|=0.523837 v_des=0.000275547  -0.0115162   -0.179631 v_task=  0.00111333    -0.013988    -0.173379   0.00318257 -9.38954e-05
+XARM6_5J t=287.003 p_des=0.348784 0.291116   -0.004 p_tip=  0.348879   0.290873 0.00241493 |qdot_cmd|=0.414249 v_des=-0.0569157 -0.0754241          0 v_task=-0.0572976 -0.0744548 -0.0256597  0.0263807 -0.0302226
+XARM6_5J t=288.003 p_des= 0.33204 0.259913   -0.004 p_tip=   0.332149    0.260782 -0.00351227 |qdot_cmd|=0.128926 v_des=-0.038105 0.0260821         0 v_task= -0.0385444   0.0226066 -0.00195091   0.0112405  -0.0138055
+XARM6_5J t=289.003 p_des=0.331952 0.259621   -0.004 p_tip=   0.331346    0.259744 -0.00325586 |qdot_cmd|=0.111216 v_des=-0.037017 0.0273243         0 v_task= -0.0345902   0.0268346 -0.00297658  0.00469175 -0.00589069
+XARM6_5J t=290.003 p_des=0.331832 0.259684   -0.004 p_tip=   0.331479    0.259944 -0.00396457 |qdot_cmd|=0.110658 v_des=-0.0368114  0.0273014          0 v_task=  -0.0353998    0.0262625 -0.000141715   0.00129935  -0.00164592
+XARM6_5J t=291.003 p_des=0.331768 0.259725   -0.004 p_tip=   0.331418    0.259969 -0.00400465 |qdot_cmd|=0.109818 v_des=-0.0366975  0.0273024          0 v_task=  -0.0352973    0.0263265  1.85969e-05  0.000367252 -0.000447689
+XARM6_5J t=292.003 p_des=0.331398 0.259997   -0.004 p_tip=   0.331137    0.260136 -0.00393834 |qdot_cmd|=0.033571 v_des= 0.00994253 -0.00736867           0 v_task=    0.010987  -0.00792535 -0.000246655  0.000824917  -0.00104766
+XARM6_5J t=293.003 p_des= 0.33176 0.259719   -0.004 p_tip=   0.331658    0.259784 -0.00400038 |qdot_cmd|=0.112836 v_des=-0.036707 0.0273313         0 v_task=  -0.0363014    0.0270747  1.52828e-06  0.000208649 -0.000251269
+XARM6_5J t=294.003 p_des= 0.332127  0.259756 0.0682872 p_tip= 0.333145  0.260755 0.0701613 |qdot_cmd|=0.664246 v_des=   0    0 0.18 v_task=-0.00407341 -0.00399664    0.172504  -0.0217206   0.0276612
+XARM6_5J t=295.003 p_des= 0.361958  0.351492 0.0991058 p_tip= 0.361644  0.352673 0.0980098 |qdot_cmd|=0.625535 v_des=0.0621626  0.159174 0.0091186 v_task= 0.0634187   0.154448  0.0135025 -0.0272167  0.0255493
+XARM6_5J t=296.003 p_des= 0.379847  0.397903 0.0235664 p_tip=0.378796 0.396936 0.022024 |qdot_cmd|=0.526488 v_des=0.00775904  0.0140033  -0.179287 v_task= 0.0119597  0.0178713  -0.173117 0.00496893 -0.0053399
+XARM6_5J t=297.003 p_des=0.363474 0.396389   -0.004 p_tip=   0.363756    0.396328 -0.00312844 |qdot_cmd|=0.0222329 v_des= 6.53659e-06 -3.63602e-05            0 v_task=-0.00111816 0.000208308 -0.00348625  0.00723694 -0.00690183
+XARM6_5J t=298.003 p_des=0.363477  0.39635   -0.004 p_tip=   0.363502    0.396368 -0.00395455 |qdot_cmd|=0.00504516 v_des=-5.27984e-07 -6.15218e-06            0 v_task=-0.000100508 -7.74992e-05 -0.000181782   0.00211515  -0.00197385
+PRELIFT_RELEASE=START t=298.32 tip=   0.363492    0.396361 -0.00397791 object=   0.403248    0.349848 0.000799034 dist=0.0611883
+XARM6_5J t=299.003 p_des=0.363475 0.396345   -0.004 p_tip=   0.363453    0.396387 -0.00399279 |qdot_cmd|=0.00153028 v_des= 1.04912e-06 -8.80152e-06            0 v_task= 8.83308e-05  -0.00017539 -2.88245e-05  0.000586307 -0.000537868
+XARM6_5J t=300.003 p_des=0.363473  0.39634   -0.004 p_tip=   0.363475    0.396344 -0.00399819 |qdot_cmd|=0.000408318 v_des= 3.11432e-07 -4.41863e-06            0 v_task=-4.90096e-06  -1.9801e-05 -7.23184e-06  0.000162822 -0.000148536
+PRELIFT_RELEASE=START t=300.576 tip=   0.363474     0.39634 -0.00399912 object=  0.403244   0.349821 0.00079899 dist=0.0612018
+XARM6_5J t=301.003 p_des=   0.347384    0.414579 -0.00414164 p_tip=   0.353915    0.407007 -0.00414164 |qdot_cmd|=0.0773845 v_des=0 0 0 v_task=  -0.0261249    0.0302901            0 -0.000813312  0.000126824
+PRELIFT_RELEASE=DONE t=301.81 tip=   0.340782    0.421387 -0.00436653 object=   0.403241    0.349805 0.000799022 dist=0.0950002
+XARM6_5J t=302.003 p_des= 0.341578  0.420265 0.0210072 p_tip= 0.341452  0.421197 0.0219542 |qdot_cmd|=0.516037 v_des=   0    0 0.18 v_task=0.000503883 -0.00372606    0.176212 -0.00691043   0.0052449
+XARM6_5J t=303.003 p_des=0.352334 0.357101 0.100173 p_tip=0.352332 0.355153 0.101429 |qdot_cmd|=0.559987 v_des= 0.00807895   -0.178015 -0.00180197 v_task=  0.00809049    -0.170225  -0.00682392 -0.000713232    0.0035572

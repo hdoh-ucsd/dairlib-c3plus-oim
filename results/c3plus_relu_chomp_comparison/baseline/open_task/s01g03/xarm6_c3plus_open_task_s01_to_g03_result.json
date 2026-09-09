@@ -1,0 +1,13 @@
+{
+  "run_id": "xarm6_c3plus_open_task_s01_to_g03",
+  "scenario": "open_task",
+  "success": false,
+  "t_success": null,
+  "first_success_t": 103.6,
+  "final_position_error": 0.021680769932378864,
+  "final_orientation_error": 0.43876312419788555,
+  "best_pos_err": 0.014596214377424097,
+  "best_ang_err": 0.006091272759407129,
+  "n_control_steps": 8010,
+  "sim_time_end": 106.289
+}

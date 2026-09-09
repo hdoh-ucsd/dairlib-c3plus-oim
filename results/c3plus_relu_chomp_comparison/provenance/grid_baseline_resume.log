@@ -1,0 +1,157 @@
+120 jobs, variant=baseline, cap=600, lanes=2
+[SKIP done] baseline/open_task/s1g2
+[SKIP done] baseline/open_task/s1g3
+[SKIP done] baseline/open_task/s1g4
+[SKIP done] baseline/open_task/s1g5
+[SKIP done] baseline/open_task/s2g1
+[SKIP done] baseline/open_task/s2g3
+[SKIP done] baseline/open_task/s2g4
+[SKIP done] baseline/open_task/s2g5
+[SKIP done] baseline/open_task/s3g1
+[SKIP done] baseline/open_task/s3g2
+[SKIP done] baseline/open_task/s3g4
+[SKIP done] baseline/open_task/s3g5
+[SKIP done] baseline/open_task/s4g1
+[SKIP done] baseline/open_task/s4g2
+[SKIP done] baseline/open_task/s4g3
+[SKIP done] baseline/open_task/s4g5
+[SKIP done] baseline/open_task/s5g1
+[SKIP done] baseline/open_task/s5g2
+[SKIP done] baseline/open_task/s5g3
+[SKIP done] baseline/open_task/s5g4
+[SKIP done] baseline/single_obstacle/s1g2
+[SKIP done] baseline/single_obstacle/s1g3
+[SKIP done] baseline/single_obstacle/s1g4
+[SKIP done] baseline/single_obstacle/s1g5
+[SKIP done] baseline/single_obstacle/s2g1
+[SKIP done] baseline/single_obstacle/s2g3
+[SKIP done] baseline/single_obstacle/s2g4
+[SKIP done] baseline/single_obstacle/s2g5
+[SKIP done] baseline/single_obstacle/s3g1
+[SKIP done] baseline/single_obstacle/s3g2
+[SKIP done] baseline/single_obstacle/s3g4
+[SKIP done] baseline/single_obstacle/s3g5
+[SKIP done] baseline/single_obstacle/s4g1
+[SKIP done] baseline/single_obstacle/s4g2
+[SKIP done] baseline/single_obstacle/s4g3
+[SKIP done] baseline/single_obstacle/s4g5
+[SKIP done] baseline/single_obstacle/s5g1
+[SKIP done] baseline/single_obstacle/s5g2
+[SKIP done] baseline/single_obstacle/s5g3
+[SKIP done] baseline/single_obstacle/s5g4
+[SKIP done] baseline/shelf_gap/s1g2
+[SKIP done] baseline/shelf_gap/s1g3
+[SKIP done] baseline/shelf_gap/s1g4
+[SKIP done] baseline/shelf_gap/s1g5
+[SKIP done] baseline/shelf_gap/s2g1
+[SKIP done] baseline/shelf_gap/s2g3
+[SKIP done] baseline/shelf_gap/s2g4
+[SKIP done] baseline/shelf_gap/s2g5
+[SKIP done] baseline/shelf_gap/s3g1
+[SKIP done] baseline/shelf_gap/s3g2
+[SKIP done] baseline/shelf_gap/s3g4
+[SKIP done] baseline/shelf_gap/s3g5
+[SKIP done] baseline/shelf_gap/s4g1
+[SKIP done] baseline/shelf_gap/s4g2
+[SKIP done] baseline/shelf_gap/s4g3
+[SKIP done] baseline/shelf_gap/s4g5
+[SKIP done] baseline/shelf_gap/s5g1
+[SKIP done] baseline/shelf_gap/s5g2
+[SKIP done] baseline/shelf_gap/s5g3
+[SKIP done] baseline/shelf_gap/s5g4
+[SKIP done] baseline/ycb_clutter/s1g2
+[SKIP done] baseline/ycb_clutter/s1g3
+[SKIP done] baseline/ycb_clutter/s1g4
+[SKIP done] baseline/ycb_clutter/s1g5
+[SKIP done] baseline/ycb_clutter/s2g1
+[SKIP done] baseline/ycb_clutter/s2g3
+[SKIP done] baseline/ycb_clutter/s2g4
+[SKIP done] baseline/ycb_clutter/s2g5
+[SKIP done] baseline/ycb_clutter/s3g1
+[SKIP done] baseline/ycb_clutter/s3g2
+[SKIP done] baseline/ycb_clutter/s3g4
+[SKIP done] baseline/ycb_clutter/s3g5
+[SKIP done] baseline/ycb_clutter/s4g1
+[SKIP done] baseline/ycb_clutter/s4g2
+[SKIP done] baseline/ycb_clutter/s4g3
+[SKIP done] baseline/ycb_clutter/s4g5
+[SKIP done] baseline/ycb_clutter/s5g1
+[SKIP done] baseline/ycb_clutter/s5g2
+[SKIP done] baseline/ycb_clutter/s5g3
+[SKIP done] baseline/ycb_clutter/s5g4
+[SKIP done] baseline/slalom/s1g2
+[SKIP done] baseline/slalom/s1g3
+[SKIP done] baseline/slalom/s1g4
+[SKIP done] baseline/slalom/s1g5
+[SKIP done] baseline/slalom/s2g1
+[LAUNCH] baseline/slalom/s2g3 port 8201 goal 0.363 -0.41 3.5684
+[LAUNCH] baseline/slalom/s2g4 port 8202 goal 0.367 -0.38 2.7338
+[DONE] baseline/slalom/s2g3 rc=0
+[DONE] baseline/slalom/s2g4 rc=0
+[LAUNCH] baseline/slalom/s2g5 port 8203 goal 0.404 -0.418 3.3892
+[LAUNCH] baseline/slalom/s3g1 port 8204 goal 0.381 -0.4 3.1416
+[DONE] baseline/slalom/s2g5 rc=0
+[DONE] baseline/slalom/s3g1 rc=0
+[LAUNCH] baseline/slalom/s3g2 port 8205 goal 0.404 -0.393 2.7924
+[LAUNCH] baseline/slalom/s3g4 port 8206 goal 0.367 -0.38 2.7338
+[DONE] baseline/slalom/s3g2 rc=0
+[DONE] baseline/slalom/s3g4 rc=0
+[LAUNCH] baseline/slalom/s3g5 port 8207 goal 0.404 -0.418 3.3892
+[LAUNCH] baseline/slalom/s4g1 port 8208 goal 0.381 -0.4 3.1416
+[DONE] baseline/slalom/s3g5 rc=0
+[DONE] baseline/slalom/s4g1 rc=0
+[LAUNCH] baseline/slalom/s4g2 port 8209 goal 0.404 -0.393 2.7924
+[LAUNCH] baseline/slalom/s4g3 port 8210 goal 0.363 -0.41 3.5684
+[DONE] baseline/slalom/s4g2 rc=0
+[DONE] baseline/slalom/s4g3 rc=0
+[LAUNCH] baseline/slalom/s4g5 port 8211 goal 0.404 -0.418 3.3892
+[LAUNCH] baseline/slalom/s5g1 port 8212 goal 0.381 -0.4 3.1416
+[DONE] baseline/slalom/s4g5 rc=0
+[DONE] baseline/slalom/s5g1 rc=0
+[LAUNCH] baseline/slalom/s5g2 port 8213 goal 0.404 -0.393 2.7924
+[LAUNCH] baseline/slalom/s5g3 port 8214 goal 0.363 -0.41 3.5684
+[DONE] baseline/slalom/s5g2 rc=0
+[DONE] baseline/slalom/s5g3 rc=0
+[LAUNCH] baseline/slalom/s5g4 port 8215 goal 0.367 -0.38 2.7338
+[LAUNCH] baseline/icra_sign/s1g2 port 8216 goal 0.523 -0.4262 1.6692
+[DONE] baseline/slalom/s5g4 rc=0
+[DONE] baseline/icra_sign/s1g2 rc=0
+[LAUNCH] baseline/icra_sign/s1g3 port 8217 goal 0.5247 -0.4041 1.2708
+[LAUNCH] baseline/icra_sign/s1g4 port 8218 goal 0.5107 -0.4221 1.1996
+[DONE] baseline/icra_sign/s1g3 rc=0
+[DONE] baseline/icra_sign/s1g4 rc=0
+[LAUNCH] baseline/icra_sign/s1g5 port 8219 goal 0.4845 -0.4286 1.1630
+[LAUNCH] baseline/icra_sign/s2g1 port 8220 goal 0.5 -0.4 1.5708
+[DONE] baseline/icra_sign/s1g5 rc=0
+[DONE] baseline/icra_sign/s2g1 rc=0
+[LAUNCH] baseline/icra_sign/s2g3 port 8221 goal 0.5247 -0.4041 1.2708
+[LAUNCH] baseline/icra_sign/s2g4 port 8222 goal 0.5107 -0.4221 1.1996
+[DONE] baseline/icra_sign/s2g3 rc=0
+[DONE] baseline/icra_sign/s2g4 rc=0
+[LAUNCH] baseline/icra_sign/s2g5 port 8223 goal 0.4845 -0.4286 1.1630
+[LAUNCH] baseline/icra_sign/s3g1 port 8224 goal 0.5 -0.4 1.5708
+[DONE] baseline/icra_sign/s2g5 rc=0
+[DONE] baseline/icra_sign/s3g1 rc=0
+[LAUNCH] baseline/icra_sign/s3g2 port 8225 goal 0.523 -0.4262 1.6692
+[LAUNCH] baseline/icra_sign/s3g4 port 8226 goal 0.5107 -0.4221 1.1996
+[DONE] baseline/icra_sign/s3g2 rc=0
+[DONE] baseline/icra_sign/s3g4 rc=0
+[LAUNCH] baseline/icra_sign/s3g5 port 8227 goal 0.4845 -0.4286 1.1630
+[LAUNCH] baseline/icra_sign/s4g1 port 8228 goal 0.5 -0.4 1.5708
+[DONE] baseline/icra_sign/s3g5 rc=0
+[DONE] baseline/icra_sign/s4g1 rc=0
+[LAUNCH] baseline/icra_sign/s4g2 port 8229 goal 0.523 -0.4262 1.6692
+[LAUNCH] baseline/icra_sign/s4g3 port 8230 goal 0.5247 -0.4041 1.2708
+[DONE] baseline/icra_sign/s4g2 rc=0
+[DONE] baseline/icra_sign/s4g3 rc=0
+[LAUNCH] baseline/icra_sign/s4g5 port 8231 goal 0.4845 -0.4286 1.1630
+[LAUNCH] baseline/icra_sign/s5g1 port 8232 goal 0.5 -0.4 1.5708
+[DONE] baseline/icra_sign/s4g5 rc=0
+[DONE] baseline/icra_sign/s5g1 rc=0
+[LAUNCH] baseline/icra_sign/s5g2 port 8233 goal 0.523 -0.4262 1.6692
+[LAUNCH] baseline/icra_sign/s5g3 port 8234 goal 0.5247 -0.4041 1.2708
+[DONE] baseline/icra_sign/s5g2 rc=0
+[DONE] baseline/icra_sign/s5g3 rc=0
+[LAUNCH] baseline/icra_sign/s5g4 port 8235 goal 0.5107 -0.4221 1.1996
+[DONE] baseline/icra_sign/s5g4 rc=0
+CAMPAIGN COMPLETE
