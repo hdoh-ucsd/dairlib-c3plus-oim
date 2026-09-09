@@ -1,0 +1,20 @@
+{
+  "verdict": "ROOT_CAUSE_IDENTIFIED_NO_CODE_CHANGED",
+  "hypothesis": "P1_VISUAL_FALSE_POSITIVE",
+  "confidence": "HIGH",
+  "run": "xarm6_c3plus_single_obstacle_s01_to_g01 (600s tier)",
+  "min_physical_signed_distance_m": 0.00065,
+  "penetration_samples": 0,
+  "planner_vs_physical_median_diff_m": 2e-07,
+  "frame_audit": "no mismatch",
+  "collision_filter": "T-obstacle pair fully enforced",
+  "missing_telemetry": ["object-obstacle contact forces", "lambda_obs/eta/phi per knot"],
+  "future_telemetry_path": "frozen-binary replay with SAMPLING_C3_COST_LOG_DIR set (controller.cc:64-117, 2735-2800) — no source change",
+  "smallest_future_fixes": [
+    "render obstacle in a distinct color (cosmetic, renderer/scene material only)",
+    "Task B candidate: footprint-based clearance for ranking J_obs (center-based read +44.5mm during a 0.65mm press-stall)",
+    "enable cost logging env in future campaigns"
+  ],
+  "regression_test": "frozen replay of this config; offline d_phys>=0 all poses; |phi_planner_footprint-d_phys|<2mm; gaptrace phi sign agrees with d_phys; closest-approach render frame visibly separates bodies",
+  "context_out_of_scope": "F2 press-stall 316s at 0.65-1.5mm clearance; frozen per-cycle LCS witness noted as a potential outrun mechanism in other runs"
+}
