@@ -9,7 +9,7 @@ frozen) path.
 Usage: run_grid_campaign.py --variant baseline|relu --pairs offdiag|all|smoke
        [--cap 600] [--lanes 2] [--port-base 8000]
 """
-import argparse, os, re, subprocess, time
+import argparse, os, re, shutil, subprocess, time
 
 WT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 S = os.path.join(WT, "tools/scene_smoke")
@@ -90,6 +90,16 @@ def main():
                     running.remove((p, lab))
             time.sleep(5)
         out = os.path.join(OUTROOT, a.variant, scene, f"s{m:02d}g{n:02d}")
+        # Resume support: a completed run has "RUN DONE" in launcher.log —
+        # skip it. A partial dir (crash mid-run) is wiped and rerun.
+        lg = os.path.join(out, "launcher.log")
+        if not os.path.islink(out) and os.path.isfile(lg) and \
+                "RUN DONE" in open(lg, errors="replace").read():
+            print(f"[SKIP done] {a.variant}/{scene}/s{m}g{n}", flush=True)
+            continue
+        if os.path.isdir(out) and not os.path.islink(out) and os.listdir(out):
+            print(f"[WIPE partial] {a.variant}/{scene}/s{m}g{n}", flush=True)
+            shutil.rmtree(out)
         os.makedirs(out, exist_ok=True)
         gx, gy, gyaw = goal_of(scene, n)
         port += 1

@@ -1,0 +1,3 @@
+SUCCESS t=132.90
+FINAL {"first_success_t": 132.9, "control_steps": 10300, "best_pos_err": 0.0016829705963970697, "best_ang_err": 0.0027545181136696684, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE matched_open_table_xarm6_s1g2 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g02
