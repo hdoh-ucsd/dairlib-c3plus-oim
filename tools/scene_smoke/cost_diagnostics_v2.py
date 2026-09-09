@@ -157,59 +157,35 @@ def process_run(args):
         if not math.isnan(st):
             succ_step = k[int(np.argmin(np.abs(m["sim_time"] - st)))]
 
-    # ---- figure ----
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(16, 5.5), sharex=True)
     contact = m["physical_contact_active"] > 0.5
 
-    for ax in (axL, axR):
-        # episode shading (C3-like/contact-rich, light blue)
-        for ep in episodes:
-            s, e = float(ep["start_step"]), float(ep["end_step"])
-            e = min(e, k[-1])
-            if s <= k[-1]:
-                ax.axvspan(s, e, color="#add8e6", alpha=0.35, lw=0)
-        # contact on/off ticks
-        trans = np.flatnonzero(np.diff(contact.astype(int)))
-        ons = [k[i + 1] for i in trans if contact[i + 1]]
-        offs = [k[i + 1] for i in trans if not contact[i + 1]]
-        if len(ons) + len(offs) > 100:
-            dec = math.ceil((len(ons) + len(offs)) / 100)
-            ons, offs = ons[::dec], offs[::dec]
-        for x0 in ons:
-            ax.axvline(x0, color="green", lw=0.4, alpha=0.6, ymax=0.05)
-        for x0 in offs:
-            ax.axvline(x0, color="red", lw=0.4, alpha=0.6, ymax=0.05)
-        if succ_step is not None:
-            ax.axvline(succ_step, color="green", lw=1.6, ls="-", label="first success")
-        if run_id in CRASH_RUNS:
-            ax.plot([k[-1]], [ax.get_ylim()[0]], "rx", ms=12, mew=3, clip_on=False,
-                    label="runtime termination")
-            ax.axvline(k[-1], color="red", lw=1.2, ls=":")
-        else:
-            ax.axvline(k[-1], color="gray", lw=1.2, ls="--", label="timeout/end")
+    # ---- figure: same layout/style as the original *_eval_metrics.png,
+    # right panel reduced to the 3 decision-relevant costs + total ----
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(16, 6))
+    scene = run_id.split("/")[0]
+    fig.suptitle(f"{stem.replace('_metrics', '')} ({scene})")
 
-    axL.plot(k, epos, color="#1f77b4", lw=1.0, label="position error (m)")
-    axL.plot(k, eth, color="#ff7f0e", lw=1.0, label="orientation error (rad)")
-    axL.axhline(0.05, color="#1f77b4", ls=":", lw=1, label="0.05 m")
-    axL.axhline(0.10, color="#ff7f0e", ls=":", lw=1, label="0.10 rad")
-    axL.set_title(f"{run_id} — Task diagnostics\n(shaded = C3-like episodes; ticks = contact on/off)")
+    axL.plot(k, epos, lw=1.4, label="position error (m)")
+    axL.plot(k, eth, lw=1.4, label="orientation error (rad)")
+    axL.set_title("Task diagnostics")
     axL.set_xlabel("control step")
-    axL.set_ylabel("error")
-    axL.legend(fontsize=7, loc="upper right")
+    axL.legend(loc="upper right")
+    axL.grid(alpha=0.3)
 
-    axR.plot(k, j_trans, color="#2ca02c", lw=0.9, label="J_trans")
-    axR.plot(k, j_rot, color="#ff7f0e", lw=0.9, label="J_rot")
-    axR.plot(k, j_task, color="black", lw=1.8, label="J_C3_task = J_trans + J_rot")
-    lbl = "J_obs (ranking layer)" + ("" if has_obs else " ≡ 0 (no obstacles)")
-    axR.plot(k, j_obs, color="#d62728", lw=1.0, ls="--", label=lbl)
-    axR.set_yscale("symlog", linthresh=1.0)
-    axR.set_title(f"C3+ cost decomposition (measured state; outcome={outcome})\n"
-                  "J_obs is the RANKING layer — local C3 is obstacle-blind (CASE C)")
+    axR.plot(k, j_trans, lw=1.0, label=f"translation (Σ {np.nansum(j_trans):.3g})")
+    axR.plot(k, j_rot, lw=1.0, label=f"orientation (Σ {np.nansum(j_rot):.3g})")
+    lbl = "obstacle" + ("" if has_obs else " (no obstacles)")
+    axR.plot(k, j_obs, lw=1.0, label=f"{lbl} (Σ {np.nansum(j_obs):.3g})")
+    axR.plot(k, j_task, color="black", lw=2.2,
+             label="total (translation+orientation)")
+    axR.set_yscale("symlog", linthresh=1e-3)
+    axR.set_title("C3+ cost decomposition")
     axR.set_xlabel("control step")
-    axR.set_ylabel("cost (symlog)")
-    axR.legend(fontsize=7, loc="upper right")
+    axR.set_ylabel("cost per control step")
+    axR.legend(loc="upper right", fontsize=8)
+    axR.grid(alpha=0.3)
 
-    fig.tight_layout()
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
     fig.savefig(os.path.join(d, stem + "_cost_diagnostics_v2.png"), dpi=110)
     plt.close(fig)
 
