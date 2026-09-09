@@ -9,3 +9,7 @@
   machinery untouched (lcs_contact unchanged); outer loop untouched.
 - No smoke run succeeded within 300 s — expected; smoke is not an SR gate.
 Baseline path remains compile-identical when the env vars are absent.
+
+NOTE 2026-09-09: the four 300 s smoke run dirs were MOVED to
+relu_design/smoke_runs_300s/ (they are Checkpoint-C artifacts, not campaign
+cells — the live relu grid reruns those cells at the canonical 600 s cap).

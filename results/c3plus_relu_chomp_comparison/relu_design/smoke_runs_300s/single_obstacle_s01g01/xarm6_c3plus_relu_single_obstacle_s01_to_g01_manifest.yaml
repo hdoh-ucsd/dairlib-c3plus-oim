@@ -1,0 +1,16 @@
+run_id: xarm6_c3plus_relu_single_obstacle_s01_to_g01
+scenario: single_obstacle
+demo: matched_single_obstacle_xarm6_t1
+goal:
+- 0.381
+- -0.4
+- 3.1416
+files:
+- xarm6_c3plus_relu_single_obstacle_s01_to_g01_metrics.csv
+- xarm6_c3plus_relu_single_obstacle_s01_to_g01_eval_metrics.png
+- xarm6_c3plus_relu_single_obstacle_s01_to_g01_result.json
+git_commit: 6ead20d4be626afcaff9bed10cb39214f9dd4782
+tolerances:
+  pos_tol: 0.05
+  ang_tol: 0.1
+generated: '2026-09-08T20:48:37.160703'

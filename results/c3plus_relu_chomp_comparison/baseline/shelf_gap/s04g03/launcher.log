@@ -1,0 +1,2 @@
+FINAL {"first_success_t": null, "control_steps": 15910, "best_pos_err": 0.5022250981421462, "best_ang_err": 1.1167753784047978, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE matched_shelf_gap_xarm6_s4g3 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s04g03

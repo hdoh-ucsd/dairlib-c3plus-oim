@@ -1,0 +1,2 @@
+SUCCESS t=93.40
+FINAL {"first_success_t": 93.4, "control_steps": 6819, "best_pos_err": 0.041780409497097604, "best_ang_err": 0.011555401371174945, "pos_tol": 0.05, "ang_tol": 0.1}
