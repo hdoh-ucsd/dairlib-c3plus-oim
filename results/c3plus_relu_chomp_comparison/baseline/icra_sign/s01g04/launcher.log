@@ -1,0 +1,2 @@
+FINAL {"first_success_t": null, "control_steps": 15050, "best_pos_err": 0.18083979433805505, "best_ang_err": 0.005985778641270922, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE anything_icra_c_matched_xarm6_s1g4 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/icra_sign/s01g04

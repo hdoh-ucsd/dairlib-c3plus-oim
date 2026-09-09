@@ -1,0 +1,2 @@
+FINAL {"first_success_t": null, "control_steps": 21580, "best_pos_err": 0.7257377822356074, "best_ang_err": 2.2968498696540176, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE matched_slalom_xarm6_s5g1 -> /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/slalom/s05g01

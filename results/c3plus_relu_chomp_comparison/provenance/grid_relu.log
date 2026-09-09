@@ -1,0 +1,3 @@
+150 jobs, variant=relu, cap=600, lanes=2
+[LAUNCH] relu/open_task/s1g1 port 8401 goal 0.381 -0.4 3.1416
+[LAUNCH] relu/open_task/s1g2 port 8402 goal 0.397 -0.431 3.2400

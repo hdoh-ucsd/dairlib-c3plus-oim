@@ -1,0 +1,328 @@
+85 runs to package (variant=baseline, jobs=2)
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g03 as xarm6_c3plus_open_task_s01_to_g03 (demo=matched_open_table_xarm6_s1g3 goal=0.404 -0.393 2.792399)
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g02 as xarm6_c3plus_open_task_s01_to_g02 (demo=matched_open_table_xarm6_s1g2 goal=0.397 -0.431 3.240000)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g03/xarm6_c3plus_open_task_s01_to_g03_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g03/xarm6_c3plus_open_task_s01_to_g03_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g03/xarm6_c3plus_open_task_s01_to_g03_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g03/xarm6_c3plus_open_task_s01_to_g03_manifest.yaml
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g02/xarm6_c3plus_open_task_s01_to_g02_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g02/xarm6_c3plus_open_task_s01_to_g02_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g02/xarm6_c3plus_open_task_s01_to_g02_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g02/xarm6_c3plus_open_task_s01_to_g02_manifest.yaml
+  frame 600/679
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g03/xarm6_c3plus_open_task_s01_to_g03.mp4 (679 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g03/xarm6_c3plus_open_task_s01_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root 1184812 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g03.mp4
+-rw-r--r--  1 root root   85923 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root  265567 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g03_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g03_manifest.yaml
+-rw-r--r--  1 root root 3895543 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g03_metrics.csv
+-rw-r--r--  1 root root     379 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g03_result.json
+PACKAGE DONE baseline/open_task/s01g03
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g04 as xarm6_c3plus_open_task_s01_to_g04 (demo=matched_open_table_xarm6_s1g4 goal=0.386 -0.424 2.770399)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g04/xarm6_c3plus_open_task_s01_to_g04_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g04/xarm6_c3plus_open_task_s01_to_g04_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g04/xarm6_c3plus_open_task_s01_to_g04_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g04/xarm6_c3plus_open_task_s01_to_g04_manifest.yaml
+  frame 800/839
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g02/xarm6_c3plus_open_task_s01_to_g02.mp4 (839 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g02/xarm6_c3plus_open_task_s01_to_g02_cost_diagnostics.png
+-rw-r--r--  1 root root 1482472 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g02.mp4
+-rw-r--r--  1 root root   84589 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g02_cost_diagnostics.png
+-rw-r--r--  1 root root  272293 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g02_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g02_manifest.yaml
+-rw-r--r--  1 root root 5053295 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g02_metrics.csv
+-rw-r--r--  1 root root     380 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g02_result.json
+PACKAGE DONE baseline/open_task/s01g02
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g05 as xarm6_c3plus_open_task_s01_to_g05 (demo=matched_open_table_xarm6_s1g5 goal=0.359 -0.424 2.733801)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g05/xarm6_c3plus_open_task_s01_to_g05_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g05/xarm6_c3plus_open_task_s01_to_g05_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g05/xarm6_c3plus_open_task_s01_to_g05_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g05/xarm6_c3plus_open_task_s01_to_g05_manifest.yaml
+  frame 400/480
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g05/xarm6_c3plus_open_task_s01_to_g05.mp4 (480 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g05/xarm6_c3plus_open_task_s01_to_g05_cost_diagnostics.png
+-rw-r--r--  1 root root  850564 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g05.mp4
+-rw-r--r--  1 root root   82102 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g05_cost_diagnostics.png
+-rw-r--r--  1 root root  254834 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g05_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g05_manifest.yaml
+-rw-r--r--  1 root root 2486551 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g05_metrics.csv
+-rw-r--r--  1 root root     375 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g05_result.json
+PACKAGE DONE baseline/open_task/s01g05
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g01 as xarm6_c3plus_open_task_s02_to_g01 (demo=matched_open_table_xarm6_s2g1 goal=0.381 -0.4 3.141600)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g01/xarm6_c3plus_open_task_s02_to_g01_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g01/xarm6_c3plus_open_task_s02_to_g01_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g01/xarm6_c3plus_open_task_s02_to_g01_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g01/xarm6_c3plus_open_task_s02_to_g01_manifest.yaml
+  frame 800/801
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g04/xarm6_c3plus_open_task_s01_to_g04.mp4 (801 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s01g04/xarm6_c3plus_open_task_s01_to_g04_cost_diagnostics.png
+-rw-r--r--  1 root root 1424734 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g04.mp4
+-rw-r--r--  1 root root   81496 Sep  9 07:14 xarm6_c3plus_open_task_s01_to_g04_cost_diagnostics.png
+-rw-r--r--  1 root root  268721 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g04_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g04_manifest.yaml
+-rw-r--r--  1 root root 4677433 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g04_metrics.csv
+-rw-r--r--  1 root root     378 Sep  9 07:13 xarm6_c3plus_open_task_s01_to_g04_result.json
+PACKAGE DONE baseline/open_task/s01g04
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g03 as xarm6_c3plus_open_task_s02_to_g03 (demo=matched_open_table_xarm6_s2g3 goal=0.404 -0.393 2.792399)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g03/xarm6_c3plus_open_task_s02_to_g03_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g03/xarm6_c3plus_open_task_s02_to_g03_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g03/xarm6_c3plus_open_task_s02_to_g03_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g03/xarm6_c3plus_open_task_s02_to_g03_manifest.yaml
+  frame 500/544
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g01/xarm6_c3plus_open_task_s02_to_g01.mp4 (544 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g01/xarm6_c3plus_open_task_s02_to_g01_cost_diagnostics.png
+-rw-r--r--  1 root root  949632 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g01.mp4
+-rw-r--r--  1 root root   83286 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g01_cost_diagnostics.png
+-rw-r--r--  1 root root  250401 Sep  9 07:14 xarm6_c3plus_open_task_s02_to_g01_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:14 xarm6_c3plus_open_task_s02_to_g01_manifest.yaml
+-rw-r--r--  1 root root 3009976 Sep  9 07:14 xarm6_c3plus_open_task_s02_to_g01_metrics.csv
+-rw-r--r--  1 root root     382 Sep  9 07:14 xarm6_c3plus_open_task_s02_to_g01_result.json
+PACKAGE DONE baseline/open_task/s02g01
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g04 as xarm6_c3plus_open_task_s02_to_g04 (demo=matched_open_table_xarm6_s2g4 goal=0.386 -0.424 2.770399)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g04/xarm6_c3plus_open_task_s02_to_g04_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g04/xarm6_c3plus_open_task_s02_to_g04_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g04/xarm6_c3plus_open_task_s02_to_g04_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g04/xarm6_c3plus_open_task_s02_to_g04_manifest.yaml
+  frame 400/456
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g03/xarm6_c3plus_open_task_s02_to_g03.mp4 (456 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g03/xarm6_c3plus_open_task_s02_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root  803455 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g03.mp4
+-rw-r--r--  1 root root   82846 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root  244920 Sep  9 07:14 xarm6_c3plus_open_task_s02_to_g03_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:14 xarm6_c3plus_open_task_s02_to_g03_manifest.yaml
+-rw-r--r--  1 root root 2390723 Sep  9 07:14 xarm6_c3plus_open_task_s02_to_g03_metrics.csv
+-rw-r--r--  1 root root     376 Sep  9 07:14 xarm6_c3plus_open_task_s02_to_g03_result.json
+PACKAGE DONE baseline/open_task/s02g03
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g05 as xarm6_c3plus_open_task_s02_to_g05 (demo=matched_open_table_xarm6_s2g5 goal=0.359 -0.424 2.733801)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g05/xarm6_c3plus_open_task_s02_to_g05_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g05/xarm6_c3plus_open_task_s02_to_g05_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g05/xarm6_c3plus_open_task_s02_to_g05_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g05/xarm6_c3plus_open_task_s02_to_g05_manifest.yaml
+  frame 500/534
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g04/xarm6_c3plus_open_task_s02_to_g04.mp4 (534 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g04/xarm6_c3plus_open_task_s02_to_g04_cost_diagnostics.png
+-rw-r--r--  1 root root  977667 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g04.mp4
+-rw-r--r--  1 root root   83325 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g04_cost_diagnostics.png
+-rw-r--r--  1 root root  259473 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g04_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g04_manifest.yaml
+-rw-r--r--  1 root root 2797956 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g04_metrics.csv
+-rw-r--r--  1 root root     377 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g04_result.json
+PACKAGE DONE baseline/open_task/s02g04
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g01 as xarm6_c3plus_open_task_s03_to_g01 (demo=matched_open_table_xarm6_s3g1 goal=0.381 -0.4 3.141600)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g01/xarm6_c3plus_open_task_s03_to_g01_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g01/xarm6_c3plus_open_task_s03_to_g01_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g01/xarm6_c3plus_open_task_s03_to_g01_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g01/xarm6_c3plus_open_task_s03_to_g01_manifest.yaml
+  frame 600/674
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g05/xarm6_c3plus_open_task_s02_to_g05.mp4 (674 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s02g05/xarm6_c3plus_open_task_s02_to_g05_cost_diagnostics.png
+-rw-r--r--  1 root root 1195922 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g05.mp4
+-rw-r--r--  1 root root   86248 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g05_cost_diagnostics.png
+-rw-r--r--  1 root root  272068 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g05_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g05_manifest.yaml
+-rw-r--r--  1 root root 3918824 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g05_metrics.csv
+-rw-r--r--  1 root root     377 Sep  9 07:15 xarm6_c3plus_open_task_s02_to_g05_result.json
+PACKAGE DONE baseline/open_task/s02g05
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g02 as xarm6_c3plus_open_task_s03_to_g02 (demo=matched_open_table_xarm6_s3g2 goal=0.397 -0.431 3.240000)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g02/xarm6_c3plus_open_task_s03_to_g02_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g02/xarm6_c3plus_open_task_s03_to_g02_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g02/xarm6_c3plus_open_task_s03_to_g02_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g02/xarm6_c3plus_open_task_s03_to_g02_manifest.yaml
+  frame 600/620
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g02/xarm6_c3plus_open_task_s03_to_g02.mp4 (620 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g02/xarm6_c3plus_open_task_s03_to_g02_cost_diagnostics.png
+-rw-r--r--  1 root root 1126706 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g02.mp4
+-rw-r--r--  1 root root   85728 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g02_cost_diagnostics.png
+-rw-r--r--  1 root root  279349 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g02_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g02_manifest.yaml
+-rw-r--r--  1 root root 3428513 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g02_metrics.csv
+-rw-r--r--  1 root root     382 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g02_result.json
+PACKAGE DONE baseline/open_task/s03g02
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g04 as xarm6_c3plus_open_task_s03_to_g04 (demo=matched_open_table_xarm6_s3g4 goal=0.386 -0.424 2.770399)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g04/xarm6_c3plus_open_task_s03_to_g04_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g04/xarm6_c3plus_open_task_s03_to_g04_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g04/xarm6_c3plus_open_task_s03_to_g04_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g04/xarm6_c3plus_open_task_s03_to_g04_manifest.yaml
+  frame 1000/1012
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g01/xarm6_c3plus_open_task_s03_to_g01.mp4 (1012 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g01/xarm6_c3plus_open_task_s03_to_g01_cost_diagnostics.png
+-rw-r--r--  1 root root  461203 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g01.mp4
+-rw-r--r--  1 root root   76566 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g01_cost_diagnostics.png
+-rw-r--r--  1 root root  216066 Sep  9 07:15 xarm6_c3plus_open_task_s03_to_g01_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:15 xarm6_c3plus_open_task_s03_to_g01_manifest.yaml
+-rw-r--r--  1 root root 1190429 Sep  9 07:15 xarm6_c3plus_open_task_s03_to_g01_metrics.csv
+-rw-r--r--  1 root root     370 Sep  9 07:15 xarm6_c3plus_open_task_s03_to_g01_result.json
+PACKAGE DONE baseline/open_task/s03g01
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g05 as xarm6_c3plus_open_task_s03_to_g05 (demo=matched_open_table_xarm6_s3g5 goal=0.359 -0.424 2.733801)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g05/xarm6_c3plus_open_task_s03_to_g05_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g05/xarm6_c3plus_open_task_s03_to_g05_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g05/xarm6_c3plus_open_task_s03_to_g05_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g05/xarm6_c3plus_open_task_s03_to_g05_manifest.yaml
+  frame 600/700
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g04/xarm6_c3plus_open_task_s03_to_g04.mp4 (700 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g04/xarm6_c3plus_open_task_s03_to_g04_cost_diagnostics.png
+-rw-r--r--  1 root root 1244528 Sep  9 07:17 xarm6_c3plus_open_task_s03_to_g04.mp4
+-rw-r--r--  1 root root   87840 Sep  9 07:17 xarm6_c3plus_open_task_s03_to_g04_cost_diagnostics.png
+-rw-r--r--  1 root root  282400 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g04_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g04_manifest.yaml
+-rw-r--r--  1 root root 3973886 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g04_metrics.csv
+-rw-r--r--  1 root root     377 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g04_result.json
+PACKAGE DONE baseline/open_task/s03g04
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g01 as xarm6_c3plus_open_task_s04_to_g01 (demo=matched_open_table_xarm6_s4g1 goal=0.381 -0.4 3.141600)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g01/xarm6_c3plus_open_task_s04_to_g01_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g01/xarm6_c3plus_open_task_s04_to_g01_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g01/xarm6_c3plus_open_task_s04_to_g01_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g01/xarm6_c3plus_open_task_s04_to_g01_manifest.yaml
+  frame 1000/1050
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g05/xarm6_c3plus_open_task_s03_to_g05.mp4 (1050 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s03g05/xarm6_c3plus_open_task_s03_to_g05_cost_diagnostics.png
+-rw-r--r--  1 root root  501142 Sep  9 07:17 xarm6_c3plus_open_task_s03_to_g05.mp4
+-rw-r--r--  1 root root   74092 Sep  9 07:17 xarm6_c3plus_open_task_s03_to_g05_cost_diagnostics.png
+-rw-r--r--  1 root root  223182 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g05_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g05_manifest.yaml
+-rw-r--r--  1 root root 1326575 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g05_metrics.csv
+-rw-r--r--  1 root root     370 Sep  9 07:16 xarm6_c3plus_open_task_s03_to_g05_result.json
+PACKAGE DONE baseline/open_task/s03g05
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g02 as xarm6_c3plus_open_task_s04_to_g02 (demo=matched_open_table_xarm6_s4g2 goal=0.397 -0.431 3.240000)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g02/xarm6_c3plus_open_task_s04_to_g02_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g02/xarm6_c3plus_open_task_s04_to_g02_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g02/xarm6_c3plus_open_task_s04_to_g02_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g02/xarm6_c3plus_open_task_s04_to_g02_manifest.yaml
+  frame 400/452
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g02/xarm6_c3plus_open_task_s04_to_g02.mp4 (452 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g02/xarm6_c3plus_open_task_s04_to_g02_cost_diagnostics.png
+-rw-r--r--  1 root root  828476 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g02.mp4
+-rw-r--r--  1 root root   80546 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g02_cost_diagnostics.png
+-rw-r--r--  1 root root  246127 Sep  9 07:17 xarm6_c3plus_open_task_s04_to_g02_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:17 xarm6_c3plus_open_task_s04_to_g02_manifest.yaml
+-rw-r--r--  1 root root 2561266 Sep  9 07:17 xarm6_c3plus_open_task_s04_to_g02_metrics.csv
+-rw-r--r--  1 root root     380 Sep  9 07:17 xarm6_c3plus_open_task_s04_to_g02_result.json
+PACKAGE DONE baseline/open_task/s04g02
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g03 as xarm6_c3plus_open_task_s04_to_g03 (demo=matched_open_table_xarm6_s4g3 goal=0.404 -0.393 2.792399)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g03/xarm6_c3plus_open_task_s04_to_g03_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g03/xarm6_c3plus_open_task_s04_to_g03_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g03/xarm6_c3plus_open_task_s04_to_g03_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g03/xarm6_c3plus_open_task_s04_to_g03_manifest.yaml
+  frame 900/983
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g01/xarm6_c3plus_open_task_s04_to_g01.mp4 (983 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g01/xarm6_c3plus_open_task_s04_to_g01_cost_diagnostics.png
+-rw-r--r--  1 root root 1789067 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g01.mp4
+-rw-r--r--  1 root root   83519 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g01_cost_diagnostics.png
+-rw-r--r--  1 root root  300349 Sep  9 07:17 xarm6_c3plus_open_task_s04_to_g01_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:17 xarm6_c3plus_open_task_s04_to_g01_manifest.yaml
+-rw-r--r--  1 root root 5914807 Sep  9 07:17 xarm6_c3plus_open_task_s04_to_g01_metrics.csv
+-rw-r--r--  1 root root     380 Sep  9 07:17 xarm6_c3plus_open_task_s04_to_g01_result.json
+PACKAGE DONE baseline/open_task/s04g01
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g05 as xarm6_c3plus_open_task_s04_to_g05 (demo=matched_open_table_xarm6_s4g5 goal=0.359 -0.424 2.733801)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g05/xarm6_c3plus_open_task_s04_to_g05_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g05/xarm6_c3plus_open_task_s04_to_g05_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g05/xarm6_c3plus_open_task_s04_to_g05_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g05/xarm6_c3plus_open_task_s04_to_g05_manifest.yaml
+  frame 500/544
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g03/xarm6_c3plus_open_task_s04_to_g03.mp4 (544 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g03/xarm6_c3plus_open_task_s04_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root  976903 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g03.mp4
+-rw-r--r--  1 root root   78471 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root  260918 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g03_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g03_manifest.yaml
+-rw-r--r--  1 root root 2983656 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g03_metrics.csv
+-rw-r--r--  1 root root     376 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g03_result.json
+PACKAGE DONE baseline/open_task/s04g03
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g01 as xarm6_c3plus_open_task_s05_to_g01 (demo=matched_open_table_xarm6_s5g1 goal=0.381 -0.4 3.141600)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g01/xarm6_c3plus_open_task_s05_to_g01_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g01/xarm6_c3plus_open_task_s05_to_g01_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g01/xarm6_c3plus_open_task_s05_to_g01_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g01/xarm6_c3plus_open_task_s05_to_g01_manifest.yaml
+  frame 500/547
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g05/xarm6_c3plus_open_task_s04_to_g05.mp4 (547 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s04g05/xarm6_c3plus_open_task_s04_to_g05_cost_diagnostics.png
+-rw-r--r--  1 root root 1018669 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g05.mp4
+-rw-r--r--  1 root root   82441 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g05_cost_diagnostics.png
+-rw-r--r--  1 root root  258749 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g05_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g05_manifest.yaml
+-rw-r--r--  1 root root 2972603 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g05_metrics.csv
+-rw-r--r--  1 root root     376 Sep  9 07:18 xarm6_c3plus_open_task_s04_to_g05_result.json
+PACKAGE DONE baseline/open_task/s04g05
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g02 as xarm6_c3plus_open_task_s05_to_g02 (demo=matched_open_table_xarm6_s5g2 goal=0.397 -0.431 3.240000)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g02/xarm6_c3plus_open_task_s05_to_g02_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g02/xarm6_c3plus_open_task_s05_to_g02_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g02/xarm6_c3plus_open_task_s05_to_g02_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g02/xarm6_c3plus_open_task_s05_to_g02_manifest.yaml
+  frame 700/776
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g02/xarm6_c3plus_open_task_s05_to_g02.mp4 (776 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g02/xarm6_c3plus_open_task_s05_to_g02_cost_diagnostics.png
+-rw-r--r--  1 root root  1756808 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g02.mp4
+-rw-r--r--  1 root root    87533 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g02_cost_diagnostics.png
+-rw-r--r--  1 root root   327457 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g02_eval_metrics.png
+-rw-r--r--  1 root root      420 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g02_manifest.yaml
+-rw-r--r--  1 root root  9372723 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g02_metrics.csv
+-rw-r--r--  1 root root      379 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g02_result.json
+PACKAGE DONE baseline/open_task/s05g02
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g03 as xarm6_c3plus_open_task_s05_to_g03 (demo=matched_open_table_xarm6_s5g3 goal=0.404 -0.393 2.792399)
+  frame 900/982
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g01/xarm6_c3plus_open_task_s05_to_g01.mp4 (982 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g01/xarm6_c3plus_open_task_s05_to_g01_cost_diagnostics.png
+-rw-r--r--  1 root root 1786755 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g01.mp4
+-rw-r--r--  1 root root   88113 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g01_cost_diagnostics.png
+-rw-r--r--  1 root root  299062 Sep  9 07:18 xarm6_c3plus_open_task_s05_to_g01_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:18 xarm6_c3plus_open_task_s05_to_g01_manifest.yaml
+-rw-r--r--  1 root root 5825026 Sep  9 07:18 xarm6_c3plus_open_task_s05_to_g01_metrics.csv
+-rw-r--r--  1 root root     384 Sep  9 07:18 xarm6_c3plus_open_task_s05_to_g01_result.json
+PACKAGE DONE baseline/open_task/s05g01
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g04 as xarm6_c3plus_open_task_s05_to_g04 (demo=matched_open_table_xarm6_s5g4 goal=0.386 -0.424 2.770399)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g03/xarm6_c3plus_open_task_s05_to_g03_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g03/xarm6_c3plus_open_task_s05_to_g03_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g03/xarm6_c3plus_open_task_s05_to_g03_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g03/xarm6_c3plus_open_task_s05_to_g03_manifest.yaml
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g04/xarm6_c3plus_open_task_s05_to_g04_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g04/xarm6_c3plus_open_task_s05_to_g04_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g04/xarm6_c3plus_open_task_s05_to_g04_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g04/xarm6_c3plus_open_task_s05_to_g04_manifest.yaml
+  frame 700/783
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g04/xarm6_c3plus_open_task_s05_to_g04.mp4 (783 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g04/xarm6_c3plus_open_task_s05_to_g04_cost_diagnostics.png
+-rw-r--r--  1 root root 1402763 Sep  9 07:20 xarm6_c3plus_open_task_s05_to_g04.mp4
+-rw-r--r--  1 root root   84260 Sep  9 07:20 xarm6_c3plus_open_task_s05_to_g04_cost_diagnostics.png
+-rw-r--r--  1 root root  267683 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g04_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g04_manifest.yaml
+-rw-r--r--  1 root root 4652898 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g04_metrics.csv
+-rw-r--r--  1 root root     383 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g04_result.json
+PACKAGE DONE baseline/open_task/s05g04
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g02 as xarm6_c3plus_shelf_gap_s01_to_g02 (demo=matched_shelf_gap_xarm6_s1g2 goal=0.404 -0.393 2.792399)
+  frame 900/907
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g03/xarm6_c3plus_open_task_s05_to_g03.mp4 (907 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/open_task/s05g03/xarm6_c3plus_open_task_s05_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root 1658607 Sep  9 07:20 xarm6_c3plus_open_task_s05_to_g03.mp4
+-rw-r--r--  1 root root   88275 Sep  9 07:20 xarm6_c3plus_open_task_s05_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root  307258 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g03_eval_metrics.png
+-rw-r--r--  1 root root     420 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g03_manifest.yaml
+-rw-r--r--  1 root root 5376410 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g03_metrics.csv
+-rw-r--r--  1 root root     380 Sep  9 07:19 xarm6_c3plus_open_task_s05_to_g03_result.json
+PACKAGE DONE baseline/open_task/s05g03
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g03 as xarm6_c3plus_shelf_gap_s01_to_g03 (demo=matched_shelf_gap_xarm6_s1g3 goal=0.363 -0.41 3.568401)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g03/xarm6_c3plus_shelf_gap_s01_to_g03_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g03/xarm6_c3plus_shelf_gap_s01_to_g03_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g03/xarm6_c3plus_shelf_gap_s01_to_g03_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g03/xarm6_c3plus_shelf_gap_s01_to_g03_manifest.yaml
+  frame 1000/1028
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g03/xarm6_c3plus_shelf_gap_s01_to_g03.mp4 (1028 frames @ 10 fps)
+wrote /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g03/xarm6_c3plus_shelf_gap_s01_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root  418772 Sep  9 07:22 xarm6_c3plus_shelf_gap_s01_to_g03.mp4
+-rw-r--r--  1 root root   70243 Sep  9 07:22 xarm6_c3plus_shelf_gap_s01_to_g03_cost_diagnostics.png
+-rw-r--r--  1 root root  208605 Sep  9 07:21 xarm6_c3plus_shelf_gap_s01_to_g03_eval_metrics.png
+-rw-r--r--  1 root root     419 Sep  9 07:21 xarm6_c3plus_shelf_gap_s01_to_g03_manifest.yaml
+-rw-r--r--  1 root root  858833 Sep  9 07:21 xarm6_c3plus_shelf_gap_s01_to_g03_metrics.csv
+-rw-r--r--  1 root root     368 Sep  9 07:21 xarm6_c3plus_shelf_gap_s01_to_g03_result.json
+PACKAGE DONE baseline/shelf_gap/s01g03
+packaging /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g04 as xarm6_c3plus_shelf_gap_s01_to_g04 (demo=matched_shelf_gap_xarm6_s1g4 goal=0.367 -0.391 2.733801)
+Terminated
+PACKAGING PASS DONE (baseline)
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g04/xarm6_c3plus_shelf_gap_s01_to_g04_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g04/xarm6_c3plus_shelf_gap_s01_to_g04_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g04/xarm6_c3plus_shelf_gap_s01_to_g04_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g04/xarm6_c3plus_shelf_gap_s01_to_g04_manifest.yaml
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g02/xarm6_c3plus_shelf_gap_s01_to_g02_metrics.csv
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g02/xarm6_c3plus_shelf_gap_s01_to_g02_eval_metrics.png
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g02/xarm6_c3plus_shelf_gap_s01_to_g02_result.json
+WROTE /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics/results/c3plus_relu_chomp_comparison/baseline/shelf_gap/s01g02/xarm6_c3plus_shelf_gap_s01_to_g02_manifest.yaml
