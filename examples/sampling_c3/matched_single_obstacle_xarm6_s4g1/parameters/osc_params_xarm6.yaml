@@ -1,0 +1,99 @@
+### Parameters from OSCGains ###
+controller_frequency: 1000
+w_input: 0.00
+w_input_reg: 0.0
+w_accel: 0.00001
+w_soft_constraint: 0.0
+w_lambda: 0.0
+impact_threshold: 0.000
+impact_tau: 0.000
+mu: 0.4615
+
+W_accel: [ 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+W_input_reg: [ 1, 1, 1, 1, 1, 10]
+W_lambda_c_reg: [ 0.001, 0.001, 0.01,
+                  0.001, 0.001, 0.01,
+                  0.001, 0.001, 0.01,
+                  0.001, 0.001, 0.01 ]
+W_lambda_h_reg: [ 0.001, 0.001, 0.001,
+                  0.001, 0.001, 0.001 ]
+
+
+### Additional parameters for SamplingC3OSCParams ###
+
+# Two teleoperation modes:  1) locked EE neutral position, where xbox controls
+# perturb the EE; and 2) xbox controls move the EE to a new neutral position.
+# xArm6: neutral set to the demo's initial EE tip pose (same tip start as the
+# Franka demo). The shared value [0.4276, 0.1930, 0.1276] sits 0.23 m from the
+# start tip; the 6-DOF arm's startup swing toward it sweeps the tip through
+# x < 0.15 m, tripping the planner's workspace-limit DRAKE_DEMAND. With the
+# neutral at the start pose there is no startup transient at all.
+neutral_position: [0.32668246, 0.40079496, 0.07330996]
+teleop_neutral_position: true
+
+# If using teleop_neutral_position, it's beneficial for the x/y/z_scales to be
+# relatively small, i.e. 0.0002 works well (compared to 0.2 for the locked
+# neutral position scheme).
+x_scale: 0.0002
+y_scale: 0.0002
+z_scale: 0.0002
+
+# xArm6: Cartesian accel clamp 10 -> 2 m/s^2 (= the planner's nominal_ee_accel). With the
+# Panda Kd=20 restored, large reposition steps otherwise build overshoot energy the xArm6's
+# lower effort ceilings cannot brake (startup x_min crash, round 5); capping accel bounds
+# approach speed instead of damping contact tracking (the Kd=40 wedge/topple, rounds 2-4).
+end_effector_acceleration: 10
+track_end_effector_orientation: false
+cancel_gravity_compensation: false
+enforce_acceleration_constraints: false
+publish_debug_info: true
+
+w_elbow: 1
+elbow_kp: 200
+elbow_kd: 10
+
+# This is the weight matrix for the end effector position tracking.
+# xArm6 (round 7): translation made PRIMARY by weight (1 -> 50). On 6-DOF there is no
+# redundancy to absorb the rot task (W=10, Kp=800); with W=1 the QP sacrificed lateral
+# tracking (~2 cm wedge into the spinning T at reposition onset -> scoop/topple; startup
+# runaway through x_min). Explicit weight hierarchy replaces the Panda's implicit one.
+EndEffectorW:
+  [50, 0, 0,
+   0, 50, 0,
+   0, 0, 50]
+EndEffectorKp:
+  [ 200, 0, 0,
+    0, 200, 0,
+    0, 0, 200 ]
+# Kd restored to the Panda value 20 (round-5): Kd=40 made the tip lag the T's fast-rotating
+# face during pushes, wedging deeper; the subsequent lift through the mu_eff=1.0 contact
+# scooped/toppled the T at the first reposition in rounds 2-4. The workspace-overshoot crash
+# Kd=40 originally addressed is now bounded by the robot_radius_limits 0.70 calibration.
+EndEffectorKd:
+  [ 40, 0, 0,
+    0, 40, 0,
+    0, 0, 40 ]
+# Tool-axis (z) rotation weight zeroed for the 6-DOF xArm6: tool roll is
+# physically irrelevant (sphere tip, planner never commands roll) and zeroing
+# it recovers the slack DOF the Panda got from joint redundancy.
+# Tool roll weight 0 (6-DOF slack); tilt weight kept at the Panda value (a 10->1 A/B in round 3
+# did not change the topple time, so tilt stiffness is exonerated).
+EndEffectorRotW:
+  [ 10, 0, 0,
+    0, 10, 0,
+    0, 0, 0 ]
+EndEffectorRotKp:
+  [ 800, 0, 0,
+    0, 800, 0,
+    0, 0,  800]
+EndEffectorRotKd:
+  [ 40, 0, 0,
+    0, 40, 0,
+    0, 0, 40]
+# This is the weight matrix for the end effector force tracking. 
+# The end effector forces in the OSC are called lambdas but are really tracking
+# the forces at the end effector or the u_sol we get in c3.
+LambdaEndEffectorW:
+  [ 1, 0, 0,
+    0, 1, 0,
+    0, 0, 1 ]

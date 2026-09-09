@@ -1,0 +1,65 @@
+{
+ "summary": {
+  "single_obstacle": {
+   "n": 1000,
+   "spearman_old": 0.7794833333333333,
+   "spearman_base": 0.5524000000000001,
+   "top1_old": 0.726,
+   "top1_base": 0.58,
+   "top3_old": 0.6933333333333332,
+   "top3_base": 0.7593333333333333,
+   "mismatch": 0.03
+  },
+  "shelf_gap": {
+   "n": 1000,
+   "spearman_old": 0.7618166666666666,
+   "spearman_base": 0.8862833333333333,
+   "top1_old": 0.637,
+   "top1_base": 0.008,
+   "top3_old": 0.7976666666666665,
+   "top3_base": 0.8869999999999999,
+   "mismatch": 0.008
+  },
+  "ycb_clutter": {
+   "n": 1000,
+   "spearman_old": 0.6299666666666667,
+   "spearman_base": 0.9584999999999999,
+   "top1_old": 0.975,
+   "top1_base": 0.015,
+   "top3_old": 0.613,
+   "top3_base": 0.8786666666666666,
+   "mismatch": 0.193
+  },
+  "slalom": {
+   "n": 1000,
+   "spearman_old": 0.4737833333333333,
+   "spearman_base": 0.9553833333333334,
+   "top1_old": 0.767,
+   "top1_base": 0.0,
+   "top3_old": 0.5923333333333333,
+   "top3_base": 0.9383333333333332,
+   "mismatch": 0.001
+  },
+  "icra_sign": {
+   "n": 1000,
+   "spearman_old": 0.7332166666666667,
+   "spearman_base": 0.49461666666666665,
+   "top1_old": 0.588,
+   "top1_base": 0.309,
+   "top3_old": 0.6946666666666667,
+   "top3_base": 0.6609999999999999,
+   "mismatch": 0.614
+  }
+ },
+ "sanity_violations": 0,
+ "nan_count": 0,
+ "flagship": {
+  "t": 316.746,
+  "d_center": 0.02408753811891419,
+  "d_fp": 0.0006705257552270805,
+  "old": 2738.766562180985,
+  "new": 174.07817936776246,
+  "top1_changed_vs_base": true,
+  "top1_changed_vs_old": true
+ }
+}
