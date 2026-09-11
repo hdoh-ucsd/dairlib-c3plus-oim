@@ -514,7 +514,8 @@ Eigen::VectorXd MeshNormalSampling(
 
   do {
     // Sample value from total selected area
-    std::mt19937 gen(std::random_device{}());
+    std::mt19937 nondeterministic_gen(std::random_device{}());
+    std::mt19937& gen = SamplingC3RandomGenerator(nondeterministic_gen);
     std::uniform_real_distribution<double> dis(0.0, total_area);
     double target = dis(gen);
     const Face* selected_face = nullptr;
@@ -648,13 +649,15 @@ Eigen::VectorXd MeshNormalSamplingMultiObject(
     }
 
     // RNG setup
-    std::mt19937 gen(std::random_device{}());
+    std::mt19937 nondeterministic_gen(std::random_device{}());
+    std::mt19937& gen = SamplingC3RandomGenerator(nondeterministic_gen);
     std::uniform_real_distribution<double> dis_obj(0.0, total_area_all_objects);
 
     do {
         // Select object weighted by total area 
-        std::random_device rd;  
-        std::mt19937 gen(rd());
+        std::random_device rd;
+        std::mt19937 nondeterministic_gen(rd());
+        std::mt19937& gen = SamplingC3RandomGenerator(nondeterministic_gen);
         std::uniform_int_distribution<int> dist(0, num_objects_selected - 1);
         int selected_object_idx = dist(gen);
 
