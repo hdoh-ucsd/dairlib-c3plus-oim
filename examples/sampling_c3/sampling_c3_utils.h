@@ -20,6 +20,8 @@ static constexpr const char* kGroundModel =
   "examples/sampling_c3/urdf/ground.urdf";
 static constexpr const char* kPlatformModel =
   "examples/sampling_c3/urdf/platform.urdf";
+static constexpr const char* kOimXarm6Model =
+  "/root/push_anything_ADMM/sim/models/oim_xarm6_tabletop/xarm6/xarm6.xml";
 
 static constexpr const char* kLeftWallModel = "examples/sampling_c3/urdf/wall_left.urdf";
 static constexpr const char* kRightWallModel = "examples/sampling_c3/urdf/wall_right.urdf";
@@ -64,6 +66,16 @@ drake::multibody::ModelInstanceIndex AddFrankaToPlant(
     drake::multibody::MultibodyPlant<double>* plant,
     drake::geometry::SceneGraph<double>* scene_graph = nullptr,
     const bool& include_ee = true,
+    const bool& include_ground_and_platform = true,
+    const bool& include_walls = false);
+
+/// Add the OIM xArm6 (five actuated joints, fixed wrist roll, rigid pushing
+/// stick) while retaining DAIRLab's platform/workspace convention.  The
+/// exported `end_effector_tip` frame keeps the native Sampling-C3/OSC API
+/// unchanged.
+drake::multibody::ModelInstanceIndex AddOimXarm6ToPlant(
+    drake::multibody::MultibodyPlant<double>* plant,
+    drake::geometry::SceneGraph<double>* scene_graph = nullptr,
     const bool& include_ground_and_platform = true,
     const bool& include_walls = false);
 

@@ -83,9 +83,9 @@ int DoMain(int argc, char* argv[]) {
       drake::yaml::LoadYamlFile<SamplingC3Options>(
           controller_params.sampling_c3_options_file);
 
-  // Create a Franka-only plant (no need to add walls to this).
+  // Create an OIM xArm6-only plant (no need to add walls to this).
   MultibodyPlant<double> plant_franka(0.0);
-  AddFrankaToPlant(&plant_franka, nullptr, true, true, false);
+  AddOimXarm6ToPlant(&plant_franka, nullptr, true, false);
   plant_franka.Finalize();
   auto franka_context = plant_franka.CreateDefaultContext();
 

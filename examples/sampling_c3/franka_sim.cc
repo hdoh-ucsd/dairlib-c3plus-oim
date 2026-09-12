@@ -78,8 +78,8 @@ int DoMain(int argc, char* argv[]) {
   DiagramBuilder<double> builder;
   double sim_dt = sim_params.dt;
   auto [plant, scene_graph] = AddMultibodyPlantSceneGraph(&builder, sim_dt);
-  ModelInstanceIndex franka_index = AddFrankaToPlant(
-    &plant, &scene_graph, true, true, sampling_c3_options.include_walls);
+  ModelInstanceIndex franka_index = AddOimXarm6ToPlant(
+    &plant, &scene_graph, true, sampling_c3_options.include_walls);
 
   int num_objects = sim_params.object_models.size();
   std::vector<ModelInstanceIndex> object_indices = AddObjectsToPlant(
@@ -143,11 +143,12 @@ int DoMain(int argc, char* argv[]) {
 
   VectorXd q = VectorXd::Zero(nq);
 
-  q.head(plant.num_positions(franka_index)) = sim_params.q_init_franka;
+  q.head(plant.num_positions(franka_index)) =
+      sim_params.q_init_franka.head(plant.num_positions(franka_index));
   for (int i = 0; i < num_objects; i++) {
-      q.segment(7 * (i+1), 7) = sim_params.q_init_objects.at(i);
+      const int start = plant.num_positions(franka_index) + 7 * i;
+      q.segment(start, 7) = sim_params.q_init_objects.at(i);
   }
-  q.tail(7) = sim_params.q_init_objects.at(num_objects - 1);
 
   std::cout << "q: " << q.transpose() << std::endl;
 

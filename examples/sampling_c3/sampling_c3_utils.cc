@@ -2,6 +2,7 @@
 #include <iostream>
 #include "common/find_resource.h"
 #include "drake/multibody/parsing/parser.h"
+#include "drake/multibody/tree/fixed_offset_frame.h"
 
 namespace dairlib {
 
@@ -55,6 +56,39 @@ ModelInstanceIndex AddFrankaToPlant(MultibodyPlant<double>* plant,
   }
 
   return franka_index;
+}
+
+ModelInstanceIndex AddOimXarm6ToPlant(MultibodyPlant<double>* plant,
+                                      SceneGraph<double>* scene_graph,
+                                      const bool& include_ground_and_platform,
+                                      const bool& include_walls) {
+  Parser parser(plant, scene_graph);
+  parser.SetAutoRenaming(true);
+  ModelInstanceIndex xarm_index = parser.AddModels(kOimXarm6Model)[0];
+
+  for (int i = 1; i <= 5; ++i) {
+    const std::string name = "xarm6_joint" + std::to_string(i);
+    const auto& joint = plant->GetJointByName(name, xarm_index);
+    if (!plant->HasJointActuatorNamed(name)) {
+      plant->AddJointActuator(name, joint);
+    }
+  }
+
+  const auto& stick = plant->GetBodyByName("xarm6_stick", xarm_index);
+  plant->AddFrame(std::make_unique<drake::multibody::FixedOffsetFrame<double>>(
+      kEndEffectorName, stick.body_frame(),
+      RigidTransform<double>(Eigen::Vector3d(0.0, 0.0, 0.1794))));
+
+  if (include_ground_and_platform) {
+    parser.AddModels(FindResourceOrThrow(kGroundModel));
+    parser.AddModels(FindResourceOrThrow(kPlatformModel));
+    plant->WeldFrames(plant->world_frame(), plant->GetFrameByName("ground"),
+                      RigidTransform<double>(kWorldToGroundOffset));
+    plant->WeldFrames(plant->world_frame(), plant->GetFrameByName("platform"),
+                      RigidTransform<double>(kFrankaToPlatformOffset));
+  }
+  if (include_walls) AddWallsToPlant(plant, scene_graph);
+  return xarm_index;
 }
 
 void AddWallsToPlant(

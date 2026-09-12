@@ -85,9 +85,9 @@ int DoMain(int argc, char* argv[]) {
           FindResourceOrThrow(controller_params.osc_qp_settings_file))
           .GetAsSolverOptions(drake::solvers::OsqpSolver::id());
 
-  // Create a Franka-only plant.
+  // Create the OIM xArm6-only plant.
   drake::multibody::MultibodyPlant<double> plant(0.0);
-  AddFrankaToPlant(&plant);
+  AddOimXarm6ToPlant(&plant);
   plant.Finalize();
   auto plant_context = plant.CreateDefaultContext();
 
@@ -156,14 +156,6 @@ int DoMain(int argc, char* argv[]) {
       osc_params.end_effector_acceleration * Vector3d::Ones();
   end_effector_position_tracking_data->SetCmdAccelerationBounds(
       -end_effector_acceleration_limits, end_effector_acceleration_limits);
-  auto mid_link_position_tracking_data_for_rel =
-      std::make_unique<JointSpaceTrackingData>(
-          "panda_joint2_target", osc_params.K_p_mid_link,
-          osc_params.K_d_mid_link, osc_params.W_mid_link, plant,
-          plant);
-  mid_link_position_tracking_data_for_rel->AddJointToTrack("panda_joint2",
-                                                           "panda_joint2dot");
-
   auto end_effector_force_tracking_data =
       std::make_unique<ExternalForceTrackingData>(
           "end_effector_force", osc_params.W_ee_lambda, plant, plant,
@@ -179,11 +171,6 @@ int DoMain(int argc, char* argv[]) {
   Eigen::VectorXd orientation_target = Eigen::VectorXd::Zero(4);
   orientation_target(0) = 1;
   osc->AddTrackingData(std::move(end_effector_position_tracking_data));
-  // Since the Franka has 7 joints to control a 6 DOF EE command, add an
-  // additional tracking objective for joint 2 at a good configuration for the
-  // sampling C3 experiments.  1.1 joint target empirically works well.
-  osc->AddConstTrackingData(std::move(mid_link_position_tracking_data_for_rel),
-                            1.1 * VectorXd::Ones(1));
   osc->AddTrackingData(std::move(end_effector_orientation_tracking_data));
   osc->AddForceTrackingData(std::move(end_effector_force_tracking_data));
   osc->SetAccelerationCostWeights(osc_params.W_acceleration);
