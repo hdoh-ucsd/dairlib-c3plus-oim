@@ -1,0 +1,7 @@
+Setting C3 and LCS factory options for pose and position tracking.
+Setting C3 and LCS factory options for pose and position tracking.
+[2026-09-06 03:15:54.723] [console] [warning] //root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-ycb-icra/examples/sampling_c3/urdf/push_c_glyph.sdf:15: warning: In <collision name='spine_collision'>: When drake contact parameters are fully specified in the <drake:proximity_properties> tag, the <surface><friction><ode><mu*> tags are ignored.
+[2026-09-06 03:15:54.723] [console] [warning] //root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-ycb-icra/examples/sampling_c3/urdf/push_c_glyph.sdf:23: warning: In <collision name='top_bar_collision'>: When drake contact parameters are fully specified in the <drake:proximity_properties> tag, the <surface><friction><ode><mu*> tags are ignored.
+[2026-09-06 03:15:54.723] [console] [warning] //root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-ycb-icra/examples/sampling_c3/urdf/push_c_glyph.sdf:31: warning: In <collision name='bot_bar_collision'>: When drake contact parameters are fully specified in the <drake:proximity_properties> tag, the <surface><friction><ode><mu*> tags are ignored.
+Object index 0: 6
+q:    2.191      1.1    -1.33    -2.22      1.3     2.02     0.08 0.986566        0        0 0.163364    0.291   0.3534   -0.016

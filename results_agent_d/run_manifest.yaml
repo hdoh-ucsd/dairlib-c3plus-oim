@@ -1,0 +1,46 @@
+# Agent D — ycb_clutter + icra_sign scene validation (2026-09-05)
+outer_repository: /root/push_anything_ADMM (branch main @ 4316b1ea)
+controller_repository: /root/push_anything_ADMM/external/oim_c++_anything (shared object store with external/dairlib_sampling_c3)
+controller_worktree: /root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/audit-ycb-icra
+audit_branch: audit/ycb-icra-scene-validation
+base_commit: f8c3bd800   # = post-P5 HEAD of c3plus-channel-route-v1 (agent-a passive scripts on top of 43d5efb96)
+p5_commits: [5fbec41ef, 43d5efb96]   # default repos timeout + swept PWL path veto; escape zone + placeholder exclusion
+dirty_state: clean at base (audit adds passive tools only)
+c3_dependency: external C3 via MODULE.bazel (unchanged from base commit)
+executables:
+  # prebuilt in worktree obstacle-lcs-contact at the SAME commit (verified clean before use);
+  # run with cwd = audit worktree so every parameter file comes from the audit checkout
+  sim: .../obstacle-lcs-contact/bazel-bin/examples/sampling_c3/franka_sim
+  planner: .../obstacle-lcs-contact/bazel-bin/examples/sampling_c3/franka_sampling_c3_controller
+  osc: .../obstacle-lcs-contact/bazel-bin/examples/sampling_c3/franka_osc_controller
+robot_model: Franka panda_arm.urdf + end_effector_full.urdf (sphere pusher r=0.0195 m).
+  # NOTE the task brief said "xArm6": the xArm6 exists only in the OIM/MJX Python stack;
+  # the post-P5 C3+ obstacle stack under audit simulates the Franka + spherical pusher.
+tasks:
+  ycb_clutter: push_t_bt010_ycb_clutter
+  icra_sign: push_t_bt010_icra_sign
+object_model: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf (0.1 kg OIM-scale T)
+object_start: [0.5, 0.3, 0.0008], identity yaw
+goals:
+  ycb_clutter: [0.5, -0.3], yaw 0.0
+  icra_sign: [0.5, -0.4], yaw +pi/2 (the OIM C-slot pose)
+scene_configs:
+  ycb_clutter:
+    sim_obstacles: examples/sampling_c3/urdf/scene_ycb_clutter.sdf (2 static boxes)
+    planner_obstacles: [[0.5, 0.0, r=0.0707], [0.37, 0.2, r=0.0996]]  # circumscribed discs of the same 2 boxes
+  icra_sign:
+    sim_obstacles: NONE
+    planner_obstacles: []   # the ICRA sign is NOT modeled anywhere in this stack
+p5_settings: defaults ON (SAMPLING_C3_REPOS_PATH_VETO / SAMPLING_C3_REPOS_TIMEOUT_DEFAULT unset => enabled; SAMPLING_C3_OBS_TOP_Z default 0.12)
+obstacle_mode: SAMPLING_C3_OBSTACLE_MODE=lcs_contact (frictionless closest-footprint obstacle contact in the LCS; no soft cost, no legacy halfspace)
+route_mode: none (plain arm; the clean-slate rerun showed all route variants subtract performance)
+candidate_selection_mode: current (argmin ranking, no transaction, no dV-lexicographic)
+reposition_mode: current + P5 timeout/veto defaults
+qr_costs: {w_Q: 50, w_R: 1, w_G: 0.01, w_U: 0.26, q_ee: 0.01}
+horizon: N=5, planning_dt_position 0.1 / planning_dt_pose 0.05
+admm: {admm_iter: 3, rho_scale: 3, num_threads: 5, delta_option: 1, gamma: 1.0}
+sampler: {strategy: 4, radius 0.07-0.10, num_additional_samples_c3: 2, repos: 1}
+success_thresholds: pos < 0.02 m AND |yaw err| < 0.1 rad (tight, recorder-side)
+protocol: serial draws under flock /tmp/c3plus_sim.lock; wall cap 600 s per draw;
+  instrumentation via SAMPLING_C3_COST_LOG_DIR per draw (gap_state_trace, candidate ranking,
+  obstacle_lcs_contacts, reposition_swept_collision CSVs)

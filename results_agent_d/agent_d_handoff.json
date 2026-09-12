@@ -1,0 +1,31 @@
+{
+  "agent": "D",
+  "task": "ycb_clutter + icra_sign scene validation",
+  "base_commit": "f8c3bd800",
+  "audit_branch": "audit/ycb-icra-scene-validation",
+  "config": "plain lcs_contact, no route, P5 defaults ON, bt010 tasks, serial flock, 600s cap",
+  "scene_port_gaps": {
+    "ycb_clutter": "2 of 4 OIM obstacles ported (cube+sugar as boxes/discs); spam_can + mustard_bottle absent; positions differ from OIM MJCF; planner sugar disc overstates y-extent by 52mm",
+    "icra_sign": "NO sign geometry anywhere (sim or planner); open-table push to C-slot pose"
+  },
+  "runs": {
+    "ycb_clutter": {"n": 3, "successes": 0, "outcomes": ["topple@37.9s beside cube corner", "local fixed point north of cube (93 repos, 6 P5 timeouts recovered, acq 12%)", "position 41mm reached, yaw plateau at pi"]},
+    "icra_sign": {"n": 3, "successes": 1, "outcomes": ["topple@31.0s at (0.48,-0.19) yaw 0.75", "topple@27.6s at (0.48,-0.18) yaw 1.09 (SAME STATE)", "TIGHT SUCCESS 0.0197m/0.094rad @53.9s"]}
+  },
+  "key_measurements": {
+    "penetration": "none in any draw (graze -0.0 max against true boxes)",
+    "acquisition_rate": {"ycb": [0.122, 0.333, 0.55], "icra": [0.857, 0.833, 0.857]},
+    "pool": "POOL_SUFFICIENT both scenes (8/8 sectors live at ycb plateau; dense bank confirms lateral slides productive, no direct-progress push exists at the wedge)",
+    "prediction_rho_xy_given_contact": {"ycb": [0.68, 0.101, 1.61], "icra": [2.894, 2.281, 2.576]},
+    "p5": "6 reposition timeouts fired and recovered (ycb draw1); zero deadlocks; zero swept vetoes needed",
+    "lcs_slots": "n_obs_slots=2 == scene obstacle count; zero identity switches; comp_residual <= 0.05; ~616 slightly negative lambda values (soft ADMM)"
+  },
+  "verdicts": {"ycb": "Y7_MULTIPLE_CAUSES_RANKED (F10, F4+F1, F7) + port under-representation", "icra": "I1 for the ported task (tight success) / I5 for the benchmark intent (sign absent); systematic F10 topple during +90deg yaw at repeatable state"},
+  "new_architectural_limitation": false,
+  "actionable": [
+    "complete the scene port: sign glyph obstacles + spam_can/mustard_bottle (obstacle representation lane only)",
+    "icra topple is REPEATABLE at (0.48,-0.19) mid-rotation: clean root-cause target for the yaw-production topple mechanism",
+    "consider SAMPLING_C3_OBS_BOXES exact AABBs instead of conservative discs (sugar disc closes a physically-open lane by 52mm)"
+  ],
+  "artifacts": "results/parallel_c3plus_audit/agent_d_ycb_icra/ (inventories, runs, contacts, pool, prediction, reposition, matrix, figures) + report at worktree root"
+}
