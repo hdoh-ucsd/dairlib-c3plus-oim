@@ -17,6 +17,16 @@ static constexpr const char* kEndEffectorModel =
   "examples/sampling_c3/urdf/end_effector_full.urdf";
 static constexpr const char* kEndEffectorSimpleModel =
   "examples/sampling_c3/urdf/end_effector_simple_model.urdf";
+/// OIM-matched xArm6 tool: capsule stick (r=0.00555, tip at 0.1794 from the
+/// link6 flange), welded flush at link6 (no offset, no gap).
+static constexpr const char* kXarm6EndEffectorModel =
+  "examples/sampling_c3/urdf/end_effector_xarm6_stick.urdf";
+/// OIM-matched xArm6 tabletop: 0.80 x 1.523 m, long axis along y, white.
+static constexpr const char* kXarm6GroundModel =
+  "examples/sampling_c3/urdf/ground_oim_xarm6.urdf";
+/// LCS-plant EE for xArm6: same prismatic simple model, stick-tip radius.
+static constexpr const char* kXarm6EndEffectorSimpleModel =
+  "examples/sampling_c3/urdf/end_effector_simple_model_xarm6.urdf";
 static constexpr const char* kEndEffectorName = "end_effector_tip";
 static constexpr const char* kGroundModel =
   "examples/sampling_c3/urdf/ground.urdf";
@@ -136,7 +146,8 @@ std::vector<drake::multibody::ModelInstanceIndex> AddLCSModelsToPlant(
     drake::geometry::SceneGraph<double>* scene_graph = nullptr,
     std::vector<std::string> object_models = {},
     const bool& include_end_effector_orientation = false,
-    const bool& include_walls = false);
+    const bool& include_walls = false,
+    const bool& xarm6 = false);
 
 
 }   // namespace dairlib
