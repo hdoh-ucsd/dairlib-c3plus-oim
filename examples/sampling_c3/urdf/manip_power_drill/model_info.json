@@ -1,0 +1,62 @@
+{
+  "object": "power_drill",
+  "base_name": "manip_power_drill",
+  "mass_kg": 0.895,
+  "mesh_sha256": "a9b49d1062e655e50d6bc656fc57a44d5b50b033382acfb8eef13adba89e0c77",
+  "bounds_min_m": [
+    -0.073683,
+    -0.075006,
+    0.0
+  ],
+  "bounds_max_m": [
+    0.073683,
+    0.075006,
+    0.045834
+  ],
+  "extents_m": [
+    0.147366,
+    0.150012,
+    0.045834
+  ],
+  "inertia_method": "convex_hull_mass_properties_scaled_to_nominal_mass",
+  "collision_geometry": "convex hull of uploaded OBJ via drake:declare_convex",
+  "center_of_mass_m": [
+    0.006722166761867286,
+    0.002927696972571831,
+    0.02182372798368256
+  ],
+  "inertia_kg_m2": [
+    [
+      0.001595465415310569,
+      0.00010636876368112933,
+      2.2037979003639342e-05
+    ],
+    [
+      0.00010636876368112933,
+      0.0011071581113112046,
+      3.1169934425170825e-05
+    ],
+    [
+      2.2037979003639342e-05,
+      3.1169934425170825e-05,
+      0.002463347858048717
+    ]
+  ],
+  "control_support_spheres_xy_m": [
+    [
+      -0.019996,
+      -0.072586
+    ],
+    [
+      0.064961,
+      0.062396
+    ],
+    [
+      -0.029014,
+      0.06323
+    ]
+  ],
+  "friction_object_mu_static": 0.3,
+  "friction_object_mu_dynamic": 0.3,
+  "notes": "Visual uses exact uploaded mesh. Sim/control physical properties are identical. Control adds three 1 mm support spheres."
+}
