@@ -1,0 +1,62 @@
+{
+  "object": "hammer",
+  "base_name": "manip_hammer",
+  "mass_kg": 0.665,
+  "mesh_sha256": "5f42329fc8ec1904773b60dce1f04f54e98fe2dee2cb11e843d4748aec7c2fb1",
+  "bounds_min_m": [
+    -0.065983,
+    -0.090173,
+    0.0
+  ],
+  "bounds_max_m": [
+    0.065983,
+    0.090173,
+    0.032494
+  ],
+  "extents_m": [
+    0.131966,
+    0.180346,
+    0.032494
+  ],
+  "inertia_method": "convex_hull_mass_properties_scaled_to_nominal_mass",
+  "collision_geometry": "convex hull of uploaded OBJ via drake:declare_convex",
+  "center_of_mass_m": [
+    -0.0013085899932991786,
+    -0.015238120544314221,
+    0.016058420018770378
+  ],
+  "inertia_kg_m2": [
+    [
+      0.0013671256605471717,
+      -0.00011158125613067158,
+      -6.603443840087748e-06
+    ],
+    [
+      -0.00011158125613067158,
+      0.0006134799674803732,
+      6.43133400627527e-07
+    ],
+    [
+      -6.603443840087748e-06,
+      6.43133400627527e-07,
+      0.0018910768582892413
+    ]
+  ],
+  "control_support_spheres_xy_m": [
+    [
+      0.065417,
+      -0.035715
+    ],
+    [
+      -0.064003,
+      -0.081268
+    ],
+    [
+      0.040824,
+      -0.06429
+    ]
+  ],
+  "friction_object_mu_static": 0.3,
+  "friction_object_mu_dynamic": 0.3,
+  "notes": "Visual uses exact uploaded mesh. Sim/control physical properties are identical. Control adds three 1 mm support spheres."
+}
