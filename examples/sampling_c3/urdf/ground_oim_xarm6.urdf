@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!-- OIM-matched xArm6 tabletop (oim/models/xarm6_pusht_tabletop/tee.xml:55-56):
+     box 0.80 x 1.523 m, LONG AXIS ALONG Y, spanning x in [-0.05, 0.75],
+     white rgba 0.95. Model top surface at z=0 (weld offset applies -0.029,
+     matching the existing ground.urdf convention). -->
+<robot name="ground">
+  <material name="table_white">
+    <color rgba="0.95 0.95 0.95 1"/>
+  </material>
+  <link name="ground">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.35 0 -0.05"/>
+      <mass value="100"/>
+      <inertia ixx="10" iyy="10" izz="10" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.35 0 -0.05"/>
+      <geometry>
+        <box size="0.80 1.523 0.1"/>
+      </geometry>
+      <material name="table_white"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.35 0 -0.05"/>
+      <geometry>
+        <box size="0.80 1.523 0.1"/>
+      </geometry>
+      <drake:proximity_properties>
+        <drake:mu_static value="1"/>
+        <drake:mu_dynamic value="1"/>
+      </drake:proximity_properties>
+    </collision>
+  </link>
+</robot>

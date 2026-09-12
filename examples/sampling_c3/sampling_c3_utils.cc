@@ -109,17 +109,16 @@ ModelInstanceIndex AddXarm6ToPlant(MultibodyPlant<double>* plant,
       0.0, 175.0);
 
   if (include_ee) {
-    parser.AddModels(FindResourceOrThrow(kEndEffectorModel));
-    RigidTransform<double> T_EE_W = RigidTransform<double>(
-      drake::math::RotationMatrix<double>(
-        drake::math::RollPitchYaw<double>(3.1415, 0, 0)),
-      kToolAttachmentFrame);
+    // OIM stick: welded flush at the link6 flange (zero offset, identity
+    // rotation — the stick extends along link6 +z like the reference capsule).
+    parser.AddModels(FindResourceOrThrow(kXarm6EndEffectorModel));
     plant->WeldFrames(plant->GetFrameByName("xarm6_link6"),
-                      plant->GetFrameByName("end_effector_flange"), T_EE_W);
+                      plant->GetFrameByName("end_effector_flange"),
+                      RigidTransform<double>());
   }
 
   if (include_ground_and_platform) {
-    parser.AddModels(FindResourceOrThrow(kGroundModel));
+    parser.AddModels(FindResourceOrThrow(kXarm6GroundModel));
     parser.AddModels(FindResourceOrThrow(kPlatformModel));
 
     RigidTransform<double> X_F_P = RigidTransform<double>(
@@ -256,7 +255,8 @@ std::vector<ModelInstanceIndex> AddLCSModelsToPlant(
     SceneGraph<double>* scene_graph,
     std::vector<std::string> object_models,
     const bool& include_end_effector_orientation,
-    const bool& include_walls) {
+    const bool& include_walls,
+    const bool& xarm6) {
   // Cannot currently handle end effector orientation (would just require new
   // EE simple model with orientation DOFs).
   DRAKE_ASSERT(!include_end_effector_orientation);
@@ -265,8 +265,9 @@ std::vector<ModelInstanceIndex> AddLCSModelsToPlant(
 
   Parser parser_lcs(plant);
   parser_lcs.SetAutoRenaming(true);
-  parser_lcs.AddModels(kEndEffectorSimpleModel);
-  parser_lcs.AddModels(kGroundModel);
+  parser_lcs.AddModels(xarm6 ? kXarm6EndEffectorSimpleModel
+                             : kEndEffectorSimpleModel);
+  parser_lcs.AddModels(xarm6 ? kXarm6GroundModel : kGroundModel);
 
   for (const auto& model : object_models) {
     obj_models.push_back(
