@@ -1,0 +1,62 @@
+{
+  "object": "banana",
+  "base_name": "manip_banana",
+  "mass_kg": 0.066,
+  "mesh_sha256": "dd6d931df23ef71ca9999b66e571274c8f29fb47de03013336a84266471ca98e",
+  "bounds_min_m": [
+    -0.054471,
+    -0.089223,
+    0.0
+  ],
+  "bounds_max_m": [
+    0.054471,
+    0.089223,
+    0.03674
+  ],
+  "extents_m": [
+    0.108942,
+    0.178446,
+    0.03674
+  ],
+  "inertia_method": "convex_hull_mass_properties_scaled_to_nominal_mass",
+  "collision_geometry": "convex hull of uploaded OBJ via drake:declare_convex",
+  "center_of_mass_m": [
+    -0.012147013301637647,
+    0.012537908597281088,
+    0.01570202091036727
+  ],
+  "inertia_kg_m2": [
+    [
+      0.00012437566104260724,
+      -4.0548303947521454e-05,
+      3.2179873772454864e-06
+    ],
+    [
+      -4.0548303947521454e-05,
+      3.887233197274406e-05,
+      3.9799403754217214e-07
+    ],
+    [
+      3.2179873772454864e-06,
+      3.9799403754217214e-07,
+      0.0001529541835611414
+    ]
+  ],
+  "control_support_spheres_xy_m": [
+    [
+      -0.032339,
+      -0.076625
+    ],
+    [
+      0.052175,
+      0.088201
+    ],
+    [
+      -0.027434,
+      0.045858
+    ]
+  ],
+  "friction_object_mu_static": 0.3,
+  "friction_object_mu_dynamic": 0.3,
+  "notes": "Visual uses exact uploaded mesh. Sim/control physical properties are identical. Control adds three 1 mm support spheres."
+}

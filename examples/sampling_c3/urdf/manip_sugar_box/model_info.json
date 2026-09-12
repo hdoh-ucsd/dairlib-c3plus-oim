@@ -1,0 +1,62 @@
+{
+  "object": "sugar_box",
+  "base_name": "manip_sugar_box",
+  "mass_kg": 0.514,
+  "mesh_sha256": "39a61ed31a870e85fe256e8cc8e3915fd6a2522fe9025a52432198309e579150",
+  "bounds_min_m": [
+    -0.088008,
+    -0.047081,
+    0.0
+  ],
+  "bounds_max_m": [
+    0.088008,
+    0.047081,
+    0.049496
+  ],
+  "extents_m": [
+    0.176016,
+    0.094162,
+    0.049496
+  ],
+  "inertia_method": "convex_hull_mass_properties_scaled_to_nominal_mass",
+  "collision_geometry": "convex hull of uploaded OBJ via drake:declare_convex",
+  "center_of_mass_m": [
+    -0.0011259697474576204,
+    5.005663777664432e-05,
+    0.025107978910101445
+  ],
+  "inertia_kg_m2": [
+    [
+      0.0004190672024024486,
+      -1.5653640807482937e-05,
+      -4.78941424713038e-05
+    ],
+    [
+      -1.5653640807482937e-05,
+      0.0013648905056315723,
+      9.456765347226882e-06
+    ],
+    [
+      -4.78941424713038e-05,
+      9.456765347226882e-06,
+      0.001631719307545201
+    ]
+  ],
+  "control_support_spheres_xy_m": [
+    [
+      0.027206,
+      0.016589
+    ],
+    [
+      -0.085831,
+      -0.045481
+    ],
+    [
+      -0.086899,
+      0.041962
+    ]
+  ],
+  "friction_object_mu_static": 0.3,
+  "friction_object_mu_dynamic": 0.3,
+  "notes": "Visual uses exact uploaded mesh. Sim/control physical properties are identical. Control adds three 1 mm support spheres."
+}
