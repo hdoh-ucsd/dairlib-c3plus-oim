@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="oim_ycb_clutter"><static>true</static>
+    <link name="obs_box">
+      <pose>0.44999999999999996 0.0 0.05 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.1 0.1 0.1</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.1 0.1 0.1</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="domino_sugar">
+      <pose>0.32 0.1 0.03 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.175 0.095 0.06</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.175 0.095 0.06</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="spam_can">
+      <pose>0.7 -0.08 0.0418 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.1021 0.0601 0.0835</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.1021 0.0601 0.0835</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="mustard_bottle">
+      <pose>0.25 -0.09 0.0957 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.0972 0.0666 0.1913</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.0972 0.0666 0.1913</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+  </model>
+</sdf>

@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="oim_icra_sign"><static>true</static>
+    <link name="I">
+      <pose>0.6 -0.275 0.0375 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="R">
+      <pose>0.6 -0.125 0.0375 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="A">
+      <pose>0.6 -0.05 0.0375 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="2">
+      <pose>0.6 0.075 0.0375 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="0">
+      <pose>0.6 0.15 0.0375 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="2b">
+      <pose>0.6 0.225 0.0375 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+    <link name="6">
+      <pose>0.6 0.3 0.0375 0 0 0</pose>
+      <collision name="collision"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+      </collision>
+      <visual name="visual"><geometry><box><size>0.103 0.075 0.075</size></box></geometry>
+        <material><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+    </link>
+  </model>
+</sdf>

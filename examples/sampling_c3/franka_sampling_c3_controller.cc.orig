@@ -491,10 +491,7 @@ int DoMain(int argc, char* argv[]) {
   // Sampling C3 controller.
   auto controller = builder.AddSystem<systems::SamplingC3Controller>(
       plant_lcs, &plant_lcs_context, *plant_lcs_autodiff,
-      plant_lcs_context_ad.get(), contact_pairs, controller_params,
-      /* verbose = */ false);  // [EXPERIMENT] back to upstream default —
-                               // verbose stdout cost ~2 MB/s during runs;
-                               // the [TRAJ]/[TPOSE] lines are independent
+      plant_lcs_context_ad.get(), contact_pairs, controller_params);
 
   // Systems for publishing the current and best planned trajectories.
   auto actor_trajectory_sender_curr_plan = builder.AddSystem(

@@ -30,9 +30,17 @@ angle_err_to_vel_factor: 0
 fixed_target_position: [0.48199167, 0.18745379, -0.009]
 fixed_target_orientation: [-0.9327733, 0, 0, 0.36046353]
 
-fixed_target_positions: [[]]
-fixed_target_orientations: [[]]
+fixed_target_positions: [[0.48199167, 0.18745379, -0.009]]   # [EXPERIMENT-PATCH] was [[]]; filled from push_t OWN fixed_target_position
+fixed_target_orientations: [[-0.9327733, 0, 0, 0.36046353]]   # [EXPERIMENT-PATCH] was [[]]; from push_t OWN fixed_target_orientation
 # Random-specific parameters.
 random_goal_x_limits: [0.44, 0.52]
 random_goal_y_limits: [0.02, 0.25]
 random_goal_radius_limits: [0.5, 0.52]
+
+# [EXPERIMENT-PATCH] required by strict loader; values from anything sibling.
+# resting_object_heights TRUNCATED to 1 entry: push_t has ONE object
+# (anything's 4 entries are per-object).
+only_use_xy_position: true
+pairwise_goal_distance: 0.20
+random_goal_gen_max_attempts: 100
+resting_object_heights: [-0.009]   # [EXPERIMENT-PATCH] push_t OWN resting_object_height

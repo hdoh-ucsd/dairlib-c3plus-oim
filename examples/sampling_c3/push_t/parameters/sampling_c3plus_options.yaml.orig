@@ -60,8 +60,8 @@ use_quaternion_dependent_cost: true
 q_quaternion_dependent_weight: 1000
 q_quaternion_dependent_regularizer_fraction: 0
 
-Kp_for_ee_pd_rollout: [100, 100, 100]   # [EXPERIMENT-PATCH] was scalar 100; struct is std::vector<double>
-Kd_for_ee_pd_rollout: [0.5, 0.5, 0.5]   # [EXPERIMENT-PATCH] was scalar 0.5
+Kp_for_ee_pd_rollout: 100
+Kd_for_ee_pd_rollout: 0.5
 
 ### Pose tracking cost parameters
 # Matrix scaling
@@ -192,7 +192,7 @@ u_eta_position_list: [
                           #           use_predicted_x0_reset_mechanism
 dt: 0             # instead:  planning_dt_pose, planning_dt_position
 # solve_dt: 0       # unused
-mu:                # [EXPERIMENT-PATCH] was `mu: []` — std::optional<double> rejects a Sequence; empty = nullopt (use mu_per_pair_type)            # instead based on indexing into mu_per_pair_type
+mu: []            # instead based on indexing into mu_per_pair_type
 num_contacts: 0   # instead based on summing index of resolve_contacts_to_lists
 # Instead for the below, index into their _list versions.
 g_gamma: []
@@ -212,23 +212,3 @@ u_eta_slack: []
 u_eta_n: []
 u_eta_t: []
 u_eta: []
-
-# [EXPERIMENT-PATCH] absent from push_t yaml but REQUIRED by the strict
-# loader (int, no default). Value taken from anything/sampling_c3plus_options
-# .yaml:65 (the c3plus sibling). Affects the COST LCS only
-# (cc:1655-1656 N*res, dt/res), not the planner LCS.
-lcs_dt_resolution: 4
-
-# [EXPERIMENT-PATCH] Five keys REQUIRED by the strict loader but absent from
-# push_t's yaml (present only in anything/sampling_c3plus_options.yaml).
-# Values copied verbatim from that c3plus sibling; without them the push_t
-# controller cannot construct at all.
-dt_cost: 0
-ee_velocity_limits: [-0.14, 0.14]
-include_back_wall: false
-include_walls: true    # [EXPERIMENT-PATCH] push_t resolve_contacts_to_lists end in 3 (wall contacts) -> loader REQUIRES walls
-nominal_ee_accel: 2
-
-# [EXPERIMENT-PATCH] required by strict loader (inert here:
-# resolve_as_planar_contacts_list is all-zero for push_t).
-planar_normal_direction: [0, 0, 1]

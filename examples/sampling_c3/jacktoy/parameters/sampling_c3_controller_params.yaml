@@ -21,7 +21,7 @@ base_name: something
 
 include_end_effector_orientation: false
 
-object_models: []
-base_names: []
+object_models: [examples/sampling_c3/urdf/jack_control.sdf]   # [EXPERIMENT-PATCH] was []; code reads the PLURAL (AddLCSModelsToPlant). From jacktoy's OWN object_model
+base_names: [capsule_1]   # [EXPERIMENT-PATCH] was []; base_names are BODY names. From jacktoy's OWN object_body_name
 
 control_loop_delay_ms: 0

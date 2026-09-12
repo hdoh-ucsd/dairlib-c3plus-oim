@@ -354,7 +354,7 @@ u_eta_position_list: [
                           #           use_predicted_x0_reset_mechanism
 dt: 0             # instead:  planning_dt_pose, planning_dt_position
 # solve_dt: 0       # unused
-mu:                # [EXPERIMENT-PATCH] was `mu: []` — std::optional<double> rejects a Sequence; empty = nullopt (use mu_per_pair_type)            # instead based on indexing into mu_per_pair_type
+mu: []            # instead based on indexing into mu_per_pair_type
 num_contacts: 0   # instead based on summing index of resolve_contacts_to_lists
 # Instead for the below, index into their _list versions.
 g_gamma: []
@@ -374,14 +374,3 @@ u_eta_slack: []
 u_eta_n: []
 u_eta_t: []
 u_eta: []
-
-# [EXPERIMENT-PATCH] fields required by this snapshot's SamplingC3Options but
-# absent from jacktoy's shipped yaml. Values taken from push_t/anything, which
-# do carry them. jacktoy's config predates these fields in this snapshot.
-resolve_as_planar_contacts_list: [0, 0, 0]   # push_t uses [0,0,0]; 0 = keep full friction directions (correct for a 3D jack)
-lcs_dt_resolution: 4                          # push_t and anything both use 4
-dt_cost: 0   # [EXPERIMENT-PATCH] from push_t
-nominal_ee_accel: 2   # [EXPERIMENT-PATCH] from push_t
-include_walls: true   # [EXPERIMENT-PATCH] from push_t
-include_back_wall: false   # [EXPERIMENT-PATCH] from push_t
-ee_velocity_limits: [-0.14, 0.14]   # [EXPERIMENT-PATCH] from push_t

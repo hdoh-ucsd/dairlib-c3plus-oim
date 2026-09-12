@@ -19,8 +19,8 @@ object_model: examples/sampling_c3/urdf/push_t_control.sdf
 object_body_name: vertical_link
 base_name: dummy
 
-object_models: []
-base_names: []
+object_models: [examples/sampling_c3/urdf/push_t_control.sdf]   # [EXPERIMENT-PATCH] was []; the code reads the PLURAL (AddLCSModelsToPlant) so the T was never loaded — filled from push_t OWN object_model
+base_names: [vertical_link]   # [EXPERIMENT-PATCH] was []; base_names are BODY names (num_objects = size). From push_t OWN object_body_name.
 
 include_end_effector_orientation: false
 

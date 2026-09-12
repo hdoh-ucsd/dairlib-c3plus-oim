@@ -1,6 +1,5 @@
 #include "sampling_based_c3_controller.h"
 
-#include <chrono>  // [EXPERIMENT] for the [TRAJ] wall clock
 #include <ctime>
 #include <iostream>
 #include <thread>
@@ -716,16 +715,6 @@ std::pair<double, vector<VectorXd>> SamplingC3Controller::CalcCost(
     std::cout << "\n\n";
   }
 
-  // [EXPERIMENT-DT] rollout-discrimination probe (2026-08-11): one line per
-  // CalcCost call — does the cost rollout actually move the object?
-  // Layout (1 object): ee 0:3, obj quat 3:7, obj pos 7:10.
-  std::cout << "[ROLLOUT-DT] type=" << static_cast<int>(cost_type)
-            << " dT_xy="
-            << (XX.back().segment(7, 2) - XX.front().segment(7, 2)).norm()
-            << " dEE_xy="
-            << (XX.back().segment(0, 2) - XX.front().segment(0, 2)).norm()
-            << " cost=" << cost << std::endl;
-
   std::pair<double, std::vector<VectorXd>> ret(cost, XX);
   return ret;
 }
@@ -751,20 +740,6 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
   // Store the current LCS state.
   drake::VectorX<double> x_lcs_curr = lcs_x_curr->get_data();
   ee_position_curr_ = x_lcs_curr.segment(0, 3);
-  {
-    // [EXPERIMENT] one compact per-loop trajectory line, independent of
-    // verbose_: state-message sim timestamp + wall clock (verifies the sim
-    // keeps realtime) + object pose (goal-error extraction).
-    static const auto wall0 = std::chrono::steady_clock::now();
-    double wall_s = std::chrono::duration<double>(
-                        std::chrono::steady_clock::now() - wall0)
-                        .count();
-    std::cout << "[TRAJ] t=" << lcs_x_curr->get_timestamp()
-              << " wall=" << wall_s
-              << " obj_pos=" << x_lcs_curr.segment(7, 3).transpose()
-              << " obj_quat=" << x_lcs_curr.segment(3, 4).transpose()
-              << std::endl;
-  }
   if (verbose_) {
     std::cout << "x_lcs_curr: " << x_lcs_curr.transpose() << std::endl;
     std::cout << "x_lcs_des: " << x_lcs_des.get_value().transpose()
@@ -812,12 +787,10 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
   if (!x_final_target_.segment(3, n_x_ - 3)
            .isApprox(x_lcs_final_des.value().segment(3, n_x_ - 3), 1e-5)) {
     std::cout << "Detected goal change!" << std::endl;
-    // [EXPERIMENT] goal print made unconditional (was verbose-gated): one
-    // line per goal change; summarize/compare tooling parses it.
-    std::cout << "  New goal:  " << x_lcs_final_des.value().transpose()
-              << std::endl;
     if (verbose_) {
       std::cout << "  Last goal: " << x_final_target_.transpose() << std::endl;
+      std::cout << "  New goal:  " << x_lcs_final_des.value().transpose()
+                << std::endl;
       std::cout << "  --> Error:  "
                 << (x_final_target_.segment(3, n_x_ - 3) -
                     x_lcs_final_des.value().segment(3, n_x_ - 3))
@@ -1179,7 +1152,7 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
 
     // Keep track of progress while in C3 mode.
     bool met_minimum_progress = true;  // Reset by below function.
-    bool print_current_pos_and_rot_cost = true;  // [EXPERIMENT] was radio_out->channel[6]
+    bool print_current_pos_and_rot_cost = radio_out->channel[6];
     KeepTrackOfC3ModeProgress(x_lcs_curr, x_lcs_final_des, met_minimum_progress,
                               print_current_pos_and_rot_cost);
 
@@ -1504,13 +1477,6 @@ void SamplingC3Controller::CheckForWorkspaceLimitViolations(
     const TimestampedVector<double>* lcs_x_curr) const {
   // xyz checks
   for (int i = 0; i < sampling_c3_options_.workspace_limits.size(); ++i) {
-    if (verbose_) {  // [EXPERIMENT] was unconditional — 3 lines/loop of spam
-      std::cout << "[WSCHK] i=" << i << " ee=("
-                << lcs_x_curr->get_data().segment(0, 3).transpose()
-                << ")  n=(" << sampling_c3_options_.workspace_limits[i].segment(0,3).transpose()
-                << ")  lo=" << sampling_c3_options_.workspace_limits[i][3]
-                << " hi=" << sampling_c3_options_.workspace_limits[i][4] << std::endl;
-    }
     DRAKE_DEMAND(lcs_x_curr->get_data().segment(0, 3).transpose() *
                      sampling_c3_options_.workspace_limits[i].segment(0, 3) >
                  sampling_c3_options_.workspace_limits[i][3]);
@@ -2305,9 +2271,7 @@ void SamplingC3Controller::KeepTrackOfC3ModeProgress(
   }
 
   if (print_current_pos_and_rot_cost) {
-    std::cout << "[TPOSE] cost=" << curr_pos_and_rot_cost
-              << " obj_pos=" << x_lcs_curr.segment(7, 3).transpose()
-              << " obj_quat=" << x_lcs_curr.segment(3, 4).transpose()
+    std::cout << "Current rot and pos cost: " << curr_pos_and_rot_cost
               << std::endl;
   }
 
