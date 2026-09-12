@@ -1,0 +1,33 @@
+{
+  "task": "faithful icra_sign scenario port",
+  "verdict": "A_ICRA_SIGN_SCENARIO_FAITHFULLY_PORTED",
+  "branch": "icra-sign-faithful-port",
+  "upstream": {"repo": "NikolaRaicevic2001/Object-Informed-Manipulation-MJX", "commit": "d6d80a65", "icra_files_verified_identical_to_local": true},
+  "new_task_dirs": ["anything_icra_c", "anything_icra_c_v2..v5 (upstream pose variants verbatim)"],
+  "new_assets": ["urdf/push_c_glyph.sdf", "urdf/push_c_glyph_controller.sdf (3 boxes + 3 witness spheres, anything-branch wiring)", "urdf/scene_icra_sign.sdf + icra_glyphs/*.obj (extruded compiled hulls)", "urdf/c_glyph_base/c_glyph_base.obj (kMeshNormal sampler mesh)"],
+  "controller_changes_scene_representation_only": [
+    "CFootprint() + SAMPLING_C3_OBJECT_FOOTPRINT=c_glyph selector (all Footprint() consumers)",
+    "SAMPLING_C3_OBS_POLYS exact convex-polygon obstacles (SDF/witness/veto/route-interval branches; overrides disc+box per index)",
+    "no cost, ranking, route, or candidate-logic changes"
+  ],
+  "run_env": {"SAMPLING_C3_OBSTACLE_MODE": "lcs_contact", "SAMPLING_C3_OBJECT_FOOTPRINT": "c_glyph", "SAMPLING_C3_OBS_TOP_Z": "0.046", "SAMPLING_C3_OBS_POLYS": "results_icra_port/obstacles/obs_polys_env.txt"},
+  "fidelity_evidence": {
+    "geometry_consistency_test": "PASS, zero hull drift, goal-slot clearance 0.0511 == upstream 5.1cm",
+    "variant_clearances_reproduce_upstream_comments": "<=1mm on all 10 values",
+    "slot_uniqueness": "C slot feasible; all letter-adjacent gaps infeasible; word gap A-2 geometrically fits a C (upstream layout property, not a goal)",
+    "physics": "mu 0.3 effective, 0.1kg, exact 3-box C, thickness 0.025"
+  },
+  "baseline_runs": {
+    "protocol": "unchanged post-P5 controller, serial, 600s/variant",
+    "v1_v3": "plateau 0.19-0.27m at the row entrance (production/prediction class; acq 38-42%)",
+    "v4_v5_original": "reached the slot (best 0.041/0.019m) but planner KILLED by workspace z-floor DRAKE_DEMAND (T-height -0.01 assumption vs C working height -0.0095); fixed to -0.015 in the 5 task yamls",
+    "v4_zfix": "full-duration live planner, best 0.040m, no simultaneous tight pose",
+    "v5_zfix": "TIGHT SUCCESS 0.0162m/0.098rad @ t=347.0s — sign completed by the unchanged controller"
+  },
+  "scene_health": "0 penetrations (graze -0.1mm max), 0 deadlocks, 0 timeouts, 0 topples (flat C removes F10), clean N_closest identity switching over all glyphs",
+  "open_items": [
+    "v1-v3 plateau = known dishonest-prediction/push-production ceiling (rho 0.02-0.10 given contact) — controller-lane work, out of scope here",
+    "glyph visuals are the collision hulls, not the pretty letter meshes (upstream's letter meshes are visual-only); vendor them if publication renders need the sign to read typographically"
+  ],
+  "artifacts": "results/icra_sign_faithful_port/ (mirrored from worktree results_icra_port/) + report + this handoff"
+}

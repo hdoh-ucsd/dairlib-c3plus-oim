@@ -1,0 +1,7 @@
+scene,draw,obstacle_id,n,phi_min,d_raw_min,lambda_max,lambda_min,comp_residual_max
+ycb_clutter,draw0,0,3382,-0.0028,0.0072,0.1561,-0.125,0.2094
+ycb_clutter,draw0,1,3382,-0.0175,-0.0075,0.5409,-0.1125,0.4211
+ycb_clutter,draw1,0,25885,-0.0238,-0.0138,0.4773,-0.1597,0.1642
+ycb_clutter,draw1,1,25885,-0.0235,-0.0135,0.5367,-0.1225,0.1183
+ycb_clutter,draw2,0,28132,-0.0142,-0.0042,0.6483,-0.1913,1.0429
+ycb_clutter,draw2,1,28132,0.0122,0.0222,0.6002,-0.1366,1.0283
