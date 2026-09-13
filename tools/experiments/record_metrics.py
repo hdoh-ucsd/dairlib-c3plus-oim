@@ -6,9 +6,14 @@ solve tick it snapshots the latest robot joints and every OBJECT_*_STATE
 pose. Errors/costs are computed offline by postprocess_run.py.
 
 Also writes a 10 Hz state_trace.jsonl compatible with the existing 3D
-renderer, and prints SUCCESS/FINAL summary lines.
+renderer, prints progress every 10 recorded controller steps, and prints
+SUCCESS/FINAL summary lines.
 """
 import argparse, json, math, struct, time
+from pathlib import Path
+
+recording_started = time.monotonic()
+
 from pydrake.lcm import DrakeLcm
 
 p = argparse.ArgumentParser()
@@ -75,6 +80,26 @@ def yaw_of(q):
                       1 - 2 * (q[2] * q[2] + q[3] * q[3]))
 
 
+def progress_label(object_name, steps_path):
+    if object_name in {f"{name}_base" for name in ("sugar_box", "power_drill", "hammer", "banana")}:
+        return object_name.removesuffix("_base")
+    known = {"T_shape_video": "Tblock", "vertical_link": "Tblock", "c_glyph_base": "Cblock"}
+    if object_name in known:
+        return known[object_name]
+    # Both legacy scene objects share the G_shape_video channel. Only the
+    # saved simulation model can distinguish them without guessing the scene.
+    if object_name == "G_shape_video":
+        import yaml
+        try:
+            saved = yaml.safe_load((Path(steps_path).parent / "config/simulation.yaml").read_text())
+            model = Path(saved["object_model"]).name
+            return {"push_t_oimscale_m01.sdf": "Tblock", "push_c_glyph.sdf": "Cblock"}.get(model, object_name)
+        except (OSError, KeyError, TypeError, yaml.YAMLError):
+            pass
+    return object_name
+
+
+label = progress_label(args.object_name, args.out_steps)
 S = {'robot': None, 'objects': {}, 'step': 0, 'first_success_t': None,
      'last_trace': -1.0, 'best_pos': 1e9, 'best_ang': 1e9, 'sim_t': 0.0}
 steps_f = open(args.out_steps, 'w')
@@ -130,6 +155,18 @@ def on_step():
     steps_f.write(json.dumps(rec) + '\n')
     if S['step'] % 100 == 0:
         steps_f.flush()
+    if S['step'] % 10 == 0:
+        selected = next((state for channel, state in S['objects'].items()
+                         if args.object_name in channel), None)
+        if selected is not None:
+            pose = selected[2]
+            pos_err = math.hypot(pose[4] - args.goal[0], pose[5] - args.goal[1])
+            ang_err = abs(math.remainder(yaw_of(pose[:4]) - args.goal[2], 2 * math.pi))
+            within_goal = pos_err < args.pos_tol and ang_err < args.ang_tol
+            print(f"[{label}] step={S['step']:04d} sim={S['sim_t']:.2f}s "
+                  f"wall={time.monotonic() - recording_started:.1f}s pos_err={pos_err:.3f}m "
+                  f"yaw_err={math.degrees(ang_err):.1f}deg within_goal={'yes' if within_goal else 'no'}",
+                  flush=True)
 
 
 lc = DrakeLcm(args.url)

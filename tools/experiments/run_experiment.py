@@ -9,6 +9,7 @@ import os
 import platform
 from pathlib import Path
 from importlib.metadata import PackageNotFoundError, version
+import re
 import shlex
 import subprocess
 import sys
@@ -62,12 +63,19 @@ def classify_failure(out):
 
 
 def logged_command(command, log, env):
+    """Retain complete phase logs and forward recorder progress as it arrives."""
     with log.open("w") as stream:
         stream.write(f"[COMMAND] {shlex.join(map(os.fsdecode, command))}\n")
         stream.write(f"[CWD] {shlex.quote(str(REPO))}\n")
         stream.flush()
-        return subprocess.run(command, cwd=REPO, env=env, stdout=stream,
-                              stderr=subprocess.STDOUT).returncode
+        with subprocess.Popen(command, cwd=REPO, env=env, stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT, text=True, errors="replace", bufsize=1) as process:
+            for line in process.stdout:
+                stream.write(line)
+                stream.flush()
+                if re.match(r"^\[[^\]]+\] step=\d+ ", line):
+                    print(line, end="", flush=True)
+            return process.wait()
 
 
 def yaw_suffix(degrees):

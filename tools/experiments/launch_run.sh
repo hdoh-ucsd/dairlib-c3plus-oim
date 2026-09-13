@@ -77,16 +77,17 @@ setsid "$BIN/franka_osc_controller" --is_simulation=true --demo_name="$DEMO" \
   --robot_model=xarm6 --lcm_url="$URL" "${controller_args[@]}" > "$OUT/osc.log" 2>&1 & OSC=$!
 setsid "$BIN/franka_sampling_c3_controller" --is_simulation=true --demo_name="$DEMO" \
   --robot_model=xarm6 --lcm_url="$URL" "${controller_args[@]}" "${planner_goal_args[@]}" > "$OUT/planner.log" 2>&1 & PLAN=$!
-setsid "$PY" "$WT/tools/experiments/record_metrics.py" \
+# Keep the recorder and its tee in one process group. pipefail preserves a
+# recorder failure, while tee exposes flushed progress to the managed runner.
+setsid bash -c 'set -o pipefail; recorder_log=$1; shift; "$@" 2>&1 | tee "$recorder_log"' \
+  recorder "$OUT/recorder.log" "$PY" "$WT/tools/experiments/record_metrics.py" \
   --goal "$GX" "$GY" "$GYAW" --object-name "$OBJ" \
   --out-steps "$OUT/steps_raw.jsonl" --out-trace "$OUT/state_trace.jsonl" \
-  --url "$URL" --duration "$CAP" --exit-on-success \
-  > "$OUT/recorder.log" 2>&1 & REC=$!
+  --url "$URL" --duration "$CAP" --exit-on-success & REC=$!
 sleep 3
 setsid "$BIN/franka_sim" --demo_name="$DEMO" --robot_model=xarm6 --matched_mu \
   --lcm_url="$URL" "${controller_args[@]}" > "$OUT/sim.log" 2>&1 & SIM=$!
 wait "$REC"
 recorder_rc=$?
-grep -h "SUCCESS\|FINAL" "$OUT/recorder.log" | tail -2
 echo "RUN DONE $DEMO -> $OUT"
 exit "$recorder_rc"

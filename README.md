@@ -117,6 +117,20 @@ packaging finished; check `*_result.json` for task success and
 budget or after five additional wall seconds following first success; that
 settling interval can extend past the budget.
 
+While recording, the terminal prints progress every **10 recorded controller
+steps**, for example:
+
+```text
+[sugar_box] step=0010 sim=0.36s wall=1.2s pos_err=0.842m yaw_err=4.2deg within_goal=no
+```
+
+`sim` is simulation time; `wall` is elapsed recording wall time, including the
+wait for simulation startup. Errors use the latest recorded object pose.
+`within_goal` describes the current pose using both tolerances (5 cm and
+0.1 rad, approximately 5.73°); it can return to `no` after first success.
+Every step is still saved to `steps_raw.jsonl`. Progress is also retained in
+`recorder.log` and `launcher.log`.
+
 Start positions, goal positions, and orientations are defined separately in
 [experiments.yaml](examples/sampling_c3/shared_parameters/experiments.yaml).
 Choose their combination in the command; there is no YAML file per start/goal
@@ -450,9 +464,45 @@ smoke jobs across `single_obstacle`, `icra_sign`, and both costs. Old
 | `runtime_status.json`, `evaluation_scene_config.yaml` | Provenance, effective settings, goals, process status, and saved scene configuration |
 | `config/` | Resolved controller, simulator, and goal YAMLs, plus snapshots of selected shared settings |
 | `state_trace.jsonl`, `steps_raw.jsonl`, `*.log` | Recorded states, controller messages, and process/packaging logs |
-| `*_metrics.csv`, `*_result.json`, `*_manifest.yaml` | Metrics, task result, and evaluation manifest |
+| `*_metrics.csv`, `*_result.json`, `*_manifest.yaml` | Per-snapshot metrics, reference-shaped JSON with task summary and trajectories, and evaluation manifest |
 | `*_eval_metrics.png`, `*_cost_diagnostics.png`, `*.mp4` | Diagnostic plots and sampled video replay |
 | `RUN_COMPLETE` | Recording and every packaging phase completed |
+
+`*_result.json` includes the same five main sections as the MPPI/OIM reference
+export: `schema`, `run`, `hyperparameters`, `static`, and `dynamic`. Existing
+top-level success/error fields remain available to campaign summaries. The
+export includes saved native settings, scene geometry, object/robot trajectories,
+diagnostic costs, and source hashes. `run.algorithm` identifies C3+; native
+settings live under `hyperparameters.c3plus`. `hyperparameters.costs` contains
+saved offline diagnostic weights, separate from the controller objective; it
+is `null` for older runs whose evaluation weights were not recorded.
+
+The schema describes the projections needed to compare algorithms:
+
+- `M` recorded snapshots become `M` states and `steps_run = M - 1` observed
+  intervals. `n_control_steps` keeps its original snapshot count. No initial
+  state is invented; use `dynamic.time`, which preserves variable sample times.
+- Object and tip velocities are finite-difference estimates using actual time
+  intervals and wrapped yaw. Initial estimates and estimates at duplicate or
+  decreasing timestamps are `null`. The source states are asynchronous snapshots.
+- `qpos` projects robot joints plus object `[x, y, yaw, z]`; `qvel` combines
+  recorded joint velocities and estimated object velocities. These arrays are
+  not the full Drake state. `object_pose_3d` retains the recorded quaternion/XYZ.
+- Applied transition controls, per-step solve times, and measured contact
+  forces remain `null`. Published joint efforts are retained separately as
+  `dynamic.robot_joint_effort`. Missing diagnostic values also use JSON `null`.
+
+New runs export this automatically. To enrich an existing result from its saved
+CSV, raw samples, and configurations, without simulation, plotting, or changing
+the other run artifacts:
+
+```bash
+python3 -m tools.experiments postprocess --export-only \
+  --run-dir results/open_table_objects/sugar_box \
+  --scene open_task \
+  --run-id exponential_open_task_sugar_box_s02g02_yaw_000_seed42 \
+  --scene-config results/open_table_objects/sugar_box/evaluation_scene_config.yaml
+```
 
 Save the commit, image ID, environment-check report, campaign plan, and complete
 run folders when sharing results. Runtime status includes binary hashes,
