@@ -1,5 +1,9 @@
 
+#include <cmath>
+#include <iomanip>
 #include <limits>
+#include <sstream>
+#include <stdexcept>
 
 #include <dairlib/lcmt_radio_out.hpp>
 #include <drake/common/find_resource.h>
@@ -71,10 +75,21 @@ DEFINE_int32(max_control_loops, -1,
              "each). Negative means run until killed.");
 DEFINE_double(end_time, std::numeric_limits<double>::infinity(),
               "Stop after this many seconds of message time.");
+DEFINE_double(goal_yaw_degrees, 0.0,
+              "Optional absolute world goal yaw (-90, 0, or 90 degrees) for "
+              "single-object fixed-goal simulation; omitted preserves YAML.");
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  drake::lcm::DrakeLcm lcm(FLAGS_lcm_url);
+  const bool override_goal_yaw =
+      !gflags::GetCommandLineFlagInfoOrDie("goal_yaw_degrees").is_default;
+  if (override_goal_yaw &&
+      (!FLAGS_is_simulation || !std::isfinite(FLAGS_goal_yaw_degrees) ||
+       (FLAGS_goal_yaw_degrees != -90.0 && FLAGS_goal_yaw_degrees != 0.0 &&
+        FLAGS_goal_yaw_degrees != 90.0))) {
+    throw std::runtime_error(
+        "--goal_yaw_degrees requires simulation and a value of -90, 0, or 90");
+  }
 
   // Load parameters.
   std::string controller_params_path =
@@ -83,6 +98,28 @@ int DoMain(int argc, char* argv[]) {
   SamplingC3ControllerParams controller_params =
       drake::yaml::LoadYamlFile<SamplingC3ControllerParams>(
           controller_params_path);
+  if (override_goal_yaw) {
+    auto& goal = controller_params.goal_params;
+    if (goal.goal_mode != kFixedGoal || controller_params.num_objects != 1 ||
+        controller_params.object_models.size() != 1 ||
+        goal.fixed_target_positions.size() != 1 ||
+        goal.fixed_target_orientations.size() != 1) {
+      throw std::runtime_error(
+          "--goal_yaw_degrees requires a single-object fixed-goal demo");
+    }
+    const double yaw_radians = FLAGS_goal_yaw_degrees * std::acos(-1.0) / 180.0;
+    // Goal parameters use quaternion [w, x, y, z] in the world frame.
+    goal.fixed_target_orientation = Eigen::Vector4d(
+        std::cos(yaw_radians / 2.0), 0.0, 0.0, std::sin(yaw_radians / 2.0));
+    goal.fixed_target_orientations.at(0) = goal.fixed_target_orientation;
+    const auto& position = goal.fixed_target_positions.at(0);
+    std::ostringstream banner;
+    banner << std::setprecision(17) << "[GOAL-YAW] goal_yaw_degrees="
+           << FLAGS_goal_yaw_degrees << " goal_x=" << position.x()
+           << " goal_y=" << position.y();
+    std::cout << banner.str() << std::endl;
+  }
+  drake::lcm::DrakeLcm lcm(FLAGS_lcm_url);
   std::string lcm_channels_file =
       FLAGS_is_simulation ? controller_params.lcm_channels_simulation_file
                           : controller_params.lcm_channels_hardware_file;

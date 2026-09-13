@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # One isolated experiment: sim + OSC + C3+ trio plus per-step recorder.
-# Usage: launch_run.sh DEMO OBJNAME GX GY GYAW CAP PORT OUTDIR
+# Usage: launch_run.sh DEMO OBJNAME GX GY GYAW CAP PORT OUTDIR [GOAL_YAW_DEGREES]
 # run_experiment.py supplies the planner environment derived from the scene YAML.
 set -uo pipefail
-if [[ $# -ne 8 ]]; then
-  echo "Usage: launch_run.sh DEMO OBJNAME GX GY GYAW CAP PORT OUTDIR" >&2
+if [[ $# -ne 8 && $# -ne 9 ]]; then
+  echo "Usage: launch_run.sh DEMO OBJNAME GX GY GYAW CAP PORT OUTDIR [GOAL_YAW_DEGREES]" >&2
   exit 2
 fi
 DEMO="${1:?}"; OBJ="${2:?}"; GX="$3"; GY="$4"; GYAW="$5"
@@ -14,6 +14,21 @@ WT="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN="$WT/bazel-bin/examples/sampling_c3"
 PY="${PYTHON:-python3}"
 URL="udpm://239.255.76.67:${PORT}?ttl=0"
+planner_goal_args=()
+if [[ $# -eq 9 ]]; then
+  if [[ ! "$9" =~ ^([+-]?90|[+-]?0)([.]0+)?$ ]]; then
+    echo "GOAL_YAW_DEGREES must be -90, 0, or 90 (absolute world yaw)." >&2
+    exit 2
+  fi
+  # Gflags prints help and exits before constructing any controller systems.
+  # Some versions exit nonzero for help, so inspect the text independently.
+  controller_help="$("$BIN/franka_sampling_c3_controller" --helpshort 2>&1)"
+  if ! grep -Eq -- '(^|[[:space:]])-goal_yaw_degrees([[:space:]]|=)' <<< "$controller_help"; then
+    echo "Controller does not support --goal_yaw_degrees. Rebuild with python3 -m tools.experiments build before launching this campaign." >&2
+    exit 2
+  fi
+  planner_goal_args=("--goal_yaw_degrees=$9")
+fi
 mkdir -p "$OUT" || exit 1
 OUT="$(cd "$OUT" && pwd)"
 cd "$WT"   # parameter yamls resolve relative to cwd -> worktree copies
@@ -37,7 +52,7 @@ trap 'exit 143' TERM
 setsid "$BIN/franka_osc_controller" --is_simulation=true --demo_name="$DEMO" \
   --robot_model=xarm6 --lcm_url="$URL" > "$OUT/osc.log" 2>&1 & OSC=$!
 setsid "$BIN/franka_sampling_c3_controller" --is_simulation=true --demo_name="$DEMO" \
-  --robot_model=xarm6 --lcm_url="$URL" > "$OUT/planner.log" 2>&1 & PLAN=$!
+  --robot_model=xarm6 --lcm_url="$URL" "${planner_goal_args[@]}" > "$OUT/planner.log" 2>&1 & PLAN=$!
 setsid "$PY" "$WT/tools/experiments/record_metrics.py" \
   --goal "$GX" "$GY" "$GYAW" --object-name "$OBJ" \
   --out-steps "$OUT/steps_raw.jsonl" --out-trace "$OUT/state_trace.jsonl" \

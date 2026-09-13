@@ -13,6 +13,8 @@ COMMANDS = {
     "check": ("check_environment.py", "Check dependencies, multicast, and scene assets"),
     "run": ("run_experiment.py", "Run and package one indexed scene/start/goal experiment"),
     "campaign": ("run_grid_campaign.py", "Run a manifest or grid serially, with safe resume"),
+    "run_launch": ("run_grid_campaign.py", "Full run: 180 trials at goal 2 with yaw 90/0/-90 degrees"),
+    "run_launch_simple_s2": ("run_grid_campaign.py", "Start-2 run: 36 trials at goal 2 with yaw 90/0/-90 degrees"),
     "postprocess": ("postprocess_run.py", "Recompute metrics from an existing run"),
     "render": ("render_run_3d.py", "Render an existing trace to MP4"),
     "cost-figure": ("cost_fig.py", "Plot cost diagnostics from existing metrics"),
@@ -34,7 +36,8 @@ def main(argv=None):
     # Forward all leaf arguments unchanged, including --help. Only the chosen
     # command loads its scientific/native dependencies.
     if argv and argv[0] in COMMANDS:
-        return subprocess.call([sys.executable, str(TOOL_DIR / COMMANDS[argv[0]][0]), *argv[1:]])
+        leaf_args = argv if argv[0] in ("run_launch", "run_launch_simple_s2") else argv[1:]
+        return subprocess.call([sys.executable, str(TOOL_DIR / COMMANDS[argv[0]][0]), *leaf_args])
     args = parser.parse_args(argv)
     if args.command == "scenes":
         for scene in SCENES:
