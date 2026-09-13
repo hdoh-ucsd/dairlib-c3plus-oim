@@ -11,10 +11,6 @@ group "operator" {
         exec = "python3 examples/sampling_c3/start_logging.py hw push_t /mnt/data2/push_t/logs/";
         host = "sampling_c3_localhost";
     }
-    cmd "record_video" {
-        exec = "python3 record_video.py";
-        host = "franka_control";
-    }
 }
 
 group "controllers (hardware)" {
@@ -76,7 +72,6 @@ script "start_experiment" {
     stop cmd "franka_driver_in";
     stop cmd "torque_driver";
     stop cmd "franka_osc";
-    start cmd "record_video";
     start cmd "logger";
     wait ms 1000;
     start cmd "franka_driver_out";
@@ -98,6 +93,5 @@ script "start_operator_commands" {
 script "stop_experiment" {
     stop group "drivers";
     stop group "controllers (hardware)";
-    stop cmd "record_video";
     stop cmd "logger";
 }

@@ -1,0 +1,8 @@
+# Send only toolchain inputs. Experiments and the repository are bind-mounted.
+*
+!Dockerfile
+!.dockerignore
+!entrypoint.sh
+!requirements.txt
+!snopt7.6.tar.gz
+!gurobi10.0.3_linux64.tar.gz

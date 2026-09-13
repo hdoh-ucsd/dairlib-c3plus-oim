@@ -2,7 +2,8 @@ __pycache__/
 /build/
 /.idea/
 /.cache/sampling_c3_run.lock
-/results/reproduction_validation_20260912/**/tmp/
+/results/
+/results_*/
 /cmake-build-debug/
 /bazel-*
 *.ipynb_checkpoints
@@ -14,4 +15,3 @@ attic/multibody/solver_log/
 *.csv
 /examples/Cassie/saved_trajectories/
 /MODULE.bazel.lock
-results_icra_port/runs/*/selected_candidate_qp_variables.jsonl

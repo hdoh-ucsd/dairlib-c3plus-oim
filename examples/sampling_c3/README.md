@@ -47,7 +47,7 @@ We use a two computer setup with a Franka robot arm:
   1. Computer 1:  Runs sampling C3 controller and [our fork of FoundationPose](https://github.com/dairlab/foundationpose) for object tracking.  Requires a GPU to run FoundationPose.
      - Connected via ethernet to Computer 2.
 
-  2. Computer 2:  Runs our OSC, Franka drivers, and webcam recording.  Requires a realtime kernel for communicating with the Franka.  We rely on [drake-franka-driver](https://github.com/RobotLocomotion/drake-franka-driver), which works via LCM. Much thanks to the Drake developers who provided this!  No ROS/ROS2 involved.
+  2. Computer 2:  Runs our OSC and Franka drivers.  Requires a realtime kernel for communicating with the Franka.  We rely on [drake-franka-driver](https://github.com/RobotLocomotion/drake-franka-driver), which works via LCM. Much thanks to the Drake developers who provided this!  No ROS/ROS2 involved.
 
   3. Ethernet connections:
      - Computer 1 <--> Computer 2 with link-local network settings.
@@ -55,7 +55,6 @@ We use a two computer setup with a Franka robot arm:
 
   4. USB connections:
      - RealSense for FoundationPose <--> Computer 1
-     - USB webcams for experiment recording <--> Computer 2
 
 ### Franka Driver:  Installing `drake-franka-driver`
 ```
@@ -110,7 +109,6 @@ bazel build ...
 
 5. Begin the experiment using the script `script:start_experiment`. This spawns the following processes:
    - `start_logging.py`: Starts a lcm-logger with an automatic naming convention for the log number.
-   - `record_video.py`: Streams all available webcams to a .mp4 file corresponding to the log number.
    - `torque_driver`: `drake-franka-driver` in torque control mode.
    - `franka_driver_`(in/out): communicates with `drake-franka-driver` to receive/publish franka state information and torque commands. This is just a translator between Drake's Franka Panda specific lcm messages and the standardized robot commands that we use. 
    - `bazel-bin/examples/sampling_c3/franka_osc_controller`: Low-level task-space controller that tracks task-space trajectories it receives from the MPC.
@@ -118,6 +116,5 @@ bazel build ...
    - `bazel-bin/examples/sampling_c3/xbox_script`: This gets started with `script:start_operator_commands` but gets restarted with `script:start_experiment` to ensure the experiment starts in teleop mode as a safety precaution.
 
 6. Using the xbox controller, switch from tracking the teleop commands to the MPC plan by pressing "A".  Do this after checking that the plans look reasonable in the visualizer.
-7. Stop the experiment using `script:stop_experiment`. This also stops logging and recording.
-
+7. Stop the experiment using `script:stop_experiment`. This also stops logging.
 

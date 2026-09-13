@@ -4,7 +4,8 @@
 #
 # Carries ONLY the build toolchain and the solver distributions. The repository
 # is bind-mounted at run time and Bazel's output tree lives in a named Docker
-# volume, so nothing a build produces is written to the host.
+# volume. Bazel workspace symlinks and experiment outputs still appear on the
+# bind-mounted checkout.
 #
 # Use docker/shell.sh -- it builds this image on first use and drops you in.
 #
@@ -12,6 +13,8 @@ FROM ubuntu:noble
 
 # Keep in sync with MODULE.bazel (DRAKE_VERSION) and .bazeliskrc.
 ARG DRAKE_VERSION=1.51.1
+ARG DRAKE_SHA256=40cb4d0e3d378ba67c21aca8cc1396399774b333b12d0030f5fbe4ddff1dc786
+ARG LIBBOT2_COMMIT=f007e6e902f237782b32d739325b2c0290095866
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Match the host user so files written into the bind-mounted repository keep
@@ -32,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # --- Drake build prerequisites (also installs bazelisk and clang) ------------
 # install_prereqs is the authoritative dependency list for the pinned Drake.
 RUN wget -q "https://github.com/RobotLocomotion/drake/archive/v${DRAKE_VERSION}.tar.gz" \
+    && echo "${DRAKE_SHA256}  v${DRAKE_VERSION}.tar.gz" | sha256sum -c - \
     && tar -xzf "v${DRAKE_VERSION}.tar.gz" "drake-${DRAKE_VERSION}/setup/" \
     && "./drake-${DRAKE_VERSION}/setup/install_prereqs" \
          --developer -y --with-bazel --with-clang \
@@ -43,8 +47,10 @@ RUN wget -q "https://github.com/RobotLocomotion/drake/archive/v${DRAKE_VERSION}.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cmake build-essential liblcm-dev python3-lcm python3-pip \
         python3-setuptools libglu1-mesa-dev libgtk-3-dev \
-    && git clone --depth 1 --branch drake \
-         https://github.com/RobotLocomotion/libbot2.git /tmp/libbot2 \
+    && git init /tmp/libbot2 \
+    && git -C /tmp/libbot2 remote add origin https://github.com/RobotLocomotion/libbot2.git \
+    && git -C /tmp/libbot2 fetch --depth 1 origin "${LIBBOT2_COMMIT}" \
+    && git -C /tmp/libbot2 checkout --detach FETCH_HEAD \
     && cmake -S /tmp/libbot2 -B /tmp/libbot2-build \
          -DCMAKE_INSTALL_PREFIX=/opt/libbot2 \
     && cmake --build /tmp/libbot2-build -j"$(nproc)" --target bot2-procman \
@@ -72,24 +78,30 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 # --- Python tooling ----------------------------------------------------------
 # Mesh/sampling generation (examples/sampling_c3/sampling_generation) plus the
-# analysis and rendering scripts under scripts/.
+# analysis and rendering tools under tools/experiments/.
 COPY requirements.txt /tmp/requirements.txt
-# NOTE: `pip check` cannot be used here. --system-site-packages is required so
-# the venv can see apt's python3-lcm, but it also exposes the lint/type stubs
-# that Drake's install_prereqs drops into the system interpreter
-# (types-seaborn, types-flask-migrate, ipywidgets, ...). Those have their own
-# unsatisfied dependencies, so `pip check` fails on pre-existing system state
-# that has nothing to do with this project. Import the packages we actually
-# need instead -- a stricter test of what matters, immune to that noise.
-RUN python3 -m venv --system-site-packages /opt/push-anything-venv \
-    && /opt/push-anything-venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
+# Keep the runtime separate from Drake's system build/lint dependencies.
+# Expose only apt's self-contained LCM binding. Importing all system packages
+# mixed Ubuntu's mpl_toolkits namespace with pip's newer Matplotlib and broke
+# 3-D plotting; it also made pip check report unrelated system dependencies.
+RUN python3 -m venv /opt/push-anything-venv \
+    && test -f /usr/lib/python3/dist-packages/lcm/__init__.py \
     && /opt/push-anything-venv/bin/python3 -c \
-       "import pydrake, numpy, scipy, matplotlib, PIL, trimesh, yaml, lcm; \
+       "import sysconfig; from pathlib import Path; \
+        Path(sysconfig.get_path('purelib'), 'lcm').symlink_to('/usr/lib/python3/dist-packages/lcm', target_is_directory=True)" \
+    && /opt/push-anything-venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
+    && /opt/push-anything-venv/bin/pip check \
+    && /opt/push-anything-venv/bin/python3 -c \
+       "import numpy, scipy, matplotlib, PIL, trimesh, yaml, lcm; \
+        from pydrake.multibody.plant import MultibodyPlant; \
+        from pydrake.geometry import RenderEngineVtkParams; \
+        from mpl_toolkits.mplot3d import Axes3D; \
         from pydrake.common import GetDrakePath; \
         print('python deps OK: numpy', numpy.__version__, '| drake', GetDrakePath())"
 ENV PATH="/opt/push-anything-venv/bin:${PATH}"
 ENV PYTHON=/opt/push-anything-venv/bin/python3
 ENV MPLCONFIGDIR=/tmp/matplotlib
+ENV HOME=/home/dairlib
 
 # --- unprivileged user matching the host ------------------------------------
 # ubuntu:noble already ships a uid-1000 "ubuntu" account; rename it when the
@@ -105,50 +117,10 @@ RUN set -e; test "${USER_UID}" -ne 0; test "${USER_GID}" -ne 0; \
     fi; \
     echo "dairlib ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dairlib; \
     chmod 0440 /etc/sudoers.d/dairlib
+LABEL org.dairlib.uid="${USER_UID}" org.dairlib.gid="${USER_GID}"
 
-# --- container-local Bazel settings -----------------------------------------
-# Deliberately NOT in the repository's own .bazelrc: these are properties of
-# the container, and the project .bazelrc is shared with host builds.
-COPY <<'BAZELRC' /home/dairlib/.bazelrc
-# Keep the whole output tree (external repos, action cache, compiled objects)
-# in the container-local cache volume rather than under the bind-mounted
-# workspace or the host's ~/.cache.
-startup --output_user_root=/home/dairlib/.cache/bazel
-
-# Cap the Bazel server heap. Without this the JVM sizes itself from the HOST's
-# memory, not the cgroup limit, and competes with the compile jobs.
-startup --host_jvm_args=-Xmx2g
-
-# Job count is FIXED, not derived from HOST_CPUS. Docker's --cpus is a CFS
-# quota, not a cpuset, so nproc/HOST_CPUS inside the container still report
-# every host core -- `--jobs=HOST_CPUS*0.5` resolved to 16 here and the
-# resulting Drake/VTK compiles were OOM-killed against the memory limit.
-# Drake's heaviest translation units peak near 2 GB each, so keep
-#   jobs * 2 GB + 2 GB (JVM)  <  the container memory limit
-build --jobs=8
-build --local_ram_resources=14000
-
-build --verbose_failures
-BAZELRC
-
-# --- entrypoint --------------------------------------------------------------
-# Makes LCM's multicast transport work inside the container's own network
-# namespace. Every process of a run lives in this one container, so routing the
-# multicast range over loopback both makes delivery reliable and guarantees no
-# LCM traffic reaches the host network or any other container.
-COPY <<'ENTRY' /usr/local/bin/entrypoint.sh
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Needs NET_ADMIN, which shell.sh grants. The capability is scoped to this
-# container's network namespace and cannot affect the host.
-sudo ip link set lo multicast on 2>/dev/null || true
-if ! ip route show | grep -q '^224.0.0.0/4'; then
-    sudo ip route add 224.0.0.0/4 dev lo 2>/dev/null || true
-fi
-
-exec "$@"
-ENTRY
+# Runtime settings are container-local; see shell.sh --help for overrides.
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN mkdir -p /home/dairlib/.cache/bazel \
     && chmod 0755 /usr/local/bin/entrypoint.sh \
