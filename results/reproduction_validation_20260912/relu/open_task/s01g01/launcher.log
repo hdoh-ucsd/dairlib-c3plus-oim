@@ -1,0 +1,2 @@
+FINAL {"first_success_t": null, "control_steps": 550, "best_pos_err": 0.5331260264853246, "best_ang_err": 2.9431537527482083, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE matched_open_table_xarm6_t1 -> /tmp/c3plus-reproduction-check-TvYqnM/relu/open_task/s01g01

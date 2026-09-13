@@ -1,0 +1,13 @@
+{
+  "run_id": "baseline_open_task_s01g01_seed42",
+  "scenario": "open_task",
+  "success": false,
+  "t_success": null,
+  "first_success_t": null,
+  "final_position_error": 0.5169579602016586,
+  "final_orientation_error": 3.0899289990881456,
+  "best_pos_err": 0.5169579602016586,
+  "best_ang_err": 2.9447089166181306,
+  "n_control_steps": 571,
+  "sim_time_end": 8.0
+}

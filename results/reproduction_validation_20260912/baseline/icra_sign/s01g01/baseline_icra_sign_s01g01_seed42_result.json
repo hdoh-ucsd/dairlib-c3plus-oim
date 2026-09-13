@@ -1,0 +1,13 @@
+{
+  "run_id": "baseline_icra_sign_s01g01_seed42",
+  "scenario": "icra_sign",
+  "success": false,
+  "t_success": null,
+  "first_success_t": null,
+  "final_position_error": 0.8165441584755575,
+  "final_orientation_error": 1.4912163644100738,
+  "best_pos_err": 0.814186473923968,
+  "best_ang_err": 1.4912163644100738,
+  "n_control_steps": 288,
+  "sim_time_end": 7.015
+}

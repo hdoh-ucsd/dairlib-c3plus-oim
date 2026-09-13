@@ -1,0 +1,360 @@
+{
+  "seed": 42,
+  "execution": "serial",
+  "purpose": "dependency_smoke_not_performance",
+  "wall_cap_seconds": 15,
+  "replay_max_frames": 2,
+  "runs": [
+    {
+      "scene": "icra_sign",
+      "variant": "baseline",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "baseline/icra_sign/s01g01",
+      "video": "baseline/icra_sign/s01g01/baseline_icra_sign_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "open_task",
+      "variant": "baseline",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "baseline/open_task/s01g01",
+      "video": "baseline/open_task/s01g01/baseline_open_task_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "shelf_gap",
+      "variant": "baseline",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "baseline/shelf_gap/s01g01",
+      "video": "baseline/shelf_gap/s01g01/baseline_shelf_gap_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "baseline/single_obstacle/s01g01",
+      "video": "baseline/single_obstacle/s01g01/baseline_single_obstacle_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "slalom",
+      "variant": "baseline",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "baseline/slalom/s01g01",
+      "video": "baseline/slalom/s01g01/baseline_slalom_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "ycb_clutter",
+      "variant": "baseline",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "baseline/ycb_clutter/s01g01",
+      "video": "baseline/ycb_clutter/s01g01/baseline_ycb_clutter_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "icra_sign",
+      "variant": "relu",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "relu/icra_sign/s01g01",
+      "video": "relu/icra_sign/s01g01/relu_icra_sign_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "open_task",
+      "variant": "relu",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "relu/open_task/s01g01",
+      "video": "relu/open_task/s01g01/relu_open_task_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "shelf_gap",
+      "variant": "relu",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "relu/shelf_gap/s01g01",
+      "video": "relu/shelf_gap/s01g01/relu_shelf_gap_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "relu/single_obstacle/s01g01",
+      "video": "relu/single_obstacle/s01g01/relu_single_obstacle_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "slalom",
+      "variant": "relu",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [
+        {
+          "process": "controller",
+          "reason": "topple_guard"
+        }
+      ],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "relu/slalom/s01g01",
+      "video": "relu/slalom/s01g01/relu_slalom_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    },
+    {
+      "scene": "ycb_clutter",
+      "variant": "relu",
+      "seed": 42,
+      "seed_verified": true,
+      "failures": [],
+      "packaging_complete": true,
+      "packaging_rc": {
+        "postprocess_rc": 0,
+        "render_rc": 0,
+        "cost_fig_rc": 0
+      },
+      "folder": "relu/ycb_clutter/s01g01",
+      "video": "relu/ycb_clutter/s01g01/relu_ycb_clutter_s01g01_seed42.mp4",
+      "video_probe": {
+        "programs": [],
+        "streams": [
+          {
+            "width": 960,
+            "height": 720,
+            "nb_frames": "2"
+          }
+        ],
+        "format": {
+          "duration": "0.200000"
+        }
+      }
+    }
+  ],
+  "host_checks_passed": 28,
+  "host_checks_total": 29,
+  "host_check_failures": [
+    {
+      "check": "Graphviz SVG",
+      "passed": false,
+      "detail": "Error: /usr/lib/x86_64-linux-gnu/graphviz/config6a is zero sized, or other read error.\nFormat: \"svg\" not recognized. Use one of:"
+    }
+  ],
+  "docker_runtime_verified": false
+}

@@ -1,0 +1,32 @@
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:112: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:113: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:114: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:115: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:116: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:117: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:118: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:137: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:136: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:142: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:141: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:147: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:146: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:196: warning: The attribute 'stiffness' found in a 'joint' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:196: warning: The attribute 'springref' found in a 'joint' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:196: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:151: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:202: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:201: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:212: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+WARNING:drake:/tmp/xarm6_vtk_assets_9itk4g41/xarm6_policyport.xml:259: warning: The tag 'velocity' found as a child of 'actuator' is currently unsupported and will be ignored.
+WARNING:drake://root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/push_c_glyph.sdf:15: warning: In <collision name='spine_collision'>: When drake contact parameters are fully specified in the <drake:proximity_properties> tag, the <surface><friction><ode><mu*> tags are ignored.
+WARNING:drake://root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/push_c_glyph.sdf:23: warning: In <collision name='top_bar_collision'>: When drake contact parameters are fully specified in the <drake:proximity_properties> tag, the <surface><friction><ode><mu*> tags are ignored.
+WARNING:drake://root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/push_c_glyph.sdf:31: warning: In <collision name='bot_bar_collision'>: When drake contact parameters are fully specified in the <drake:proximity_properties> tag, the <surface><friction><ode><mu*> tags are ignored.
+/root/dairlib-oim-c3plus-baseline/tools/scene_smoke/render_run_3d.py:169: DrakeDeprecationWarning: (Deprecated.)
+
+Deprecated:
+    Use is_floating_base_body() instead. This will be removed from
+    Drake on or after 2026-06-01.
+  if b.is_floating():
+  frame 0/2
+wrote /tmp/c3plus-reproduction-check-TvYqnM/relu/icra_sign/s01g01/relu_icra_sign_s01g01_seed42.mp4 (2 frames @ 10 fps)

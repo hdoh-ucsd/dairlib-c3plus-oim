@@ -13,8 +13,8 @@ import re
 import numpy as np
 import yaml
 
-WT = "/root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics"
-ROOT = os.path.join(WT, "results/c3plus_relu_chomp_comparison")
+WT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = os.environ.get("C3PLUS_RESULTS_ROOT", os.path.join(WT, "results/c3plus_relu_chomp_comparison"))
 SCFG = os.path.join(WT, "tools/scene_smoke/scene_configs")
 SCENES = ["open_task", "single_obstacle", "shelf_gap", "ycb_clutter",
           "icra_sign", "slalom"]
@@ -54,7 +54,8 @@ def goal_of(scene, n):
     run_grid_campaign.py)."""
     gp = os.path.join(WT, "examples/sampling_c3", FAM[scene] + f"t{n}",
                       "parameters/goal_params.yaml")
-    txt = open(gp).read()
+    with open(gp) as stream:
+        txt = stream.read()
     pos = re.search(r"^fixed_target_position: \[([^\]]+)\]", txt, re.M).group(1)
     quat = re.search(r"^fixed_target_orientation: \[([^\]]+)\]", txt,
                      re.M).group(1)
@@ -69,7 +70,7 @@ def demo_name(scene, m, n):
 
 def poly_signed_dist(px, py, poly):
     """Signed distance point->polygon (negative inside; even-odd, winding
-    agnostic). Same formula as tools/scene_smoke/cost_diagnostics_v2.py."""
+    agnostic)."""
     n = len(poly)
     dmin = math.inf
     inside = False

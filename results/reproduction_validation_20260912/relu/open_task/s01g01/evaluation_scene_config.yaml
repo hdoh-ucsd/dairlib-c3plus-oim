@@ -1,0 +1,29 @@
+goal:
+- 0.381
+- -0.4
+- 3.141600000009793
+object_channel_substring: G_shape_video
+footprint:
+- - -0.0445
+  - 0.0198
+- - -0.0445
+  - 0.0
+- - -0.0099
+  - 0.0
+- - -0.0099
+  - -0.0794
+- - 0.0099
+  - -0.0794
+- - 0.0099
+  - 0.0
+- - 0.0445
+  - 0.0
+- - 0.0445
+  - 0.0198
+pusher_radius: 0.00555
+block_half_height: 0.0298
+tip_target_z: 0.0298
+obstacles: {}
+tip_floor_branch: real
+control_dt: 0.1
+boundary_sample_spacing: 0.002

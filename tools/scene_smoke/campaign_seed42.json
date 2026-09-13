@@ -1,0 +1,305 @@
+{
+  "seed": 42,
+  "runs": [
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 1,
+      "goal": 1,
+      "goal_pose": [
+        0.381,
+        -0.4,
+        3.1416
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 1,
+      "goal": 1,
+      "goal_pose": [
+        0.381,
+        -0.4,
+        3.1416
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 1,
+      "goal": 2,
+      "goal_pose": [
+        0.397,
+        -0.431,
+        3.24
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 1,
+      "goal": 2,
+      "goal_pose": [
+        0.397,
+        -0.431,
+        3.24
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 1,
+      "goal": 3,
+      "goal_pose": [
+        0.404,
+        -0.393,
+        2.7924
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 1,
+      "goal": 3,
+      "goal_pose": [
+        0.404,
+        -0.393,
+        2.7924
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 1,
+      "goal": 4,
+      "goal_pose": [
+        0.386,
+        -0.424,
+        2.7704
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 1,
+      "goal": 4,
+      "goal_pose": [
+        0.386,
+        -0.424,
+        2.7704
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 1,
+      "goal": 5,
+      "goal_pose": [
+        0.359,
+        -0.424,
+        2.7338
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 1,
+      "goal": 5,
+      "goal_pose": [
+        0.359,
+        -0.424,
+        2.7338
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 2,
+      "goal": 1,
+      "goal_pose": [
+        0.381,
+        -0.4,
+        3.1416
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 2,
+      "goal": 1,
+      "goal_pose": [
+        0.381,
+        -0.4,
+        3.1416
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 2,
+      "goal": 2,
+      "goal_pose": [
+        0.397,
+        -0.431,
+        3.24
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 2,
+      "goal": 2,
+      "goal_pose": [
+        0.397,
+        -0.431,
+        3.24
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 2,
+      "goal": 3,
+      "goal_pose": [
+        0.404,
+        -0.393,
+        2.7924
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 2,
+      "goal": 3,
+      "goal_pose": [
+        0.404,
+        -0.393,
+        2.7924
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 2,
+      "goal": 4,
+      "goal_pose": [
+        0.386,
+        -0.424,
+        2.7704
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 2,
+      "goal": 4,
+      "goal_pose": [
+        0.386,
+        -0.424,
+        2.7704
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 2,
+      "goal": 5,
+      "goal_pose": [
+        0.359,
+        -0.424,
+        2.7338
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 2,
+      "goal": 5,
+      "goal_pose": [
+        0.359,
+        -0.424,
+        2.7338
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 3,
+      "goal": 1,
+      "goal_pose": [
+        0.381,
+        -0.4,
+        3.1416
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 3,
+      "goal": 1,
+      "goal_pose": [
+        0.381,
+        -0.4,
+        3.1416
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 3,
+      "goal": 2,
+      "goal_pose": [
+        0.397,
+        -0.431,
+        3.24
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "relu",
+      "start": 3,
+      "goal": 2,
+      "goal_pose": [
+        0.397,
+        -0.431,
+        3.24
+      ],
+      "cap": 600
+    },
+    {
+      "scene": "single_obstacle",
+      "variant": "baseline",
+      "start": 3,
+      "goal": 3,
+      "goal_pose": [
+        0.404,
+        -0.393,
+        2.7924
+      ],
+      "cap": 600
+    }
+  ]
+}

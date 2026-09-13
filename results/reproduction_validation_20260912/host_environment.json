@@ -1,0 +1,150 @@
+{
+  "python": "/root/miniconda3/envs/push_anything_ADMM/bin/python3",
+  "checks": [
+    {
+      "check": "bazel",
+      "passed": true,
+      "detail": "/usr/local/bin/bazel"
+    },
+    {
+      "check": "git",
+      "passed": true,
+      "detail": "/usr/bin/git"
+    },
+    {
+      "check": "g++",
+      "passed": true,
+      "detail": "/usr/bin/g++"
+    },
+    {
+      "check": "pkg-config",
+      "passed": true,
+      "detail": "/usr/bin/pkg-config"
+    },
+    {
+      "check": "java",
+      "passed": true,
+      "detail": "/usr/bin/java"
+    },
+    {
+      "check": "setsid",
+      "passed": true,
+      "detail": "/usr/bin/setsid"
+    },
+    {
+      "check": "ffmpeg",
+      "passed": true,
+      "detail": "/usr/bin/ffmpeg"
+    },
+    {
+      "check": "ffprobe",
+      "passed": true,
+      "detail": "/usr/bin/ffprobe"
+    },
+    {
+      "check": "dot",
+      "passed": true,
+      "detail": "/usr/bin/dot"
+    },
+    {
+      "check": "import pydrake",
+      "passed": true,
+      "detail": "pydrake"
+    },
+    {
+      "check": "import numpy",
+      "passed": true,
+      "detail": "numpy"
+    },
+    {
+      "check": "import scipy",
+      "passed": true,
+      "detail": "scipy"
+    },
+    {
+      "check": "import matplotlib",
+      "passed": true,
+      "detail": "matplotlib"
+    },
+    {
+      "check": "import PIL",
+      "passed": true,
+      "detail": "PIL"
+    },
+    {
+      "check": "import trimesh",
+      "passed": true,
+      "detail": "trimesh"
+    },
+    {
+      "check": "import yaml",
+      "passed": true,
+      "detail": "yaml"
+    },
+    {
+      "check": "Drake version",
+      "passed": true,
+      "detail": "1.51.1"
+    },
+    {
+      "check": "LCM multicast",
+      "passed": true,
+      "detail": "publish/subscribe round trip passed"
+    },
+    {
+      "check": "Graphviz SVG",
+      "passed": false,
+      "detail": "Error: /usr/lib/x86_64-linux-gnu/graphviz/config6a is zero sized, or other read error.\nFormat: \"svg\" not recognized. Use one of:"
+    },
+    {
+      "check": "Gurobi distribution",
+      "passed": true,
+      "detail": "Gurobi 10.0 distribution found; license requirements depend on the solver selected"
+    },
+    {
+      "check": "franka_sim",
+      "passed": true,
+      "detail": "executable and shared libraries found"
+    },
+    {
+      "check": "franka_osc_controller",
+      "passed": true,
+      "detail": "executable and shared libraries found"
+    },
+    {
+      "check": "franka_sampling_c3_controller",
+      "passed": true,
+      "detail": "executable and shared libraries found"
+    },
+    {
+      "check": "scene open_task",
+      "passed": true,
+      "detail": "robot/tool/simulator/controller models parsed; 25 demo configs and referenced dependencies found"
+    },
+    {
+      "check": "scene single_obstacle",
+      "passed": true,
+      "detail": "robot/tool/simulator/controller models parsed; 25 demo configs and referenced dependencies found"
+    },
+    {
+      "check": "scene shelf_gap",
+      "passed": true,
+      "detail": "robot/tool/simulator/controller models parsed; 25 demo configs and referenced dependencies found"
+    },
+    {
+      "check": "scene ycb_clutter",
+      "passed": true,
+      "detail": "robot/tool/simulator/controller models parsed; 25 demo configs and referenced dependencies found"
+    },
+    {
+      "check": "scene icra_sign",
+      "passed": true,
+      "detail": "robot/tool/simulator/controller models parsed; 25 demo configs and referenced dependencies found"
+    },
+    {
+      "check": "scene slalom",
+      "passed": true,
+      "detail": "robot/tool/simulator/controller models parsed; 25 demo configs and referenced dependencies found"
+    }
+  ]
+}

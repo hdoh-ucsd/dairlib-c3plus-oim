@@ -1,0 +1,16 @@
+run_id: relu_shelf_gap_s01g01_seed42
+scenario: shelf_gap
+demo: matched_shelf_gap_xarm6_t1
+goal:
+- 0.381
+- -0.4
+- 3.141600000009793
+files:
+- relu_shelf_gap_s01g01_seed42_metrics.csv
+- relu_shelf_gap_s01g01_seed42_eval_metrics.png
+- relu_shelf_gap_s01g01_seed42_result.json
+git_commit: cf092c53dab655100dc28b000d9554ad9fb0897c
+tolerances:
+  pos_tol: 0.05
+  ang_tol: 0.1
+generated: '2026-09-12T17:49:06.331211'

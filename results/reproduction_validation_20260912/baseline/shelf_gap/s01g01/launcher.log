@@ -1,0 +1,2 @@
+FINAL {"first_success_t": null, "control_steps": 521, "best_pos_err": 0.7999042581704902, "best_ang_err": 3.141576881847026, "pos_tol": 0.05, "ang_tol": 0.1}
+RUN DONE matched_shelf_gap_xarm6_t1 -> /tmp/c3plus-reproduction-check-TvYqnM/baseline/shelf_gap/s01g01

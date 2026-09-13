@@ -1,0 +1,13 @@
+{
+  "run_id": "relu_slalom_s01g01_seed42",
+  "scenario": "slalom",
+  "success": false,
+  "t_success": null,
+  "first_success_t": null,
+  "final_position_error": 0.7756831164883152,
+  "final_orientation_error": 2.578693052782514,
+  "best_pos_err": 0.7716188013191615,
+  "best_ang_err": 2.4744246816685846,
+  "n_control_steps": 356,
+  "sim_time_end": 4.944999
+}
