@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <filesystem>
 #include <limits>
 
 #include "systems/framework/output_vector.h"
@@ -69,6 +70,8 @@ DEFINE_string(lcm_url, "udpm://239.255.76.67:7667?ttl=0",
               "LCM URL with IP, port, and TTL settings");
 DEFINE_string(demo_name, "jacktoy",
               "Demo within sampling_c3; used to find controller params file");
+DEFINE_string(controller_params, "",
+              "Explicit controller YAML path; empty uses --demo_name.");
 DEFINE_string(robot_model, "franka",
               "Robot arm model: 'franka' (default) or 'xarm6'.");
 DEFINE_bool(xarm6_five_joint, true,
@@ -442,8 +445,11 @@ int DoMain(int argc, char* argv[]) {
   drake::lcm::DrakeLcm lcm(FLAGS_lcm_url);
 
   // Load parameters.
-  std::string controller_params_path = "examples/sampling_c3/" +
-    FLAGS_demo_name + "/parameters/sampling_c3_controller_params.yaml";
+  std::string controller_params_path =
+      FLAGS_controller_params.empty()
+          ? "examples/sampling_c3/" + FLAGS_demo_name +
+                "/parameters/sampling_c3_controller_params.yaml"
+          : FLAGS_controller_params;
   SamplingC3ControllerParams controller_params =
       drake::yaml::LoadYamlFile<SamplingC3ControllerParams>(
           controller_params_path);
@@ -457,7 +463,10 @@ int DoMain(int argc, char* argv[]) {
       drake::yaml::LoadYamlFile<SamplingC3LcmChannels>(lcm_channels_file);
   drake::solvers::SolverOptions solver_options =
       drake::yaml::LoadYamlFile<solvers::SolverOptionsFromYaml>(
-          FindResourceOrThrow(controller_params.osc_qp_settings_file))
+          std::filesystem::path(controller_params.osc_qp_settings_file)
+                  .is_absolute()
+              ? controller_params.osc_qp_settings_file
+              : FindResourceOrThrow(controller_params.osc_qp_settings_file))
           .GetAsSolverOptions(drake::solvers::OsqpSolver::id());
 
   // Create a Franka-only plant.

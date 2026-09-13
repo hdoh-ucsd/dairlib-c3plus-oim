@@ -1,5 +1,9 @@
 # push_t_bt010_single_obstacle_xarm6
 
+Configuration files are shared under `../shared_parameters/`. Follow the file
+pointers in `parameters/sampling_c3_controller_params.yaml` for their current
+locations; the filenames below describe the original configuration roles.
+
 xArm6 (5-joint, joint6 welded) variant of the C3+ single_obstacle scene.
 Constructed as a copy of `push_t_bt010_open_table_xarm6` (FROZEN baseline,
 see `results/panda_to_xarm6_final/baseline/xarm6_panda_equivalent_baseline.yaml`)

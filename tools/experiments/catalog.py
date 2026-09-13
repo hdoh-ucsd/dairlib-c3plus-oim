@@ -1,8 +1,13 @@
 """Scene metadata and checkout paths; scientific imports stay in leaf helpers."""
 from __future__ import annotations
 
+from copy import deepcopy
+import hashlib
+import json
 import math
 from pathlib import Path
+import re
+import shutil
 
 REPO = Path(__file__).resolve().parents[2]
 TOOL_DIR = Path(__file__).resolve().parent
@@ -27,6 +32,7 @@ DEMO_FAMILIES = {
 }
 BINARIES = ("franka_sim", "franka_osc_controller", "franka_sampling_c3_controller")
 BUILD_TARGETS = tuple(f"//examples/sampling_c3:{name}" for name in BINARIES)
+EXPERIMENTS_FILE = Path("examples/sampling_c3/shared_parameters/experiments.yaml")
 
 
 def planner_environment(config) -> dict[str, str]:
@@ -112,14 +118,220 @@ def demo_name(scene, start, goal):
     return DEMO_FAMILIES[scene] + (f"t{start}" if start == goal else f"s{start}g{goal}")
 
 
-def load_controller_goal(demo, repo=REPO):
-    """Return the goal file and planar pose referenced by a demo's controller."""
+def _read_yaml(path):
     import yaml
 
-    parameters = repo / "examples/sampling_c3" / demo / "parameters"
-    controller = yaml.safe_load((parameters / "sampling_c3_controller_params.yaml").read_text())
-    goal_file = repo / controller["goal_params_file"]
-    config = yaml.safe_load(goal_file.read_text())
+    return yaml.safe_load(path.read_text())
+
+
+def _yaml_references(value, repo):
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from _yaml_references(item, repo)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _yaml_references(item, repo)
+    elif (isinstance(value, str) and value.startswith(("examples/", "common/"))
+          and value.endswith((".yaml", ".yml"))):
+        yield repo / value
+
+
+def _yaml_dependencies(value, repo):
+    pending = list(_yaml_references(value, repo))
+    configs = {}
+    while pending:
+        path = pending.pop()
+        if path in configs:
+            continue
+        configs[path] = _read_yaml(path)
+        pending.extend(_yaml_references(configs[path], repo))
+    return configs
+
+
+def _demo_selection(demo):
+    for scene, prefix in DEMO_FAMILIES.items():
+        if not demo.startswith(prefix):
+            continue
+        match = re.fullmatch(r"(?:t([1-5])|s([1-5])g([1-5]))", demo[len(prefix):])
+        if not match:
+            raise ValueError(f"Invalid indexed demo: {demo}")
+        start = int(match[1] or match[2])
+        goal = int(match[1] or match[3])
+        if demo != demo_name(scene, start, goal):
+            raise ValueError(f"Use the canonical indexed demo name: {demo_name(scene, start, goal)}")
+        return scene, start, goal
+    return None
+
+
+def _merge(base, updates):
+    result = deepcopy(base)
+    for key, value in updates.items():
+        result[key] = (_merge(result[key], value)
+                       if isinstance(value, dict) and isinstance(result.get(key), dict)
+                       else deepcopy(value))
+    return result
+
+
+def _scene_config(scenes, name, visited=()):
+    if name in visited:
+        raise ValueError(f"Scene inheritance cycle: {name}")
+    scene = deepcopy(scenes[name])
+    parent = scene.pop("extends", None)
+    return _merge(_scene_config(scenes, parent, (*visited, name)), scene) if parent else scene
+
+
+def _vector(value, length, label, quaternion=False):
+    try:
+        invalid = (not isinstance(value, list) or len(value) != length
+                   or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                          or not math.isfinite(v) for v in value))
+    except OverflowError:
+        invalid = True
+    if invalid:
+        raise ValueError(f"{label} must contain {length} finite numbers")
+    if quaternion and not any(value):
+        raise ValueError(f"{label} must be a nonzero quaternion")
+    return deepcopy(value)
+
+
+def _override_goal_yaw(goal, degrees):
+    if degrees is None:
+        return
+    if isinstance(degrees, bool) or degrees not in (-90, 0, 90):
+        raise ValueError("Goal yaw must be -90, 0, or 90 degrees")
+    if goal["goal_mode"] != 2:
+        raise ValueError("Goal yaw override requires fixed goal_mode=2")
+    angle = math.radians(degrees) / 2
+    quaternion = [math.cos(angle), 0, 0, math.sin(angle)]
+    goal.update(fixed_target_orientation=quaternion, fixed_target_orientations=[deepcopy(quaternion)])
+
+
+def compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=None):
+    """Compose one native trial from independent positions and orientations."""
+    repo = Path(repo)
+    selection = _demo_selection(demo)
+    if selection is None:
+        path = repo / "examples/sampling_c3" / demo / "parameters/sampling_c3_controller_params.yaml"
+        controller = _read_yaml(path)
+        goal = _read_yaml(repo / controller.pop("goal_params_file"))
+        simulation = _read_yaml(repo / controller.pop("sim_params_file"))
+    else:
+        scene_name, start, goal_index = selection
+        data = _read_yaml(repo / EXPERIMENTS_FILE)
+        if data["schema_version"] != 1:
+            raise ValueError("Unsupported experiment configuration schema")
+        scene = _scene_config(data["scenes"], scene_name)
+        profile = data["object_profiles"][scene["object_profile"]]
+        defaults = data["defaults"]
+        start_refs = _merge(profile["start_positions"], scene.get("start_positions", {}))
+        start_orientation_refs = _merge(_merge(defaults["start_orientations"],
+                                               profile.get("start_orientations", {})),
+                                        scene.get("start_orientations", {}))
+        goal_refs = _merge(profile["goal_positions"], scene.get("goal_positions", {}))
+        orientation_refs = _merge(profile["goal_orientations"], scene.get("goal_orientations", {}))
+        start_xy = _vector(data["start_positions"][start_refs[start]], 2, "Start position")
+        goal_xy = _vector(data["goal_positions"][goal_refs[goal_index]], 2, "Goal position")
+        start_q = _vector(data["orientations"][start_orientation_refs[start]],
+                          4, "Start orientation", quaternion=True)
+        goal_q = _vector(data["orientations"][orientation_refs[goal_index]],
+                         4, "Goal orientation", quaternion=True)
+        height = _vector([profile["object_height"]], 1, "Object height")[0]
+        robot = scene.get("robot_joint_overrides", {}).get(start, profile["robot_joint_preset"])
+        joints = _vector(data["robot_joint_presets"][robot], 5, "Robot joint preset")
+        controller = deepcopy(defaults["controller"])
+        controller.update(sampling_c3_options_file=profile["sampling_c3_options_file"],
+                          sampling_params_file=profile["sampling_params_file"],
+                          scenario_params_file=scene["scenario_params_file"],
+                          object_model=profile["controller_model"], object_models=[profile["controller_model"]],
+                          object_body_name=profile["object_body_name"], base_name=profile["base_name"],
+                          base_names=[profile["object_body_name"]])
+        simulation = deepcopy(defaults["simulation"])
+        initial_pose = [*start_q, *start_xy, height]
+        simulation.update(object_model=profile["simulation_model"], object_models=[profile["simulation_model"]],
+                          q_init_franka=joints, q_init_object=initial_pose, q_init_objects=[deepcopy(initial_pose)])
+        if [start, goal_index] in scene.get("visualize_pairs", []):
+            simulation["visualize_drake_sim"] = True
+        goal = deepcopy(defaults["goal"])
+        position = [*goal_xy, height]
+        goal.update(fixed_target_position=position, fixed_target_positions=[deepcopy(position)],
+                    fixed_target_orientation=goal_q, fixed_target_orientations=[deepcopy(goal_q)])
+    _vector(goal["fixed_target_position"], 3, "Goal position")
+    _vector(goal["fixed_target_orientation"], 4, "Goal orientation", quaternion=True)
+    _vector(simulation["q_init_object"][:4], 4, "Start orientation", quaternion=True)
+    _vector(simulation["q_init_object"][4:], 3, "Start position")
+    _override_goal_yaw(goal, goal_yaw_degrees)
+    return {"controller": controller, "simulation": simulation, "goal": goal}
+
+
+def load_demo_configs(demo, repo=REPO):
+    """Read source YAMLs for a demo, following only its selected dependencies."""
+    repo = Path(repo)
+    if _demo_selection(demo) is not None:
+        composed = compose_demo_configs(demo, repo)
+        return {repo / EXPERIMENTS_FILE: _read_yaml(repo / EXPERIMENTS_FILE),
+                **_yaml_dependencies(composed, repo)}
+    path = repo / "examples/sampling_c3" / demo / "parameters/sampling_c3_controller_params.yaml"
+    controller = _read_yaml(path)
+    return {path: controller, **_yaml_dependencies(controller, repo)}
+
+
+def demo_config_digest(demo, repo=REPO, goal_yaw_degrees=None):
+    """Fingerprint effective settings and dependencies, excluding unused trials."""
+    repo = Path(repo)
+    composed = compose_demo_configs(demo, repo, goal_yaw_degrees)
+    dependencies = {str(path.relative_to(repo)): data
+                    for path, data in _yaml_dependencies(composed, repo).items()}
+    payload = {"composed": composed, "dependencies": dependencies}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                     allow_nan=False).encode()).hexdigest()
+
+
+def write_demo_configs(demo, directory, repo=REPO, goal_yaw_degrees=None):
+    """Save an isolated native configuration and every selected YAML dependency."""
+    import yaml
+
+    repo = Path(repo).resolve()
+    directory = Path(directory).resolve()
+    if directory.exists():
+        raise FileExistsError(f"Refusing to overwrite configuration directory: {directory}")
+    composed = compose_demo_configs(demo, repo, goal_yaw_degrees)
+    dependencies = _yaml_dependencies(composed, repo)
+    copies = {str(path.relative_to(repo)): directory / "repository" / path.relative_to(repo)
+              for path in dependencies}
+
+    def localize(value):
+        if isinstance(value, dict):
+            return {key: localize(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [localize(item) for item in value]
+        return str(copies[value]) if isinstance(value, str) and value in copies else value
+
+    resolved = localize(composed)
+    resolved["controller"].update(goal_params_file=str(directory / "goal.yaml"),
+                                  sim_params_file=str(directory / "simulation.yaml"))
+    directory.mkdir(parents=True, exist_ok=False)
+    for source, data in dependencies.items():
+        target = copies[str(source.relative_to(repo))]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(yaml.safe_dump(localize(data), sort_keys=False))
+    for role, data in resolved.items():
+        (directory / f"{role}.yaml").write_text(yaml.safe_dump(data, sort_keys=False))
+    if _demo_selection(demo) is not None:
+        shutil.copy2(repo / EXPERIMENTS_FILE, directory / "source_experiments.yaml")
+    return directory / "controller.yaml"
+
+
+def load_controller_goal(demo, repo=REPO):
+    """Return the source and planar goal for a composed or legacy demo."""
+    repo = Path(repo)
+    if _demo_selection(demo) is not None:
+        goal_file = repo / EXPERIMENTS_FILE
+        config = compose_demo_configs(demo, repo)["goal"]
+    else:
+        parameters = repo / "examples/sampling_c3" / demo / "parameters"
+        controller = _read_yaml(parameters / "sampling_c3_controller_params.yaml")
+        goal_file = repo / controller["goal_params_file"]
+        config = _read_yaml(goal_file)
     x, y, _ = config["fixed_target_position"]
     w, _, _, z = config["fixed_target_orientation"]
     return goal_file, (x, y, 2.0 * math.atan2(z, w))

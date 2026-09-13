@@ -10,12 +10,14 @@ cc_library(
 filegroup(
     name = "all_example_params_yamls",
     visibility = ["//visibility:public"],
-    data = ["//examples/sampling_c3/jacktoy:parameters"],
+    srcs = glob([
+        "push_t_bt010_*/parameters/sampling_c3_controller_params.yaml",
+    ]) + [":shared_params_yamls"],
 )
 
 filegroup(
     name = "shared_params_yamls",
-    srcs = glob(["shared_parameters/*.yaml"]),
+    srcs = glob(["shared_parameters/**/*.yaml"]),
     visibility = ["//visibility:public"],
 )
 

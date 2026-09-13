@@ -84,7 +84,7 @@ python3 -m tools.experiments run \
 | Option | Meaning |
 | --- | --- |
 | `--scene` | One of the six scenes above; `scenes` lists them |
-| `--start`, `--goal` | Native start/goal indices, each from 1 to 5 |
+| `--start`, `--goal` | Independent start-position and goal-position indices, each from 1 to 5 |
 | `--goal-yaw-degrees` | Optional absolute world yaw: 90, 0, or −90 degrees; preserves the indexed goal position |
 | `--obstacle_cost` | `exponential` or `relu` |
 | `--cap` | Recorder wall-time budget in seconds, default 600; startup and packaging add time |
@@ -95,12 +95,29 @@ Recording, metrics, plots, and MP4 rendering are automatic. `RUN_COMPLETE` means
 packaging finished; check `*_result.json` for task success and
 `runtime_status.json` for process failures.
 
+Start positions, goal positions, and orientations are defined separately in
+[experiments.yaml](examples/sampling_c3/shared_parameters/experiments.yaml).
+Choose their combination in the command; there is no YAML file per start/goal
+pair. For example, start S2, goal position G2, and goal yaw −90°:
+
+```bash
+python3 -m tools.experiments run \
+  --scene single_obstacle --obstacle_cost relu \
+  --start 2 --goal 2 --goal-yaw-degrees -90 \
+  --out results/reproduce/s2_g2_minus90 --dry-run
+```
+
+Omitting `--goal-yaw-degrees` uses the goal's original benchmark orientation.
+Each start retains its configured initial orientation and robot joint pose.
+An actual run saves the resolved native configuration and its shared YAML
+dependencies in the run's `config/` directory.
+
 ### Campaigns
 
 Run the fixed-goal orientation campaigns inside Docker, from the repository root:
 
 ```bash
-# Rebuild once after updating: the controller needs the goal-yaw override.
+# Rebuild once after updating to support composed configurations and goal yaw.
 python3 -m tools.experiments build
 
 # Full run: all five starts (180 trials).
@@ -185,6 +202,7 @@ smoke jobs across `single_obstacle`, `icra_sign`, and both costs. Old
 | Output | Contents |
 | --- | --- |
 | `runtime_status.json`, `evaluation_scene_config.yaml` | Provenance, effective settings, goals, process status, and saved scene configuration |
+| `config/` | Resolved controller, simulator, and goal YAMLs, plus snapshots of selected shared settings |
 | `state_trace.jsonl`, `steps_raw.jsonl`, `*.log` | Recorded states, controller messages, and process/packaging logs |
 | `*_metrics.csv`, `*_result.json`, `*_manifest.yaml` | Metrics, task result, and evaluation manifest |
 | `*_eval_metrics.png`, `*_cost_diagnostics.png`, `*.mp4` | Diagnostic plots and sampled video replay |
@@ -269,16 +287,35 @@ Untracking existing results preserves local files and leaves Git history intact.
 <details>
 <summary>Scene configuration and tool responsibilities</summary>
 
-`__main__.py` dispatches commands; `catalog.py` shares scene metadata and goal
-lookup. `run_experiment.py` packages one run; `run_grid_campaign.py` manages
+`__main__.py` dispatches commands; `catalog.py` composes and snapshots native
+configurations. `run_experiment.py` packages one run; `run_grid_campaign.py` manages
 campaigns. `launch_run.sh` launches and cleans up native processes, while
 `record_metrics.py` records LCM data. The remaining tools implement `check`,
 `postprocess`, `render`, and `cost-figure`; direct Python script calls also work.
 
-The simulator and controller goal come from
-`examples/sampling_c3/<demo>/parameters/`; models live under
-`examples/sampling_c3/urdf/`. Diagonal start/goal pairs use `...tM` demos and
-other pairs use `...sMgN`. Plans report position in meters and yaw in radians.
+The shared [experiment catalogue](examples/sampling_c3/shared_parameters/experiments.yaml)
+stores each configurable value once:
+
+| Section | Contents |
+| --- | --- |
+| `start_positions`, `goal_positions` | Separate named XY coordinates, in metres |
+| `orientations` | Reused quaternions in `[w, x, y, z]` order |
+| `robot_joint_presets` | Initial robot joint configurations, in radians |
+| `defaults`, `object_profiles` | Common controller/simulator/goal settings, object heights, and indexed references |
+| `scenes` | Scene selection and the few scene-specific overrides |
+
+Keep coordinates and quaternion values in their respective tables; profiles
+and scene overrides select them by name. Controller profiles and scene geometry
+remain separate shared YAMLs; models live under `examples/sampling_c3/urdf/`.
+At launch, the tools generate `config/controller.yaml`, `simulation.yaml`, and
+`goal.yaml`, then pass the controller file to all native processes through
+`--controller_params`. The `...tM` and `...sMgN` demo names remain run identifiers;
+their former 150 directories are unnecessary. Three legacy `push_t_bt010_*`
+entrypoints remain for `bash_run.sh`.
+
+Plans report the starting pose as `[w, x, y, z, X, Y, Z]`, goal position in metres,
+and goal yaw in radians. Configuration hashes prevent resuming a campaign with
+changed selected settings; use a new output root for older campaign plans.
 
 Scene YAMLs supply evaluation geometry and planner overrides. Their optional
 `planner` block references `obstacles.polygons` by zero-based index:
@@ -294,8 +331,8 @@ planner:
 ICRA also sets `object_footprint: c_glyph` and `obstacle_top_z: 0.046`.
 Unassigned slots, including the robot base, retain native disc geometry.
 `catalog.planner_environment()` validates and serializes these settings.
-Changing a physical scene requires updating its native model/configuration
-alongside the YAML; the YAML alone does not change the simulation or controller goal.
+Changing physical scene geometry requires updating its native model/configuration
+alongside the evaluator YAML. Start and goal changes belong in the experiment catalogue.
 
 </details>
 

@@ -71,6 +71,8 @@ using drake::systems::DiagramBuilder;
 DEFINE_bool(is_simulation, true, "True for simulation, false for hardware");
 DEFINE_string(demo_name, "jacktoy",
               "Name for the demo, used when building filepaths for output.");
+DEFINE_string(controller_params, "",
+              "Explicit controller YAML path; empty uses --demo_name.");
 DEFINE_string(robot_model, "franka",
               "Robot arm model: 'franka' (default) or 'xarm6'. Must match the "
               "value passed to franka_sim / the controllers: the incoming "
@@ -82,8 +84,10 @@ int do_main(int argc, char* argv[]) {
 
   // Load parameters.
   std::string controller_params_path =
-      "examples/sampling_c3/" + FLAGS_demo_name +
-      "/parameters/sampling_c3_controller_params.yaml";
+      FLAGS_controller_params.empty()
+          ? "examples/sampling_c3/" + FLAGS_demo_name +
+                "/parameters/sampling_c3_controller_params.yaml"
+          : FLAGS_controller_params;
   SamplingC3ControllerParams controller_params =
       drake::yaml::LoadYamlFile<SamplingC3ControllerParams>(
           controller_params_path);
