@@ -5,7 +5,7 @@ franka_publish_rate: 1000
 object_publish_rate: 10
 actuator_delay: 0.000
 
-visualize_drake_sim: false
+visualize_drake_sim: true
 publish_efforts: true
 
 dt: 0.0001

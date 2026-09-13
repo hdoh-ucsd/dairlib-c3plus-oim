@@ -1,4 +1,6 @@
 
+#include <limits>
+
 #include <dairlib/lcmt_radio_out.hpp>
 #include <drake/common/find_resource.h>
 #include <drake/common/yaml/yaml_io.h>
@@ -64,6 +66,11 @@ DEFINE_string(demo_name, "jacktoy",
               "Demo within sampling_c3; used to find controller params file");
 DEFINE_string(robot_model, "franka",
               "Robot arm model: 'franka' (default) or 'xarm6'.");
+DEFINE_int32(max_control_loops, -1,
+             "Stop after this many planner control steps (one C3+ solve cycle "
+             "each). Negative means run until killed.");
+DEFINE_double(end_time, std::numeric_limits<double>::infinity(),
+              "Stop after this many seconds of message time.");
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -784,7 +791,7 @@ int DoMain(int argc, char* argv[]) {
     return true;
   });
   std::cout << "After LcmHandleSubscriptionsUntil" << std::endl;
-  loop.Simulate();
+  loop.Simulate(FLAGS_end_time, FLAGS_max_control_loops);
   return 0;
 }
 

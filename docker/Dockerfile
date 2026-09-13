@@ -74,9 +74,19 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 # Mesh/sampling generation (examples/sampling_c3/sampling_generation) plus the
 # analysis and rendering scripts under scripts/.
 COPY requirements.txt /tmp/requirements.txt
+# NOTE: `pip check` cannot be used here. --system-site-packages is required so
+# the venv can see apt's python3-lcm, but it also exposes the lint/type stubs
+# that Drake's install_prereqs drops into the system interpreter
+# (types-seaborn, types-flask-migrate, ipywidgets, ...). Those have their own
+# unsatisfied dependencies, so `pip check` fails on pre-existing system state
+# that has nothing to do with this project. Import the packages we actually
+# need instead -- a stricter test of what matters, immune to that noise.
 RUN python3 -m venv --system-site-packages /opt/push-anything-venv \
     && /opt/push-anything-venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
-    && /opt/push-anything-venv/bin/pip check
+    && /opt/push-anything-venv/bin/python3 -c \
+       "import pydrake, numpy, scipy, matplotlib, PIL, trimesh, yaml, lcm; \
+        from pydrake.common import GetDrakePath; \
+        print('python deps OK: numpy', numpy.__version__, '| drake', GetDrakePath())"
 ENV PATH="/opt/push-anything-venv/bin:${PATH}"
 ENV PYTHON=/opt/push-anything-venv/bin/python3
 ENV MPLCONFIGDIR=/tmp/matplotlib

@@ -229,7 +229,12 @@ class LcmDrivenLoop {
   }
 
   // Start simulating the diagram
-  void Simulate(double end_time = std::numeric_limits<double>::infinity()) {
+  /// Runs the message-driven loop until `end_time` (in seconds of message
+  /// time). `max_loops` optionally caps the number of loop iterations -- one
+  /// iteration is one control step of the driven diagram. A negative value
+  /// (the default) means unlimited, so existing callers are unaffected.
+  void Simulate(double end_time = std::numeric_limits<double>::infinity(),
+                int max_loops = -1) {
     // Get mutable contexts
     auto& diagram_context = simulator_->get_mutable_context();
 
@@ -268,7 +273,14 @@ class LcmDrivenLoop {
     ///    }
     ///  }
     drake::log()->info(diagram_name_ + " started");
+    int loop_count = 0;
     while (time < end_time) {
+      if (max_loops >= 0 && loop_count >= max_loops) {
+        drake::log()->info(diagram_name_ + " reached max_loops=" +
+                           std::to_string(max_loops) + "; stopping.");
+        break;
+      }
+      ++loop_count;
       // Wait for new InputMessageType messages and SwitchMessageType messages.
       bool is_new_input_message = false;
       bool is_new_switch_message = false;

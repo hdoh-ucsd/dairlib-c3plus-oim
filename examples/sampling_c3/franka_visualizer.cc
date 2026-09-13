@@ -71,6 +71,11 @@ using drake::systems::DiagramBuilder;
 DEFINE_bool(is_simulation, true, "True for simulation, false for hardware");
 DEFINE_string(demo_name, "jacktoy",
               "Name for the demo, used when building filepaths for output.");
+DEFINE_string(robot_model, "franka",
+              "Robot arm model: 'franka' (default) or 'xarm6'. Must match the "
+              "value passed to franka_sim / the controllers: the incoming "
+              "robot state messages carry that model's joint names, and they "
+              "are looked up by name in this plant.");
 
 int do_main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -100,8 +105,12 @@ int do_main(int argc, char* argv[]) {
 
   // Build the visualizer plant.
   MultibodyPlant<double> plant(0.0);
-  ModelInstanceIndex franka_index = AddFrankaToPlant(
-      &plant, &scene_graph, true, true, sampling_c3_options.include_walls);
+  const bool is_xarm6 = (FLAGS_robot_model == "xarm6");
+  ModelInstanceIndex franka_index =
+      is_xarm6 ? AddXarm6ToPlant(&plant, &scene_graph, true, true,
+                                 sampling_c3_options.include_walls)
+               : AddFrankaToPlant(&plant, &scene_graph, true, true,
+                                  sampling_c3_options.include_walls);
 
   // Getting vector of object indices for all objects
   std::vector<ModelInstanceIndex> object_indices_plant =
@@ -111,7 +120,8 @@ int do_main(int argc, char* argv[]) {
   // Create a Franka-only plant.
   MultibodyPlant<double> plant_franka(0.0);
   ModelInstanceIndex franka_index0 =
-      AddFrankaToPlant(&plant_franka, nullptr, true, false);
+      is_xarm6 ? AddXarm6ToPlant(&plant_franka, nullptr, true, false)
+               : AddFrankaToPlant(&plant_franka, nullptr, true, false);
   plant_franka.Finalize();
   auto franka_context = plant_franka.CreateDefaultContext();
 
