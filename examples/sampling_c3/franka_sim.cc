@@ -60,6 +60,8 @@ DEFINE_string(lcm_url, "udpm://239.255.76.67:7667?ttl=0",
               "LCM URL with IP, port, and TTL settings");
 DEFINE_string(demo_name, "jacktoy",
               "Name for the demo, used when building filepaths for output.");
+DEFINE_string(controller_params, "",
+              "Explicit controller YAML path; empty uses --demo_name.");
 DEFINE_string(robot_model, "franka",
               "Robot arm model: 'franka' (default) or 'xarm6'.");
 DEFINE_bool(matched_mu, false,
@@ -98,8 +100,11 @@ int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
   // Load parameters.
-  std::string controller_params_path = "examples/sampling_c3/" +
-    FLAGS_demo_name + "/parameters/sampling_c3_controller_params.yaml";
+  std::string controller_params_path =
+      FLAGS_controller_params.empty()
+          ? "examples/sampling_c3/" + FLAGS_demo_name +
+                "/parameters/sampling_c3_controller_params.yaml"
+          : FLAGS_controller_params;
   SamplingC3ControllerParams controller_params =
       drake::yaml::LoadYamlFile<SamplingC3ControllerParams>(
           controller_params_path);

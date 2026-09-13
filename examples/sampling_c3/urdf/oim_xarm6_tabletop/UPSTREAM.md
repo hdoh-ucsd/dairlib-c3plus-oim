@@ -1,12 +1,12 @@
-# OIM xArm6 tabletop assets
+# OIM xArm6 assets
 
 Imported through the audited Python-port asset set at
 `sim/models/oim_xarm6_tabletop`, whose upstream is
 NikolaRaicevic2001/Object-Informed-Manipulation-MJX.
 
-This C++ branch intentionally vendors only the open-table Sampling-C3+ scene,
-its shared scene and T definitions, the xArm model, and the seven referenced
-OBJ meshes. It does not copy the other OIM scenarios or controller YAML. The
-files are unchanged from that local audited import; the `assets` symlink beside
-the scene compensates for the pinned Drake MJCF parser resolving an included
-model's mesh paths relative to the root scene file.
+This folder retains `xarm6/xarm6_policyport.xml`, the fixed-base xArm6 model
+with five actuated joints and fixed wrist roll, and its seven referenced OBJ
+meshes in `xarm6/assets/`. These model and mesh files are unchanged from that
+local audited import. The native simulator and experiment renderer load this
+robot model directly; the experiment scenes and object models are defined
+elsewhere under `examples/sampling_c3/`.

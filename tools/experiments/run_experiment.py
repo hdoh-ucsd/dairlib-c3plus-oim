@@ -19,11 +19,13 @@ import yaml
 if __package__:
     from .catalog import (BINARIES, CONFIG_DIR, MODELS, OBSTACLE_COSTS, REPO,
                           SCENES, TOOL_DIR, demo_name, load_controller_goal,
-                          planner_environment)
+                          compose_demo_configs, demo_config_digest, planner_environment,
+                          write_demo_configs)
 else:
     from catalog import (BINARIES, CONFIG_DIR, MODELS, OBSTACLE_COSTS, REPO,
                          SCENES, TOOL_DIR, demo_name, load_controller_goal,
-                         planner_environment)
+                         compose_demo_configs, demo_config_digest, planner_environment,
+                         write_demo_configs)
 
 
 def environment(obstacle_cost):
@@ -105,6 +107,7 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
     suffix = yaw_suffix(goal_yaw_degrees)
     demo = demo_name(scene, start, goal)
     goal_file, controller_goal = load_controller_goal(demo, repo=REPO)
+    resolved = compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=goal_yaw_degrees)
     source_controller_goal = controller_goal
     if goal_yaw_degrees is not None:
         controller_goal = (*controller_goal[:2], math.radians(goal_yaw_degrees))
@@ -122,7 +125,9 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
     plan = {"scene": scene, "obstacle_cost": obstacle_cost, "start": start, "goal_index": goal,
             "run_id": f"{obstacle_cost}_{scene}_s{start:02d}g{goal:02d}{suffix}_seed42",
             "demo": demo, "seed": 42, "controller_goal": controller_goal,
-            "evaluation_goal": pose, "goal_params_file": str(goal_file.relative_to(REPO)),
+            "start_pose": resolved["simulation"]["q_init_object"],
+            "evaluation_goal": pose, "configuration_file": str(goal_file.relative_to(REPO)),
+            "configuration_digest": demo_config_digest(demo, repo=REPO, goal_yaw_degrees=goal_yaw_degrees),
             "out": str(Path(out).resolve()), "wall_cap_seconds": cap, "port": port,
             "max_frames": max_frames}
     if goal_yaw_degrees is not None:
@@ -170,7 +175,12 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         demo = plan["demo"]
         config_path = out / "evaluation_scene_config.yaml"
         config_path.write_text(yaml.safe_dump(config, sort_keys=False))
+        controller_path = write_demo_configs(demo, out / "config", repo=REPO,
+                                              goal_yaw_degrees=goal_yaw_degrees)
         status = {**plan, "runtime": runtime_versions(), "goal": pose,
+                  "controller_params_file": str(controller_path),
+                  "config_sha256": {str(path.relative_to(out)): hashlib.sha256(path.read_bytes()).hexdigest()
+                                    for path in sorted((out / "config").rglob("*.yaml"))},
                   "execution": "serial", "python": sys.executable,
                   "worktree_dirty": bool(subprocess.check_output(
                       ["git", "status", "--porcelain", "--untracked-files=no"], cwd=REPO)),
@@ -181,9 +191,9 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         started = time.monotonic()
         launch = ["bash", str(TOOL_DIR / "launch_run.sh"),
                   demo, config["object_channel_substring"], *map(str, pose),
-                  str(cap), str(port), str(out)]
+                  str(cap), str(port), str(out), "--controller-params", str(controller_path)]
         if goal_yaw_degrees is not None:
-            launch.append(str(plan["goal_yaw_degrees"]))
+            launch.extend(["--goal-yaw-degrees", str(plan["goal_yaw_degrees"])])
         rc = logged_command(launch, out / "launcher.log", env)
         # A launcher preflight failure happens before process logs exist.
         # Preserve its actual error without masking it with a missing-file error.

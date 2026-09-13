@@ -1,0 +1,208 @@
+# Native experiment catalogue: choose scene, start index, goal index, and optional absolute goal yaw.
+
+schema_version: 1
+
+# World XY positions in metres. Object height belongs to its profile.
+start_positions:
+  t_shape_s01: [0.381, 0.4]
+  t_shape_s02: [0.366, 0.431]
+  t_shape_s03: [0.391, 0.437]
+  t_shape_s04: [0.361, 0.357]
+  t_shape_s05: [0.406, 0.383]
+  icra_sign_s01: [0.3, 0.4]
+  icra_sign_s02: [0.2779, 0.4264]
+  icra_sign_s03: [0.3007, 0.4383]
+  icra_sign_s04: [0.291, 0.3534]
+  icra_sign_s05: [0.3284, 0.3896]
+  slalom_s04: [0.361, 0.37]
+  slalom_s05: [0.406, 0.393]
+
+# Goal positions are independent of goal orientations.
+goal_positions:
+  t_shape_g01: [0.381, -0.4]
+  t_shape_g02: [0.397, -0.431]
+  t_shape_g03: [0.404, -0.393]
+  t_shape_g04: [0.386, -0.424]
+  t_shape_g05: [0.359, -0.424]
+  icra_sign_g01: [0.5, -0.4]
+  icra_sign_g02: [0.523, -0.4262]
+  icra_sign_g03: [0.5247, -0.4041]
+  icra_sign_g04: [0.5107, -0.4221]
+  icra_sign_g05: [0.4845, -0.4286]
+  shelf_gap_g03: [0.363, -0.41]
+  shelf_gap_g04: [0.367, -0.391]
+  shelf_gap_g05: [0.404, -0.418]
+  slalom_g04: [0.367, -0.38]
+
+# Quaternions [w, x, y, z], preserved exactly; these are not yaw angles.
+# Both objects share the five starting orientations.
+orientations:
+  start_s01: [1, 0, 0, 0]
+  start_s02: [0.999581, 0, 0, 0.028946]
+  start_s03: [0.979244, 0, 0, -0.202686]
+  start_s04: [0.986566, 0, 0, 0.163364]
+  start_s05: [0.990174, 0, 0, 0.13984]
+  t_shape_g01: [-3.67321e-06, 0, 0, 1]
+  t_shape_g02: [-0.0491838, 0, 0, 0.99879]
+  t_shape_g03: [0.173711, 0, 0, 0.984797]
+  t_shape_g04: [0.184533, 0, 0, 0.982826]
+  t_shape_g05: [0.202486, 0, 0, 0.979285]
+  icra_sign_g01: [0.7071068, 0, 0, 0.7071068]
+  icra_sign_g02: [0.671474, 0, 0, 0.741028]
+  icra_sign_g03: [0.804834, 0, 0, 0.593499]
+  icra_sign_g04: [0.825449, 0, 0, 0.564477]
+  icra_sign_g05: [0.83564, 0, 0, 0.549278]
+  shelf_gap_g03: [-0.211788, 0, 0, 0.977316]
+  shelf_gap_g05: [-0.123488, 0, 0, 0.992346]
+  ycb_clutter_g02: [-0.049184, 0, 0, 0.99879]
+
+# Five joint xArm6 configurations, in radians.
+robot_joint_presets:
+  t_shape: [0.888666, 0.258649, -1.158786, 0.00013, 0.900238]
+  icra_sign: [1.031217, 0.062014, -0.895682, 0.119891, 0.828036]
+  icra_sign_s04: [0.972422, 0.310762, -1.230368, 0.06679, 0.916921]
+
+# Settings shared by every indexed experiment.
+defaults:
+  controller:
+    reposition_params_file: examples/sampling_c3/shared_parameters/reposition_params.yaml
+    progress_params_file: examples/sampling_c3/shared_parameters/progress_params_c3plus.yaml
+    vis_params_file: examples/sampling_c3/shared_parameters/vis_params.yaml
+    osc_params_file: examples/sampling_c3/shared_parameters/osc_params_xarm6.yaml
+    osqp_settings_file: examples/sampling_c3/shared_parameters/sampling_c3_qp_settings.yaml
+    osc_qp_settings_file: examples/sampling_c3/shared_parameters/osc_qp_settings.yaml
+    franka_driver_channels_file: common/parameters/franka_drake_lcm_driver_channels.yaml
+    lcm_channels_hardware_file: examples/sampling_c3/shared_parameters/lcm_channels_hardware.yaml
+    lcm_channels_simulation_file: examples/sampling_c3/shared_parameters/lcm_channels_simulation.yaml
+    include_end_effector_orientation: false
+    control_loop_delay_ms: 0
+  simulation:
+    franka_publish_rate: 1000
+    object_publish_rate: 10
+    actuator_delay: 0.0
+    visualize_drake_sim: false
+    publish_efforts: true
+    dt: 0.0001
+    realtime_rate: 1
+  goal:
+    goal_mode: 2
+    position_success_threshold: 0.02
+    orientation_success_threshold: 0.1
+    resting_object_height: -0.009
+    ee_target_z_offset_above_object: 0.06
+    lookahead_step_size: 0.15
+    lookahead_angle: 2
+    angle_hysteresis: 0.4
+    angle_err_to_vel_factor: 0
+    random_goal_x_limits: [0.44, 0.52]
+    random_goal_y_limits: [0.02, 0.25]
+    random_goal_radius_limits: [0.5, 0.52]
+    resting_object_heights: [-0.002685910000000003, -0.0024437, -0.001956050000000001, 0.0001434999999999978]
+    random_goal_gen_max_attempts: 100
+    pairwise_goal_distance: 0.2
+    only_use_xy_position: true
+  start_orientations:
+    1: start_s01
+    2: start_s02
+    3: start_s03
+    4: start_s04
+    5: start_s05
+
+# Default independent selections for start/goal indices 1 through 5.
+object_profiles:
+  t_shape:
+    controller_model: examples/sampling_c3/urdf/push_t_oimscale_m01_control.sdf
+    simulation_model: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf
+    object_body_name: vertical_link
+    base_name: dummy
+    object_height: 0.0008
+    sampling_c3_options_file: examples/sampling_c3/shared_parameters/profiles/t_shape/sampling_c3plus_options.yaml
+    sampling_params_file: examples/sampling_c3/shared_parameters/profiles/t_shape/sampling_params.yaml
+    robot_joint_preset: t_shape
+    start_positions:
+      1: t_shape_s01
+      2: t_shape_s02
+      3: t_shape_s03
+      4: t_shape_s04
+      5: t_shape_s05
+    goal_positions:
+      1: t_shape_g01
+      2: t_shape_g02
+      3: t_shape_g03
+      4: t_shape_g04
+      5: t_shape_g05
+    goal_orientations:
+      1: t_shape_g01
+      2: t_shape_g02
+      3: t_shape_g03
+      4: t_shape_g04
+      5: t_shape_g05
+  icra_sign:
+    controller_model: examples/sampling_c3/urdf/push_c_glyph_controller.sdf
+    simulation_model: examples/sampling_c3/urdf/push_c_glyph.sdf
+    object_body_name: c_glyph_base
+    base_name: A_shape_video
+    object_height: -0.016
+    sampling_c3_options_file: examples/sampling_c3/shared_parameters/profiles/icra_sign/sampling_c3plus_options.yaml
+    sampling_params_file: examples/sampling_c3/shared_parameters/profiles/icra_sign/sampling_params.yaml
+    robot_joint_preset: icra_sign
+    start_positions:
+      1: icra_sign_s01
+      2: icra_sign_s02
+      3: icra_sign_s03
+      4: icra_sign_s04
+      5: icra_sign_s05
+    goal_positions:
+      1: icra_sign_g01
+      2: icra_sign_g02
+      3: icra_sign_g03
+      4: icra_sign_g04
+      5: icra_sign_g05
+    goal_orientations:
+      1: icra_sign_g01
+      2: icra_sign_g02
+      3: icra_sign_g03
+      4: icra_sign_g04
+      5: icra_sign_g05
+
+# Scene differences only. Indexed overrides replace individual references.
+# Slalom inherits shelf-gap goal choices and changes only its differing poses.
+scenes:
+  open_task:
+    object_profile: t_shape
+    scenario_params_file: examples/sampling_c3/shared_parameters/scenes/open_task/scenario_params.yaml
+    visualize_pairs: [[1, 1]]
+  single_obstacle:
+    object_profile: t_shape
+    scenario_params_file: examples/sampling_c3/shared_parameters/scenes/single_obstacle/scenario_params.yaml
+  shelf_gap:
+    object_profile: t_shape
+    scenario_params_file: examples/sampling_c3/shared_parameters/scenes/shelf_gap/scenario_params.yaml
+    goal_positions:
+      2: t_shape_g03
+      3: shelf_gap_g03
+      4: shelf_gap_g04
+      5: shelf_gap_g05
+    goal_orientations:
+      2: t_shape_g03
+      3: shelf_gap_g03
+      4: t_shape_g05
+      5: shelf_gap_g05
+  ycb_clutter:
+    object_profile: t_shape
+    scenario_params_file: examples/sampling_c3/shared_parameters/scenes/ycb_clutter/scenario_params.yaml
+    goal_orientations:
+      2: ycb_clutter_g02
+  icra_sign:
+    object_profile: icra_sign
+    scenario_params_file: examples/sampling_c3/shared_parameters/scenes/icra_sign/scenario_params.yaml
+    robot_joint_overrides:
+      4: icra_sign_s04
+  slalom:
+    extends: shelf_gap
+    scenario_params_file: examples/sampling_c3/shared_parameters/scenes/slalom/scenario_params.yaml
+    start_positions:
+      4: slalom_s04
+      5: slalom_s05
+    goal_positions:
+      4: slalom_g04

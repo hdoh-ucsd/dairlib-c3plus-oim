@@ -68,6 +68,8 @@ DEFINE_string(lcm_url, "udpm://239.255.76.67:7667?ttl=0",
               "LCM URL with IP, port, and TTL settings");
 DEFINE_string(demo_name, "jacktoy",
               "Demo within sampling_c3; used to find controller params file");
+DEFINE_string(controller_params, "",
+              "Explicit controller YAML path; empty uses --demo_name.");
 DEFINE_string(robot_model, "franka",
               "Robot arm model: 'franka' (default) or 'xarm6'.");
 DEFINE_int32(max_control_loops, -1,
@@ -93,8 +95,10 @@ int DoMain(int argc, char* argv[]) {
 
   // Load parameters.
   std::string controller_params_path =
-      "examples/sampling_c3/" + FLAGS_demo_name +
-      "/parameters/sampling_c3_controller_params.yaml";
+      FLAGS_controller_params.empty()
+          ? "examples/sampling_c3/" + FLAGS_demo_name +
+                "/parameters/sampling_c3_controller_params.yaml"
+          : FLAGS_controller_params;
   SamplingC3ControllerParams controller_params =
       drake::yaml::LoadYamlFile<SamplingC3ControllerParams>(
           controller_params_path);

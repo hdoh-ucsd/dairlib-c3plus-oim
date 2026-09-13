@@ -6,6 +6,7 @@ from importlib.metadata import version
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -14,10 +15,10 @@ import uuid
 
 if __package__:
     from .catalog import (BINARIES, CONFIG_DIR, MODELS, REPO, SCENES,
-                          demo_name, load_controller_goal, planner_environment)
+                          demo_name, load_controller_goal, load_demo_configs, planner_environment)
 else:
     from catalog import (BINARIES, CONFIG_DIR, MODELS, REPO, SCENES,
-                         demo_name, load_controller_goal, planner_environment)
+                         demo_name, load_controller_goal, load_demo_configs, planner_environment)
 
 
 def main():
@@ -94,7 +95,11 @@ def main():
                 output = subprocess.run(["ldd", str(path)], capture_output=True, text=True, check=True).stdout
                 if "not found" in output:
                     raise RuntimeError(output)
-                return "executable and shared libraries found"
+                help_result = subprocess.run([str(path), "--helpshort"], capture_output=True, text=True)
+                help_text = help_result.stdout + help_result.stderr
+                if not re.search(r"(?:^|\s)-controller_params(?:\s|=)", help_text):
+                    raise RuntimeError("Rebuild with python3 -m tools.experiments build for composed configuration support")
+                return "executable, shared libraries, and composed configuration support found"
             check(name, binary)
     if args.check_scenes:
         for scene in SCENES:
@@ -129,16 +134,13 @@ def main():
                 for m in range(1, 6):
                     for n in range(1, 6):
                         name = demo_name(scene, m, n)
-                        demo = REPO / "examples/sampling_c3" / name
-                        if not (demo / "parameters/sim_params.yaml").is_file():
-                            raise RuntimeError(f"Missing demo config: {demo}")
-                        for config in (demo / "parameters").glob("*.yaml"):
-                            inspect_refs(yaml.safe_load(config.read_text()))
+                        for saved_config in load_demo_configs(name, repo=REPO).values():
+                            inspect_refs(saved_config)
                         load_controller_goal(name, repo=REPO)
                 already_parsed = {urdf / path for path in models}
                 for path in sorted(referenced_models - already_parsed):
                     model_parser.AddModels(str(path))
-                return "planner mapping validated; robot/tool/simulator/controller models parsed; 25 demo configs and referenced dependencies found"
+                return "planner mapping validated; robot/tool/simulator/controller models parsed; 25 start/goal combinations and referenced dependencies resolved"
             check("scene " + scene, scene_assets)
     print(json.dumps({"python": sys.executable, "checks": checks}, indent=2))
     return int(any(not c["passed"] for c in checks))
