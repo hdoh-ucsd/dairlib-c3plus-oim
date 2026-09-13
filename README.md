@@ -85,6 +85,7 @@ python3 -m tools.experiments run \
 | --- | --- |
 | `--scene` | One of the six scenes above; `scenes` lists them |
 | `--start`, `--goal` | Native start/goal indices, each from 1 to 5 |
+| `--goal-yaw-degrees` | Optional absolute world yaw: 90, 0, or −90 degrees; preserves the indexed goal position |
 | `--obstacle_cost` | `exponential` or `relu` |
 | `--cap` | Recorder wall-time budget in seconds, default 600; startup and packaging add time |
 | `--out` | New output directory; existing runs are never overwritten |
@@ -95,6 +96,34 @@ packaging finished; check `*_result.json` for task success and
 `runtime_status.json` for process failures.
 
 ### Campaigns
+
+Run the fixed-goal orientation campaigns inside Docker, from the repository root:
+
+```bash
+# Rebuild once after updating: the controller needs the goal-yaw override.
+python3 -m tools.experiments build
+
+# Full run: all five starts (180 trials).
+python3 -m tools.experiments run_launch
+
+# Simplified run: start 2 only (36 trials).
+python3 -m tools.experiments run_launch_simple_s2
+```
+
+Choose either campaign. Both cover all six scenes, goal position G2, absolute
+world-frame yaw **90°, 0°, −90°**, and both cost presets, with seed 42 and a
+600-second recorder budget per trial. Each trial resets to its selected start;
+the controller, recorder, evaluation, and replay use the same goal. The current
+`exponential` preset retains the behavior described under [Obstacle costs](#obstacle-costs).
+
+Outputs default to `results/reproduce/run_launch/` and
+`results/reproduce/run_launch_simple_s2/`. Add `--dry-run` to print the full plan
+without writing files or launching processes, or `--resume` to continue the same
+campaign. `--cap`, `--port-base`, and `--output-root` can override their defaults.
+Run folders use `<obstacle_cost>/<scene>/sMMg02_yaw_p090/`, `..._yaw_000/`, and
+`..._yaw_m090/`; cost presets run consecutively for each scene/start/yaw.
+
+For other selections, use the generic `campaign` command below.
 
 Check startup and packaging across all six scenes and both costs (12 short runs):
 
@@ -121,8 +150,11 @@ python3 -m tools.experiments campaign \
 | `STOP_AFTER_CURRENT` | Create this file in the output root to stop after packaging the active run; remove before resuming |
 | `--port-base` | LCM ports begin at this value + 1; default first port is 19001 |
 
-Trials run serially under a checkout lock. Each campaign saves its plan and
-driver log, with runs under `<output-root>/<obstacle_cost>/<scene>/sMMgNN/`.
+Trials run serially under a checkout lock. Each campaign saves its plan,
+driver log, and `summary.csv`, updated from saved results after each completed
+or resumed trial. The summary records completion status, process failures,
+success, timing, final position/orientation errors (metres/radians), and video paths.
+Generic grid runs live under `<output-root>/<obstacle_cost>/<scene>/sMMgNN/`.
 Use a new output root when changing selections, caps, or ports. Short smoke
 runs check dependencies and packaging; they do not measure success rates.
 

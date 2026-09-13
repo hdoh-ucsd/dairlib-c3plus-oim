@@ -68,8 +68,33 @@ def logged_command(command, log, env):
                               stderr=subprocess.STDOUT).returncode
 
 
+def yaw_suffix(degrees):
+    """Give each supported absolute goal orientation a distinct run identity."""
+    if degrees is None:
+        return ""
+    if isinstance(degrees, bool) or degrees not in (-90, 0, 90):
+        raise ValueError("Goal yaw must be -90, 0, or 90 degrees")
+    return "_yaw_" + {-90: "m090", 0: "000", 90: "p090"}[degrees]
+
+
+def verify_goal_yaw(log, plan):
+    """Check the effective native target, rather than just the launch arguments."""
+    expected = (plan["goal_yaw_degrees"], *plan["controller_goal"][:2])
+    for line in log.read_text(errors="replace").splitlines():
+        if not line.startswith("[GOAL-YAW] "):
+            continue
+        try:
+            fields = dict(item.split("=", 1) for item in line.split()[1:])
+            observed = tuple(float(fields[key]) for key in ("goal_yaw_degrees", "goal_x", "goal_y"))
+        except (ValueError, KeyError):
+            continue
+        if all(math.isclose(a, b, rel_tol=0, abs_tol=1e-8) for a, b in zip(observed, expected)):
+            return True
+    return False
+
+
 def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
-             goal_pose=None, max_frames=1200):
+             goal_pose=None, max_frames=1200, goal_yaw_degrees=None):
     """Validate inputs and describe a run without launching or writing files."""
     if scene not in SCENES or obstacle_cost not in OBSTACLE_COSTS:
         raise ValueError("Unknown scene or obstacle cost")
@@ -77,25 +102,32 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         raise ValueError("Start/goal indices must be between 1 and 5")
     if cap <= 0 or not 1024 <= port <= 65535 or max_frames <= 0:
         raise ValueError("Invalid cap, port, or frame count")
+    suffix = yaw_suffix(goal_yaw_degrees)
     demo = demo_name(scene, start, goal)
     goal_file, controller_goal = load_controller_goal(demo, repo=REPO)
+    source_controller_goal = controller_goal
+    if goal_yaw_degrees is not None:
+        controller_goal = (*controller_goal[:2], math.radians(goal_yaw_degrees))
     x, y, _ = controller_goal
     pose = tuple(goal_pose) if goal_pose is not None else controller_goal
     if len(pose) != 3 or not all(math.isfinite(v) for v in pose):
         raise ValueError("Goal pose must contain three finite values")
-    # Archived manifests rounded their evaluation yaw values. Keep those values
-    # for reproduction, but never imply they override native controller YAML.
+    # Archived manifests rounded their evaluation yaw values. Evaluation goals
+    # must agree with the native target, including any explicit yaw override.
     angle_delta = math.atan2(math.sin(pose[2] - controller_goal[2]),
                              math.cos(pose[2] - controller_goal[2]))
     if math.hypot(pose[0] - x, pose[1] - y) > 1e-4 or abs(angle_delta) > 1e-4:
         raise ValueError("Manifest goal_pose does not match the selected demo goal; "
-                         "choose a --goal index from 1 to 5. Custom controller goals are not supported.")
-    return {"scene": scene, "obstacle_cost": obstacle_cost, "start": start, "goal_index": goal,
-            "run_id": f"{obstacle_cost}_{scene}_s{start:02d}g{goal:02d}_seed42",
+                         "choose a --goal index from 1 to 5 and an optional --goal-yaw-degrees.")
+    plan = {"scene": scene, "obstacle_cost": obstacle_cost, "start": start, "goal_index": goal,
+            "run_id": f"{obstacle_cost}_{scene}_s{start:02d}g{goal:02d}{suffix}_seed42",
             "demo": demo, "seed": 42, "controller_goal": controller_goal,
             "evaluation_goal": pose, "goal_params_file": str(goal_file.relative_to(REPO)),
             "out": str(Path(out).resolve()), "wall_cap_seconds": cap, "port": port,
             "max_frames": max_frames}
+    if goal_yaw_degrees is not None:
+        plan.update(goal_yaw_degrees=int(goal_yaw_degrees), source_controller_goal=source_controller_goal)
+    return plan
 
 
 def runtime_versions():
@@ -111,8 +143,9 @@ def runtime_versions():
 
 
 def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
-            goal_pose=None, max_frames=1200):
-    plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames)
+            goal_pose=None, max_frames=1200, goal_yaw_degrees=None):
+    plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
+                    goal_yaw_degrees)
     pose = plan["evaluation_goal"]
     out = Path(out).resolve()
     if out.exists():
@@ -146,15 +179,27 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
                   "binary_sha256": {name: hashlib.sha256((binary_dir / name).read_bytes()).hexdigest()
                                     for name in BINARIES}}
         started = time.monotonic()
-        rc = logged_command(["bash", str(TOOL_DIR / "launch_run.sh"),
-                             demo, config["object_channel_substring"], *map(str, pose),
-                             str(cap), str(port), str(out)], out / "launcher.log", env)
+        launch = ["bash", str(TOOL_DIR / "launch_run.sh"),
+                  demo, config["object_channel_substring"], *map(str, pose),
+                  str(cap), str(port), str(out)]
+        if goal_yaw_degrees is not None:
+            launch.append(str(plan["goal_yaw_degrees"]))
+        rc = logged_command(launch, out / "launcher.log", env)
+        # A launcher preflight failure happens before process logs exist.
+        # Preserve its actual error without masking it with a missing-file error.
+        if rc and not (out / "planner.log").exists():
+            status.update(wrapper_rc=rc, simulation_wall_seconds=time.monotonic()-started,
+                          failures=[{"process": "launcher", "reason": "preflight_failed"}])
+            (out / "runtime_status.json").write_text(json.dumps(status, indent=2) + "\n")
+            raise RuntimeError(f"Launcher preflight failed; inspect {out / 'launcher.log'}")
         status.update(wrapper_rc=rc, simulation_wall_seconds=time.monotonic()-started,
                       failures=classify_failure(out))
         status["seed_verified"] = "[SAMPLER-SEED] deterministic seed=42" in (out / "planner.log").read_text(errors="replace")
+        if goal_yaw_degrees is not None:
+            status["goal_yaw_verified"] = verify_goal_yaw(out / "planner.log", plan)
         status_path = out / "runtime_status.json"
         status_path.write_text(json.dumps(status, indent=2) + "\n")
-        if rc or not status["seed_verified"] or any(not (out / name).is_file() or not (out / name).stat().st_size
+        if rc or not status["seed_verified"] or not status.get("goal_yaw_verified", True) or any(not (out / name).is_file() or not (out / name).stat().st_size
                     for name in ("steps_raw.jsonl", "state_trace.jsonl")):
             raise RuntimeError(f"Invalid/no-data run; preserved logs in {out}")
         # Packaging occurs after simulation cleanup and under the same lock.
@@ -194,6 +239,8 @@ def main():
     parser.add_argument("--obstacle_cost", choices=OBSTACLE_COSTS, default="exponential")
     parser.add_argument("--start", type=int, choices=range(1, 6), default=1)
     parser.add_argument("--goal", type=int, choices=range(1, 6), default=1)
+    parser.add_argument("--goal-yaw-degrees", type=int, choices=[90, 0, -90],
+                        help="Absolute world yaw; preserve the indexed goal position")
     parser.add_argument("--seed", type=int, choices=[42], default=42)
     parser.add_argument("--cap", type=int, default=600, help="Recorder wall-time cap, seconds")
     parser.add_argument("--port", type=int, default=18001)
@@ -205,10 +252,10 @@ def main():
         if args.dry_run:
             print(json.dumps(plan_run(args.scene, args.obstacle_cost, args.start, args.goal,
                                       args.out, args.cap, args.port,
-                                      max_frames=args.max_frames), indent=2))
+                                      max_frames=args.max_frames, goal_yaw_degrees=args.goal_yaw_degrees), indent=2))
             return
         run_one(args.scene, args.obstacle_cost, args.start, args.goal, args.out,
-                args.cap, args.port, max_frames=args.max_frames)
+                args.cap, args.port, max_frames=args.max_frames, goal_yaw_degrees=args.goal_yaw_degrees)
     except (RuntimeError, ValueError, OSError, KeyError, TypeError) as exc:
         parser.exit(1, f"{exc}\n")
 

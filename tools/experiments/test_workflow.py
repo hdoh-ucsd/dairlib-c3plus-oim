@@ -2,8 +2,10 @@
 import argparse
 import copy
 from contextlib import redirect_stderr, redirect_stdout
+import csv
 import io
 import json
+import math
 from pathlib import Path
 import shlex
 import shutil
@@ -157,6 +159,209 @@ class WorkflowTests(unittest.TestCase):
                 self.assertEqual(plan["run_id"], f"{expected}_open_task_s01g01_seed42")
                 self.assertFalse(out.exists())
                 run.assert_not_called()
+
+    def test_named_campaign_cli_plans_complete_yaw_grid_without_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, starts, count in (("run_launch", range(1, 6), 180),
+                                        ("run_launch_simple_s2", (2,), 36)):
+                with self.subTest(campaign=name):
+                    out = Path(tmp) / name
+                    result = subprocess.run(
+                        [sys.executable, "-m", "tools.experiments", name,
+                         "--output-root", str(out), "--dry-run"],
+                        cwd=R.REPO, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    plan = json.loads(result.stdout)
+                    runs = plan["runs"]
+                    self.assertEqual(plan["run_count"], count)
+                    self.assertEqual(len(runs), count)
+                    self.assertEqual(len({run["run_id"] for run in runs}), count)
+                    self.assertEqual(len({run["out"] for run in runs}), count)
+                    actual = {(r["scene"], r["start"], r["goal_index"],
+                               r["goal_yaw_degrees"], r["obstacle_cost"]) for r in runs}
+                    expected = {(scene, start, 2, yaw, cost) for scene in S.SCENES
+                                for start in starts for yaw in (90, 0, -90)
+                                for cost in ("exponential", "relu")}
+                    self.assertEqual(actual, expected)
+                    for run in runs:
+                        original = S.load_controller_goal(run["demo"])[1]
+                        self.assertEqual(run["source_controller_goal"], list(original))
+                        self.assertEqual(run["controller_goal"][:2], list(original[:2]))
+                        self.assertAlmostEqual(run["controller_goal"][2], math.radians(run["goal_yaw_degrees"]))
+                        self.assertEqual(run["evaluation_goal"], run["controller_goal"])
+                        self.assertEqual(run["seed"], 42)
+                        self.assertEqual(run["wall_cap_seconds"], 600)
+                        self.assertTrue(Path(run["out"]).is_relative_to(out))
+                    for first, second in zip(runs[::2], runs[1::2]):
+                        self.assertEqual(first["controller_goal"], second["controller_goal"])
+                        self.assertEqual(first["start"], second["start"])
+                        self.assertEqual((first["obstacle_cost"], second["obstacle_cost"]), ("exponential", "relu"))
+                    self.assertFalse(out.exists())
+
+    def test_named_campaign_defaults_and_fixed_selection(self):
+        for name in ("run_launch", "run_launch_simple_s2"):
+            stream = io.StringIO()
+            with redirect_stdout(stream), patch.object(G, "run_one") as run:
+                G.main([name, "--dry-run"])
+            run.assert_not_called()
+            for plan in json.loads(stream.getvalue())["runs"]:
+                self.assertTrue(Path(plan["out"]).is_relative_to(R.REPO / "results/reproduce" / name))
+            for flags in (("--scenes", "open_task"), ("--pairs", "all"),
+                          ("--obstacle_cost", "relu"), ("--manifest", "unused"), ("--seed", "7")):
+                with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                    G.main([name, "--dry-run", *flags])
+                self.assertEqual(error.exception.code, 2)
+
+    def test_named_campaign_stop_resume_and_summary_preserve_all_yaws(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            argv = ["run_launch_simple_s2", "--output-root", str(root)]
+            completed = []
+
+            def complete(scene, cost, start, goal, out, cap, port, goal_pose, **yaw):
+                plan = R.plan_run(scene, cost, start, goal, out, cap, port, goal_pose, **yaw)
+                out.mkdir(parents=True, exist_ok=False)
+                result = {"success": False, "t_success": None, "final_position_error": 0.2,
+                          "final_orientation_error": 0.3}
+                status = {"failures": [], "wrapper_rc": 0, "seed_verified": True,
+                          "goal_yaw_verified": True, "simulation_wall_seconds": 600}
+                (out / f"{plan['run_id']}_result.json").write_text(json.dumps(result))
+                (out / "runtime_status.json").write_text(json.dumps(status))
+                (out / f"{plan['run_id']}.mp4").touch()
+                (out / "RUN_COMPLETE").touch()
+                completed.append(plan["run_id"])
+                if len(completed) == 1:
+                    (root / "STOP_AFTER_CURRENT").touch()
+                return status
+
+            def rows():
+                with (root / "summary.csv").open() as stream:
+                    return list(csv.DictReader(stream))
+
+            with patch.object(G, "run_one", side_effect=complete), redirect_stdout(io.StringIO()):
+                G.main(argv)
+                self.assertEqual(len(completed), 1)
+                self.assertEqual(sum(row["status"] == "complete" for row in rows()), 1)
+                self.assertEqual(len(rows()), 36)
+                (root / "STOP_AFTER_CURRENT").unlink()
+                G.main([*argv, "--resume"])
+            self.assertEqual(len(completed), 36)
+            self.assertEqual(len(set(completed)), 36)
+            self.assertTrue(all(row["status"] == "complete" for row in rows()))
+            self.assertTrue(all(row["success"] == "False" for row in rows()))
+            self.assertTrue(all((root / row["video"]).is_file() for row in rows()))
+            original_plan = (root / "campaign_plan.json").read_text()
+            (root / "summary.csv").unlink()
+            with patch.object(G, "run_one") as run, redirect_stdout(io.StringIO()):
+                G.main([*argv, "--resume"])
+                run.assert_not_called()
+                with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                    G.main([*argv, "--resume", "--cap", "15"])
+                run.assert_not_called()
+            self.assertEqual(len(rows()), 36)
+            self.assertEqual((root / "campaign_plan.json").read_text(), original_plan)
+
+    def test_named_campaign_resume_refuses_partial_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            partial = root / "exponential/open_task/s02g02_yaw_p090"
+            partial.mkdir(parents=True)
+            (partial / "planner.log").write_text("partial run evidence")
+            with patch.object(R, "logged_command") as launch, redirect_stdout(io.StringIO()), \
+                    redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                G.main(["run_launch_simple_s2", "--output-root", str(root), "--resume"])
+            launch.assert_not_called()
+            self.assertEqual((partial / "planner.log").read_text(), "partial run evidence")
+            with (root / "summary.csv").open() as stream:
+                rows = list(csv.DictReader(stream))
+            self.assertEqual(rows[0]["status"], "partial")
+            self.assertTrue(all(row["status"] == "pending" for row in rows[1:]))
+
+    def test_yaw_override_validation_preserves_indexed_position(self):
+        base = dict(scene="single_obstacle", obstacle_cost="relu", start=2, goal=2, out="/unused/yaw")
+        original = R.plan_run(**base)
+        self.assertNotIn("goal_yaw_degrees", original)
+        self.assertEqual(original["run_id"], "relu_single_obstacle_s02g02_seed42")
+        for value in (45, 180, float("nan"), float("inf"), True, "90"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                R.plan_run(**base, goal_yaw_degrees=value)
+        for value in (90, 0, -90):
+            changed = R.plan_run(**base, goal_yaw_degrees=value)
+            self.assertEqual(changed["controller_goal"][:2], original["controller_goal"][:2])
+            self.assertAlmostEqual(changed["controller_goal"][2], math.radians(value))
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                R.plan_run(**base, goal_yaw_degrees=value, goal_pose=[0, 0, math.radians(value)])
+
+    def test_yaw_launch_packaging_and_native_target_verification(self):
+        cases = [(90, "correct"), (0, "correct"), (-90, "correct"),
+                 (90, "missing"), (90, "wrong_position"), (90, "stale_binary")]
+        for yaw, condition in cases:
+            with self.subTest(yaw=yaw, condition=condition), tempfile.TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                demo = Path("examples/sampling_c3/matched_single_obstacle_xarm6_t2/parameters")
+                shutil.copytree(R.REPO / demo, repo / demo)
+                out = repo / "output"
+                phases = []
+
+                def logged(command, log, env):
+                    phases.append((log.name, command))
+                    log.touch()
+                    if log.name != "launcher.log":
+                        return 0
+                    if condition == "stale_binary":
+                        log.write_text("Controller does not support --goal_yaw_degrees; rebuild")
+                        return 2
+                    banner = "[SAMPLER-SEED] deterministic seed=42\n"
+                    if condition != "missing":
+                        x = "0.9" if condition == "wrong_position" else "0.397"
+                        banner += f"[GOAL-YAW] goal_yaw_degrees={yaw} goal_x={x} goal_y=-0.431\n"
+                    (out / "planner.log").write_text(banner)
+                    for name in ("sim.log", "osc.log", "steps_raw.jsonl", "state_trace.jsonl"):
+                        (out / name).write_text("test-data")
+                    return 0
+
+                with patch.object(R, "REPO", repo), patch.object(R, "BINARIES", ()), \
+                        patch.object(R, "logged_command", side_effect=logged), \
+                        patch.object(R.subprocess, "check_output", side_effect=lambda cmd, **kw: "test" if kw.get("text") else b""):
+                    if condition == "correct":
+                        status = R.run_one("single_obstacle", "relu", 2, 2, out, goal_yaw_degrees=yaw)
+                        self.assertTrue(status["goal_yaw_verified"])
+                    else:
+                        with self.assertRaises(RuntimeError):
+                            R.run_one("single_obstacle", "relu", 2, 2, out, goal_yaw_degrees=yaw)
+                saved = json.loads((out / "runtime_status.json").read_text())
+                self.assertEqual(saved["goal_yaw_degrees"], yaw)
+                self.assertEqual((out / "RUN_COMPLETE").exists(), condition == "correct")
+                self.assertEqual(phases[0][1][-1], str(yaw))
+                if condition == "correct":
+                    target = [0.397, -0.431, math.radians(yaw)]
+                    self.assertEqual(saved["controller_goal"], target)
+                    evaluation = R.yaml.safe_load((out / "evaluation_scene_config.yaml").read_text())
+                    self.assertEqual(evaluation["goal"], target)
+                    self.assertEqual(phases[0][1][4:7], list(map(str, target)))
+                    render = next(cmd for phase, cmd in phases if phase == "render.log")
+                    index = render.index("--goal")
+                    self.assertEqual(render[index + 1:index + 4], list(map(str, target)))
+                else:
+                    self.assertEqual(len(phases), 1)
+
+    def test_yaw_launcher_rejects_stale_binary_without_starting_processes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            launcher = repo / "tools/experiments/launch_run.sh"
+            launcher.parent.mkdir(parents=True)
+            shutil.copy2(S.TOOL_DIR / "launch_run.sh", launcher)
+            controller = repo / "bazel-bin/examples/sampling_c3/franka_sampling_c3_controller"
+            controller.parent.mkdir(parents=True)
+            controller.write_text("#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\nprintf 'old controller flags\\n'\nexit 1\n")
+            controller.chmod(0o755)
+            for yaw in ("90", "0", "-90", "45"):
+                out = repo / ("output" + yaw)
+                result = subprocess.run(["bash", str(launcher), "unused_demo", "object", "0.397", "-0.431",
+                                         "0", "600", "19001", str(out), yaw], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("must be" if yaw == "45" else "Rebuild", result.stderr)
+                self.assertFalse(out.exists())
 
     def test_packaging_uses_recorded_goal_and_run_temporary_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
