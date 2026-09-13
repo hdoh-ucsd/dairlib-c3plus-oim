@@ -32,7 +32,7 @@ from pydrake.systems.framework import DiagramBuilder
 from pydrake.systems.sensors import CameraInfo, RgbdSensor
 from pydrake.common.eigen_geometry import Quaternion
 
-REPO = "/root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics"
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 URDF = os.path.join(REPO, "examples/sampling_c3/urdf")
 XARM6_SRC_DIR = os.path.join(URDF, "oim_xarm6_tabletop/xarm6")
 # OIM-faithful tool + table (matches AddXarm6ToPlant in the sim): flush
@@ -55,13 +55,9 @@ def prepare_xarm6_with_normals(assets_tmp=None):
         assets_tmp = tempfile.mkdtemp(prefix="xarm6_vtk_assets_")
     dst = assets_tmp
     if not os.path.exists(os.path.join(dst, ".done")):
-        if os.path.exists(os.path.join(dst, "assets")):
-            shutil.rmtree(dst, ignore_errors=True)
-        if not os.path.isdir(dst):
-            shutil.copytree(XARM6_SRC_DIR, dst)
-        else:
-            shutil.rmtree(dst)
-            shutil.copytree(XARM6_SRC_DIR, dst)
+        if os.path.realpath(dst) == os.path.realpath(XARM6_SRC_DIR):
+            raise ValueError("Use a temporary asset directory, not the source meshes")
+        shutil.copytree(XARM6_SRC_DIR, dst, dirs_exist_ok=True)
         adir = os.path.join(dst, "assets")
         for fn in os.listdir(adir):
             if fn.endswith(".obj"):

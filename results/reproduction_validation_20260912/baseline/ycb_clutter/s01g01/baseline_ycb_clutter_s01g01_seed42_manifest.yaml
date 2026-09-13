@@ -1,0 +1,16 @@
+run_id: baseline_ycb_clutter_s01g01_seed42
+scenario: ycb_clutter
+demo: matched_ycb_clutter_xarm6_t1
+goal:
+- 0.381
+- -0.4
+- 3.141600000009793
+files:
+- baseline_ycb_clutter_s01g01_seed42_metrics.csv
+- baseline_ycb_clutter_s01g01_seed42_eval_metrics.png
+- baseline_ycb_clutter_s01g01_seed42_result.json
+git_commit: cf092c53dab655100dc28b000d9554ad9fb0897c
+tolerances:
+  pos_tol: 0.05
+  ang_tol: 0.1
+generated: '2026-09-12T17:49:44.181348'

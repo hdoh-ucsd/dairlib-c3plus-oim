@@ -25,7 +25,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl git gnupg lsb-release sudo unzip wget zip \
         g++ pkg-config zlib1g-dev libopenblas-dev openjdk-17-jdk \
-        iproute2 iputils-ping less nano procps \
+        iproute2 iputils-ping less nano procps python3-venv \
+        ffmpeg graphviz libegl1 libgl1 libgl1-mesa-dri libosmesa6 fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Drake build prerequisites (also installs bazelisk and clang) ------------
@@ -50,6 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && cmake --install /tmp/libbot2-build \
     && rm -rf /tmp/libbot2 /tmp/libbot2-build /var/lib/apt/lists/*
 ENV PATH="/opt/libbot2/bin:${PATH}"
+RUN dot -c && echo 'digraph { check -> svg }' | dot -Tsvg >/dev/null
 
 # --- SNOPT -------------------------------------------------------------------
 # Consumed as a tarball path by Drake's snopt repository rule.
@@ -71,20 +73,24 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 # --- Python tooling ----------------------------------------------------------
 # Mesh/sampling generation (examples/sampling_c3/sampling_generation) plus the
 # analysis and rendering scripts under scripts/.
-RUN pip3 install --no-cache-dir --break-system-packages \
-        trimesh ruamel.yaml lxml fast_simplification pyglet vhacdx \
-        numpy matplotlib pillow
+COPY requirements.txt /tmp/requirements.txt
+RUN python3 -m venv --system-site-packages /opt/push-anything-venv \
+    && /opt/push-anything-venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
+    && /opt/push-anything-venv/bin/pip check
+ENV PATH="/opt/push-anything-venv/bin:${PATH}"
+ENV PYTHON=/opt/push-anything-venv/bin/python3
+ENV MPLCONFIGDIR=/tmp/matplotlib
 
 # --- unprivileged user matching the host ------------------------------------
 # ubuntu:noble already ships a uid-1000 "ubuntu" account; rename it when the
 # requested uid collides, otherwise create a fresh account.
-RUN if getent passwd "${USER_UID}" >/dev/null; then \
+RUN set -e; test "${USER_UID}" -ne 0; test "${USER_GID}" -ne 0; \
+    if ! getent group "${USER_GID}" >/dev/null; then groupadd -g "${USER_GID}" dairlib; fi; \
+    if getent passwd "${USER_UID}" >/dev/null; then \
         old_user="$(getent passwd "${USER_UID}" | cut -d: -f1)"; \
-        old_group="$(getent group "${USER_GID}" | cut -d: -f1)"; \
-        [ "${old_group}" != "dairlib" ] && groupmod -n dairlib "${old_group}"; \
         [ "${old_user}"  != "dairlib" ] && usermod -l dairlib -d /home/dairlib -m "${old_user}"; \
+        usermod -g "${USER_GID}" -s /bin/bash dairlib; \
     else \
-        groupadd -g "${USER_GID}" dairlib; \
         useradd -m -u "${USER_UID}" -g "${USER_GID}" -s /bin/bash dairlib; \
     fi; \
     echo "dairlib ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dairlib; \
@@ -134,7 +140,8 @@ fi
 exec "$@"
 ENTRY
 
-RUN chmod 0755 /usr/local/bin/entrypoint.sh \
+RUN mkdir -p /home/dairlib/.cache/bazel \
+    && chmod 0755 /usr/local/bin/entrypoint.sh \
     && chown -R "${USER_UID}:${USER_GID}" /home/dairlib
 
 USER dairlib

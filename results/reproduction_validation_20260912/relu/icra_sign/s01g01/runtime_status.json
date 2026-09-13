@@ -1,0 +1,36 @@
+{
+  "run_id": "relu_icra_sign_s01g01_seed42",
+  "scene": "icra_sign",
+  "variant": "relu",
+  "seed": 42,
+  "demo": "anything_icra_c_matched_xarm6_t1",
+  "goal": [
+    0.5,
+    -0.4,
+    1.5707963267948966
+  ],
+  "wall_cap_seconds": 15,
+  "execution": "serial",
+  "python": "/root/miniconda3/envs/push_anything_ADMM/bin/python3",
+  "worktree_dirty": true,
+  "sampler_settings": {
+    "SAMPLING_C3_SEED": "42",
+    "SAMPLING_C3_OBSTACLE_MODE": "lcs_contact",
+    "SAMPLING_C3_RANK_OBS_MODE": "relu_footprint",
+    "SAMPLING_C3_OBS_RELU_EPS": "0.01",
+    "SAMPLING_C3_OBS_RELU_W": "200"
+  },
+  "commit": "cf092c53dab655100dc28b000d9554ad9fb0897c",
+  "binary_sha256": {
+    "franka_sim": "20f2546963fa8cccd9f96a15d4086f72116786d1f295859dcfddcc606151e48e",
+    "franka_osc_controller": "7acc7160a64fa18336c2f416a0fad5863a39e8c529a81cc9190dd9bbdc879c7d",
+    "franka_sampling_c3_controller": "98f0e6e14ebfea657622a24d8ebfc1ca59a95eb257463bd8f8e54a00c85d48af"
+  },
+  "wrapper_rc": 0,
+  "simulation_wall_seconds": 16.16174281295389,
+  "failures": [],
+  "seed_verified": true,
+  "postprocess_rc": 0,
+  "render_rc": 0,
+  "cost_fig_rc": 0
+}

@@ -1,0 +1,19 @@
+test_all_configs_and_goals (test_workflow.WorkflowTests) ... ok
+test_checkout_paths (test_workflow.WorkflowTests) ... ok
+test_exact_campaign_manifest (test_workflow.WorkflowTests) ... ok
+test_failure_classification (test_workflow.WorkflowTests) ... ok
+test_invalid_parameters (test_workflow.WorkflowTests) ... ok
+test_never_overwrite (test_workflow.WorkflowTests) ... ok
+test_resume_skips_only_complete (test_workflow.WorkflowTests) ... [START] 2/2 /tmp/tmpa1nxle4f/relu/open_task/s01g01
+ok
+test_settings_isolated (test_workflow.WorkflowTests) ... ok
+test_six_scene_grid (test_workflow.WorkflowTests) ... ok
+test_smoke_and_diagonal (test_workflow.WorkflowTests) ... ok
+test_stop_after_current (test_workflow.WorkflowTests) ... [START] 1/2 /tmp/tmph22bjmwz/baseline/open_task/s01g01
+Stopped between runs; current run fully packaged
+ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.016s
+
+OK

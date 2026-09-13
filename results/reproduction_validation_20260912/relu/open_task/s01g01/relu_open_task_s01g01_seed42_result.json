@@ -1,0 +1,13 @@
+{
+  "run_id": "relu_open_task_s01g01_seed42",
+  "scenario": "open_task",
+  "success": false,
+  "t_success": null,
+  "first_success_t": null,
+  "final_position_error": 0.5331260264853246,
+  "final_orientation_error": 3.0871068546635985,
+  "best_pos_err": 0.5331260264853246,
+  "best_ang_err": 2.9431537527482083,
+  "n_control_steps": 550,
+  "sim_time_end": 7.864
+}

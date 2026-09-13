@@ -4,7 +4,8 @@
 #
 #   ./docker/shell.sh
 #
-# Starts NOTHING on its own: no build, no simulation. You get a prompt in the
+# Starts no simulation on its own. It may build the toolchain image first.
+# You get a prompt in the
 # repo and run whatever you like by hand, e.g.
 #
 #   bazel build //examples/sampling_c3:franka_sampling_c3_controller
@@ -15,26 +16,39 @@
 #   * container uid == your uid -> bind-mounted files stay yours
 #   * cpu/memory caps -> a run cannot starve the machine
 #
-# Env overrides: MESHCAT_PORT (default 7000), DAIRLIB_CPUS, DAIRLIB_MEM
+# Env overrides: DAIRLIB_IMAGE, MESHCAT_PORT, DAIRLIB_CPUS, DAIRLIB_MEM.
+# Optional arguments run a command instead of opening a shell.
 #
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-IMAGE=dairlib-c3plus-oim:latest
+IMAGE="${DAIRLIB_IMAGE:-dairlib-c3plus-oim:latest}"
 VOLUME=dairlib-c3plus-oim-bazel-cache
 MESHCAT_PORT="${MESHCAT_PORT:-7000}"
 CPUS="${DAIRLIB_CPUS:-24}"
 MEM="${DAIRLIB_MEM:-24g}"
 
 # Build the toolchain image once, matching your uid/gid.
+if ! command -v docker >/dev/null 2>&1; then
+    echo 'Docker CLI/daemon required; install/start Docker before running this launcher.' >&2
+    exit 1
+fi
 if ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
-    echo "==> building ${IMAGE} (one time, a few minutes)"
-    docker build \
-        --build-arg USER_UID="$(id -u)" \
-        --build-arg USER_GID="$(id -g)" \
-        -t "${IMAGE}" "${SCRIPT_DIR}"
+    if [[ -n "${DAIRLIB_IMAGE:-}" ]]; then
+        docker pull "${IMAGE}"
+    else
+        BUILD_UID="$(id -u)"
+        BUILD_GID="$(id -g)"
+        # Never rename root when launching from a root-owned WSL checkout.
+        if [[ "${BUILD_UID}" == 0 ]]; then BUILD_UID=1000; BUILD_GID=1000; fi
+        echo "==> building ${IMAGE} (one time, a few minutes)"
+        docker build \
+            --build-arg USER_UID="${BUILD_UID}" \
+            --build-arg USER_GID="${BUILD_GID}" \
+            -t "${IMAGE}" "${SCRIPT_DIR}"
+    fi
 fi
 
 # Force-remove the container when this script exits, so closing the terminal or
@@ -48,6 +62,7 @@ TTY_FLAGS=(-i)
 [[ -t 0 && -t 1 ]] && TTY_FLAGS=(-i -t)
 
 status=0
+if [[ $# -eq 0 ]]; then set -- bash; fi
 docker run --rm "${TTY_FLAGS[@]}" \
     --name "${NAME}" \
     --hostname dairlib \
@@ -60,5 +75,5 @@ docker run --rm "${TTY_FLAGS[@]}" \
     --memory "${MEM}" \
     --shm-size 2g \
     -w /home/dairlib/dairlib \
-    "${IMAGE}" bash || status=$?
+    "${IMAGE}" "$@" || status=$?
 exit "${status}"

@@ -1,0 +1,16 @@
+run_id: baseline_icra_sign_s01g01_seed42
+scenario: icra_sign
+demo: anything_icra_c_matched_xarm6_t1
+goal:
+- 0.5
+- -0.4
+- 1.5707963267948966
+files:
+- baseline_icra_sign_s01g01_seed42_metrics.csv
+- baseline_icra_sign_s01g01_seed42_eval_metrics.png
+- baseline_icra_sign_s01g01_seed42_result.json
+git_commit: cf092c53dab655100dc28b000d9554ad9fb0897c
+tolerances:
+  pos_tol: 0.05
+  ang_tol: 0.1
+generated: '2026-09-12T17:51:21.896711'

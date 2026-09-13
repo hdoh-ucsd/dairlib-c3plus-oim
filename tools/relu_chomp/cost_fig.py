@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Per-run cost-diagnostics figure for the relu/baseline grid runs.
 
-Standalone wrapper around the tools/scene_smoke/cost_diagnostics_v2.py cost
-reconstruction (that script is coupled to the old scene-smoke campaign layout
-and failure-classification CSVs; its baseline behavior is untouched).
+Standalone cost reconstruction, independent of historical campaign layouts.
 
 --variant baseline: obstacle curve = exp reconstruction
     sum_obs 5000*exp(-(d_center - r)/0.04)   (object CENTER distance)

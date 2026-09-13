@@ -6,7 +6,7 @@ solve tick it snapshots the latest robot joints and every OBJECT_*_STATE
 pose. Errors/costs are computed offline by postprocess_run.py.
 
 Also writes a 10 Hz state_trace.jsonl compatible with the existing 3D
-renderer, and prints SUCCESS/FINAL lines like agent_d's record_run.py.
+renderer, and prints SUCCESS/FINAL summary lines.
 """
 import argparse, json, math, struct, time
 from pydrake.lcm import DrakeLcm

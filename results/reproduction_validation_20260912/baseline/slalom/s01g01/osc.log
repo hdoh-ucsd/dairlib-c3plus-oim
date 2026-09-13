@@ -1,0 +1,39 @@
+Setting C3 and LCS factory options for pose and position tracking.
+[2026-09-12 17:52:25.514] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:112: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.514] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:113: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.514] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:114: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.514] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:115: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.514] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:116: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.514] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:117: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.514] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:118: warning: The attribute 'maxhullvert' found in a 'mesh' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.536] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:137: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.536] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:136: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.573] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:142: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.573] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:141: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.589] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:147: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.589] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:146: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.603] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'stiffness' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.603] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'springref' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.603] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:196: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.603] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:151: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.620] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:202: warning: The attribute 'frictionloss' found in a 'joint' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.620] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:201: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.625] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:212: warning: The attribute 'gravcomp' found in a 'body' tag is currently unsupported and will be ignored.
+[2026-09-12 17:52:25.625] [console] [warning] /root/dairlib-oim-c3plus-baseline/examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml:259: warning: The tag 'velocity' found as a child of 'actuator' is currently unsupported and will be ignored.
+PRELIFT_RELEASE system enabled (channel OBJECT_G_shape_video_STATE_SIMULATION)
+Error: /usr/lib/x86_64-linux-gnu/graphviz/config6a is zero sized, or other read error.
+Format: "svg" not recognized. Use one of:
+XARM6_5J executor active: Kc=4.0 alpha=2.0 lambda=0.05 kv=[300,300,200,200,200] efforts=[50,50,32,32,32] qdot_limit=0.5
+Constructing subscriber for FRANKA_STATE_SIMULATION
+ACTIVE CHANNEL: FRANKA_STATE_SIMULATION
+[2026-09-12 17:52:25.631] [console] [info] Waiting for the first lcm input messages
+[2026-09-12 17:52:29.103] [console] [info] sampling_c3_xarm6_five_joint_controller started
+XARM6_5J t=0 p_des=0.326682 0.400795  0.07331 p_tip=0.326609 0.400718  0.13286 |qdot_cmd|=0.64384 v_des=0 0 0 v_task= 0.000292091  0.000306663      -0.2382  2.83679e-05 -0.000285466
+XARM6_5J t=1 p_des=0.349198 0.410422   -0.004 p_tip=  0.35053  0.411488 0.0354528 |qdot_cmd|=0.366051 v_des= 0.0157642 -0.0804246          0 v_task= 0.0104342 -0.0846883  -0.157811 -0.0950947  0.0761994
+XARM6_5J t=2 p_des=0.396651 0.399482   -0.004 p_tip= 0.397983  0.399852 0.0357381 |qdot_cmd|=0.306084 v_des=0.0195462     -0.14         0 v_task= 0.014216  -0.14148 -0.158952 -0.215099  0.208128
+PRELIFT_RELEASE=START t=2.119 tip= 0.404744  0.396933 0.0358584 object=   0.397355    0.397306 0.000602758 dist=0.00739912
+XARM6_5J t=3 p_des=  0.44092  0.387435 0.0361421 p_tip= 0.431426  0.390575 0.0361421 |qdot_cmd|=0.263923 v_des=0 0 0 v_task= 0.0379768 -0.0125604          0 -0.0770884  0.0841454
+XARM6_5J t=4 p_des= 0.467834  0.368649 0.0360912 p_tip= 0.459413  0.374043 0.0360912 |qdot_cmd|=0.133979 v_des=0 0 0 v_task= 0.0336807 -0.0215779          0 -0.0249958  0.0312395
+XARM6_5J t=5 p_des=0.452334 0.326785   -0.004 p_tip=  0.452604   0.326313 0.00805393 |qdot_cmd|=0.369147 v_des=-0.0344459 -0.0802336          0 v_task= -0.035523 -0.0783436 -0.0482157  0.0102099 -0.0127691
+XARM6_5J t=6 p_des=0.416085 0.277246   -0.004 p_tip=   0.415847    0.276713 -0.00189159 |qdot_cmd|=0.605764 v_des=-0.100995 -0.111858         0 v_task=   -0.10004   -0.109726 -0.00843365    0.016169  -0.0232361
+XARM6_5J t=7 p_des=0.372159 0.264978   -0.004 p_tip=   0.372375     0.26454 -0.00276173 |qdot_cmd|=0.0758413 v_des= -0.016139 0.00365407          0 v_task= -0.0170005   0.0054081 -0.00495306   0.0111322  -0.0161277

@@ -54,7 +54,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-WT = "/root/push_anything_ADMM/external/oim_c++_anything/.claude/worktrees/oim-scene-sync-metrics"
+WT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # OIM xarm6 weights (task_diagnostics_definition.md)
 Q_POS, Q_THETA = 200.0, 16.0
