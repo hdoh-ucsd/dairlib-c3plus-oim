@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run and package one xArm6 exponential/ReLU experiment from this checkout."""
+"""Run and package xArm6 exponential/ReLU experiments from this checkout."""
 import argparse
 import fcntl
 import hashlib
@@ -17,15 +17,15 @@ import time
 import yaml
 
 if __package__:
-    from .catalog import (BINARIES, CONFIG_DIR, MODELS, OBSTACLE_COSTS, REPO,
+    from .catalog import (BINARIES, CONFIG_DIR, MESH_OBJECTS, MODELS, OBSTACLE_COSTS, REPO,
                           SCENES, TOOL_DIR, demo_name, load_controller_goal,
-                          compose_demo_configs, demo_config_digest, planner_environment,
-                          write_demo_configs)
+                          compose_demo_configs, demo_config_digest, model_assets, planner_environment,
+                          resolve_object_profile, write_demo_configs)
 else:
-    from catalog import (BINARIES, CONFIG_DIR, MODELS, OBSTACLE_COSTS, REPO,
+    from catalog import (BINARIES, CONFIG_DIR, MESH_OBJECTS, MODELS, OBSTACLE_COSTS, REPO,
                          SCENES, TOOL_DIR, demo_name, load_controller_goal,
-                         compose_demo_configs, demo_config_digest, planner_environment,
-                         write_demo_configs)
+                         compose_demo_configs, demo_config_digest, model_assets, planner_environment,
+                         resolve_object_profile, write_demo_configs)
 
 
 def environment(obstacle_cost):
@@ -96,7 +96,7 @@ def verify_goal_yaw(log, plan):
 
 
 def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
-             goal_pose=None, max_frames=1200, goal_yaw_degrees=None):
+             goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None):
     """Validate inputs and describe a run without launching or writing files."""
     if scene not in SCENES or obstacle_cost not in OBSTACLE_COSTS:
         raise ValueError("Unknown scene or obstacle cost")
@@ -104,10 +104,14 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         raise ValueError("Start/goal indices must be between 1 and 5")
     if cap <= 0 or not 1024 <= port <= 65535 or max_frames <= 0:
         raise ValueError("Invalid cap, port, or frame count")
+    if object_name is not None and object_name not in MESH_OBJECTS:
+        raise ValueError(f"Unsupported run object: {object_name}; choose one of {', '.join(MESH_OBJECTS)}")
+    object_options = {"object_name": object_name} if object_name is not None else {}
+    profile = resolve_object_profile(scene, repo=REPO, **object_options) if object_options else None
     suffix = yaw_suffix(goal_yaw_degrees)
-    demo = demo_name(scene, start, goal)
-    goal_file, controller_goal = load_controller_goal(demo, repo=REPO)
-    resolved = compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=goal_yaw_degrees)
+    demo = demo_name(scene, start, goal, **object_options)
+    goal_file, controller_goal = load_controller_goal(demo, repo=REPO, **object_options)
+    resolved = compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=goal_yaw_degrees, **object_options)
     source_controller_goal = controller_goal
     if goal_yaw_degrees is not None:
         controller_goal = (*controller_goal[:2], math.radians(goal_yaw_degrees))
@@ -122,16 +126,26 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
     if math.hypot(pose[0] - x, pose[1] - y) > 1e-4 or abs(angle_delta) > 1e-4:
         raise ValueError("Manifest goal_pose does not match the selected demo goal; "
                          "choose a --goal index from 1 to 5 and an optional --goal-yaw-degrees.")
+    object_suffix = f"_{object_name}" if object_name is not None else ""
     plan = {"scene": scene, "obstacle_cost": obstacle_cost, "start": start, "goal_index": goal,
-            "run_id": f"{obstacle_cost}_{scene}_s{start:02d}g{goal:02d}{suffix}_seed42",
+            "run_id": f"{obstacle_cost}_{scene}{object_suffix}_s{start:02d}g{goal:02d}{suffix}_seed42",
             "demo": demo, "seed": 42, "controller_goal": controller_goal,
             "start_pose": resolved["simulation"]["q_init_object"],
             "evaluation_goal": pose, "configuration_file": str(goal_file.relative_to(REPO)),
-            "configuration_digest": demo_config_digest(demo, repo=REPO, goal_yaw_degrees=goal_yaw_degrees),
+            "configuration_digest": demo_config_digest(demo, repo=REPO, goal_yaw_degrees=goal_yaw_degrees,
+                                                        **object_options),
             "out": str(Path(out).resolve()), "wall_cap_seconds": cap, "port": port,
             "max_frames": max_frames}
     if goal_yaw_degrees is not None:
         plan.update(goal_yaw_degrees=int(goal_yaw_degrees), source_controller_goal=source_controller_goal)
+    if profile is not None:
+        plan.update(object_name=object_name, object_profile=profile,
+                    simulation_model=profile["simulation_model"],
+                    controller_model=profile["controller_model"],
+                    object_body_name=profile["object_body_name"],
+                    object_channel_substring=profile["object_channel_substring"])
+        plan["asset_sha256"] = {str(path.relative_to(REPO)): hashlib.sha256(path.read_bytes()).hexdigest()
+                                for path in model_assets(resolved, REPO)}
     return plan
 
 
@@ -148,15 +162,23 @@ def runtime_versions():
 
 
 def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
-            goal_pose=None, max_frames=1200, goal_yaw_degrees=None):
+            goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None):
     plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
-                    goal_yaw_degrees)
+                    goal_yaw_degrees, object_name)
     pose = plan["evaluation_goal"]
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(f"Refusing to overwrite existing run directory: {out}")
     config = yaml.safe_load((CONFIG_DIR / f"{scene}.yaml").read_text())
     config["goal"] = list(pose)
+    if object_name is not None:
+        profile = plan["object_profile"]
+        config.update({key: profile[key] for key in ("footprint", "block_half_height", "tip_target_z",
+                                                    "object_channel_substring")})
+        if "tip_floor_z_real" in profile:
+            config["tip_floor_z_real"] = profile["tip_floor_z_real"]
+        config.update(object_name=object_name, simulation_model=plan["simulation_model"],
+                      controller_model=plan["controller_model"], object_body_name=plan["object_body_name"])
     env = environment(obstacle_cost)
     env.update(planner_environment(config))
     binary_dir = REPO / "bazel-bin/examples/sampling_c3"
@@ -176,7 +198,8 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         config_path = out / "evaluation_scene_config.yaml"
         config_path.write_text(yaml.safe_dump(config, sort_keys=False))
         controller_path = write_demo_configs(demo, out / "config", repo=REPO,
-                                              goal_yaw_degrees=goal_yaw_degrees)
+                                              goal_yaw_degrees=goal_yaw_degrees,
+                                              **({"object_name": object_name} if object_name is not None else {}))
         status = {**plan, "runtime": runtime_versions(), "goal": pose,
                   "controller_params_file": str(controller_path),
                   "config_sha256": {str(path.relative_to(out)): hashlib.sha256(path.read_bytes()).hexdigest()
@@ -218,9 +241,14 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
                    OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1", NUMEXPR_NUM_THREADS="1")
         models = REPO / "examples/sampling_c3/urdf"
         obj, obs = MODELS[scene]
+        object_sdf = models / obj
+        if object_name is not None:
+            simulation = yaml.safe_load((out / "config/simulation.yaml").read_text())
+            object_sdf = REPO / simulation["object_model"]
+            status["render_object_model"] = str(object_sdf)
         render = [sys.executable, str(TOOL_DIR / "render_run_3d.py"),
                   "--trace", str(out / "state_trace.jsonl"), "--out", str(out / f"{run_id}.mp4"),
-                  "--object-sdf", str(models / obj), "--goal", *map(str, pose),
+                  "--object-sdf", str(object_sdf), "--goal", *map(str, pose),
                   "--title", run_id, "--max-frames", str(max_frames)]
         if obs:
             render.extend(["--obstacle-sdf", str(models / obs)])
@@ -232,6 +260,8 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
             "cost_fig": [sys.executable, str(TOOL_DIR / "cost_fig.py"),
                          "--run-dir", str(out), "--scene", scene, "--obstacle_cost", obstacle_cost],
         }
+        if object_name is not None:
+            commands["cost_fig"].extend(["--scene-config", str(config_path)])
         for phase, command in commands.items():
             print(f"[PACKAGE] {run_id} {phase}", flush=True)
             status[phase + "_rc"] = logged_command(command, out / f"{phase}.log", env)
@@ -243,9 +273,11 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         return status
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scene", choices=SCENES, required=True)
+    parser.add_argument("--objects", nargs="+", choices=MESH_OBJECTS,
+                        help="Objects to push on open_task, in serial order; multiple objects use OUT/object_name")
     parser.add_argument("--obstacle_cost", choices=OBSTACLE_COSTS, default="exponential")
     parser.add_argument("--start", type=int, choices=range(1, 6), default=1)
     parser.add_argument("--goal", type=int, choices=range(1, 6), default=1)
@@ -257,15 +289,27 @@ def main():
     parser.add_argument("--out", type=Path, required=True, help="New directory; existing dirs are refused")
     parser.add_argument("--max-frames", type=int, default=1200)
     parser.add_argument("--dry-run", action="store_true", help="Print the resolved run plan without building, running, or writing files")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
+        selected = args.objects if args.objects is not None else [None]
+        if len(set(selected)) != len(selected):
+            raise ValueError("--objects must not contain duplicates")
+        options = dict(max_frames=args.max_frames, goal_yaw_degrees=args.goal_yaw_degrees)
+        jobs = [(name, args.out / name if len(selected) > 1 else args.out) for name in selected]
+        plans = [plan_run(args.scene, args.obstacle_cost, args.start, args.goal,
+                          out, args.cap, args.port, **options,
+                          **({"object_name": name} if name is not None else {})) for name, out in jobs]
         if args.dry_run:
-            print(json.dumps(plan_run(args.scene, args.obstacle_cost, args.start, args.goal,
-                                      args.out, args.cap, args.port,
-                                      max_frames=args.max_frames, goal_yaw_degrees=args.goal_yaw_degrees), indent=2))
+            print(json.dumps(plans[0] if len(plans) == 1 else
+                             {"execution": "serial", "run_count": len(plans), "runs": plans}, indent=2))
             return
-        run_one(args.scene, args.obstacle_cost, args.start, args.goal, args.out,
-                args.cap, args.port, max_frames=args.max_frames, goal_yaw_degrees=args.goal_yaw_degrees)
+        for _, out in jobs:
+            if out.exists():
+                raise FileExistsError(f"Refusing to overwrite existing run directory: {out.resolve()}")
+        for name, out in jobs:
+            run_one(args.scene, args.obstacle_cost, args.start, args.goal, out,
+                    args.cap, args.port, **options,
+                    **({"object_name": name} if name is not None else {}))
     except (RuntimeError, ValueError, OSError, KeyError, TypeError) as exc:
         parser.exit(1, f"{exc}\n")
 

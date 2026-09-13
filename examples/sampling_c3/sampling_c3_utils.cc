@@ -1,5 +1,6 @@
 #include "sampling_c3_utils.h"
 #include <array>
+#include <filesystem>
 #include <iostream>
 #include "common/find_resource.h"
 #include "drake/multibody/parsing/parser.h"
@@ -14,6 +15,11 @@ using drake::multibody::ModelInstanceIndex;
 using drake::multibody::MultibodyPlant;
 using drake::multibody::Parser;
 
+namespace {
+std::string ResolveObjectModelPath(const std::string& path) {
+  return std::filesystem::path(path).is_absolute() ? path : FindResourceOrThrow(path);
+}
+}  // namespace
 
 ModelInstanceIndex AddFrankaToPlant(MultibodyPlant<double>* plant,
                                     SceneGraph<double>* scene_graph,
@@ -200,7 +206,7 @@ ModelInstanceIndex AddObjectToPlant(
     const std::string& object_model) {
   Parser parser(plant, scene_graph);
   parser.SetAutoRenaming(true);
-  return parser.AddModels(FindResourceOrThrow(object_model))[0];
+  return parser.AddModels(ResolveObjectModelPath(object_model))[0];
 }
 
 std::vector<ModelInstanceIndex> AddObjectsToPlant(
@@ -213,7 +219,7 @@ std::vector<ModelInstanceIndex> AddObjectsToPlant(
   std::vector<ModelInstanceIndex> models;
   for (const auto& model : object_models) {
       models.push_back(
-        parser.AddModels(FindResourceOrThrow(model))[0]
+        parser.AddModels(ResolveObjectModelPath(model))[0]
       );
   }
   return models;
@@ -271,7 +277,7 @@ std::vector<ModelInstanceIndex> AddLCSModelsToPlant(
 
   for (const auto& model : object_models) {
     obj_models.push_back(
-      parser_lcs.AddModels(FindResourceOrThrow(model))[0]
+      parser_lcs.AddModels(ResolveObjectModelPath(model))[0]
     );
   }
 

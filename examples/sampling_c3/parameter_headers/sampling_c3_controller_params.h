@@ -33,6 +33,9 @@ struct SamplingC3ControllerParams {
   std::string object_body_name;
   std::string base_name;
   std::vector<std::string> base_names;
+  // Explicit original triangle meshes for mesh-based sampling. Omitted keeps
+  // the legacy urdf/<base_name>/<base_name>.obj lookup.
+  std::optional<std::vector<std::string>> sampling_mesh_files;
 
   double workspace_margin;
   bool include_end_effector_orientation;
@@ -72,6 +75,7 @@ struct SamplingC3ControllerParams {
 
     a->Visit(DRAKE_NVP(base_names));
     a->Visit(DRAKE_NVP(object_models));
+    a->Visit(DRAKE_NVP(sampling_mesh_files));
 
     /// Store individual parameter classes internally.
     sampling_c3_options = drake::yaml::LoadYamlFile<SamplingC3Options>(

@@ -108,9 +108,18 @@ defaults:
     4: start_s04
     5: start_s05
 
+# Imported objects share the open-table poses and one controller profile.
+# Mass, collision approximations, and evaluation geometry are recorded with the assets.
+mesh_object_defaults: &mesh_object_defaults
+  extends: Tblock
+  object_height: -0.029
+  sampling_c3_options_file: examples/sampling_c3/shared_parameters/profiles/mesh_objects/sampling_c3plus_options.yaml
+  sampling_params_file: examples/sampling_c3/shared_parameters/profiles/mesh_objects/sampling_params.yaml
+  physics_metadata_file: examples/sampling_c3/urdf/objects/physics_models.json
+
 # Default independent selections for start/goal indices 1 through 5.
 object_profiles:
-  t_shape:
+  Tblock:
     controller_model: examples/sampling_c3/urdf/push_t_oimscale_m01_control.sdf
     simulation_model: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf
     object_body_name: vertical_link
@@ -137,7 +146,7 @@ object_profiles:
       3: t_shape_g03
       4: t_shape_g04
       5: t_shape_g05
-  icra_sign:
+  Cblock:
     controller_model: examples/sampling_c3/urdf/push_c_glyph_controller.sdf
     simulation_model: examples/sampling_c3/urdf/push_c_glyph.sdf
     object_body_name: c_glyph_base
@@ -165,18 +174,51 @@ object_profiles:
       4: icra_sign_g04
       5: icra_sign_g05
 
+  sugar_box:
+    <<: *mesh_object_defaults
+    simulation_model: examples/sampling_c3/urdf/objects/sugar_box.sdf
+    controller_model: examples/sampling_c3/urdf/objects/sugar_box_controller.sdf
+    object_body_name: sugar_box_base
+    base_name: sugar_box_base
+    controller:
+      sampling_mesh_files: [examples/sampling_c3/urdf/objects/sugar_box_centered.obj]
+  power_drill:
+    <<: *mesh_object_defaults
+    simulation_model: examples/sampling_c3/urdf/objects/power_drill.sdf
+    controller_model: examples/sampling_c3/urdf/objects/power_drill_controller.sdf
+    object_body_name: power_drill_base
+    base_name: power_drill_base
+    controller:
+      sampling_mesh_files: [examples/sampling_c3/urdf/objects/power_drill_centered.obj]
+  hammer:
+    <<: *mesh_object_defaults
+    simulation_model: examples/sampling_c3/urdf/objects/hammer.sdf
+    controller_model: examples/sampling_c3/urdf/objects/hammer_controller.sdf
+    object_body_name: hammer_base
+    base_name: hammer_base
+    controller:
+      sampling_mesh_files: [examples/sampling_c3/urdf/objects/hammer_centered.obj]
+  banana:
+    <<: *mesh_object_defaults
+    simulation_model: examples/sampling_c3/urdf/objects/banana.sdf
+    controller_model: examples/sampling_c3/urdf/objects/banana_controller.sdf
+    object_body_name: banana_base
+    base_name: banana_base
+    controller:
+      sampling_mesh_files: [examples/sampling_c3/urdf/objects/banana_centered.obj]
+
 # Scene differences only. Indexed overrides replace individual references.
 # Slalom inherits shelf-gap goal choices and changes only its differing poses.
 scenes:
   open_task:
-    object_profile: t_shape
+    object_profile: Tblock
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/open_task/scenario_params.yaml
     visualize_pairs: [[1, 1]]
   single_obstacle:
-    object_profile: t_shape
+    object_profile: Tblock
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/single_obstacle/scenario_params.yaml
   shelf_gap:
-    object_profile: t_shape
+    object_profile: Tblock
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/shelf_gap/scenario_params.yaml
     goal_positions:
       2: t_shape_g03
@@ -189,12 +231,12 @@ scenes:
       4: t_shape_g05
       5: shelf_gap_g05
   ycb_clutter:
-    object_profile: t_shape
+    object_profile: Tblock
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/ycb_clutter/scenario_params.yaml
     goal_orientations:
       2: ycb_clutter_g02
   icra_sign:
-    object_profile: icra_sign
+    object_profile: Cblock
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/icra_sign/scenario_params.yaml
     robot_joint_overrides:
       4: icra_sign_s04

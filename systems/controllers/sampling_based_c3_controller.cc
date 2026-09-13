@@ -1525,53 +1525,80 @@ SamplingC3Controller::SamplingC3Controller(
   // Below code loads in the mesh and enumerates triangular faces.
   if (sampling_params_.sampling_strategy == SamplingStrategy::kMeshNormal ||
       sampling_params_.sampling_strategy ==
-          SamplingStrategy::kMeshNormalMultiObject) {
+          SamplingStrategy::kMeshNormalMultiObject ||
+      sampling_params_.sampling_strategy == SamplingStrategy::kMeshSectionPerimeter) {
+    const bool section_sampling = sampling_params_.sampling_strategy ==
+                                  SamplingStrategy::kMeshSectionPerimeter;
     std::vector<std::string> mesh_paths;
-    for (std::string base_name : controller_params_.base_names) {
-      std::string path =
-          "examples/sampling_c3/urdf/" + base_name + "/" + base_name + ".obj";
-      mesh_paths.push_back(path);
+    if (controller_params_.sampling_mesh_files) {
+      mesh_paths = *controller_params_.sampling_mesh_files;
+    } else {
+      for (const std::string& base_name : controller_params_.base_names) {
+        mesh_paths.push_back("examples/sampling_c3/urdf/" + base_name + "/" +
+                             base_name + ".obj");
+      }
     }
-    if (mesh_paths.empty()) {
+    if (mesh_paths.empty() || mesh_paths.size() != controller_params_.base_names.size() ||
+        (section_sampling && mesh_paths.size() != 1)) {
       throw std::runtime_error(
-          "SamplingC3Controller: no mesh files found in SceneGraph");
+          "SamplingC3Controller: sampling meshes must match the object count; "
+          "section sampling supports one object");
     }
 
     // N OBJECTS
     // Store faces and bins for each object
 
     for (const std::string& mesh_path : mesh_paths) {
-      drake::geometry::TriangleSurfaceMesh<double>* mesh =
-          new drake::geometry::TriangleSurfaceMesh<double>(
-              drake::geometry::ReadObjToTriangleSurfaceMesh(mesh_path, 1.0));
+      const auto mesh = drake::geometry::ReadObjToTriangleSurfaceMesh(mesh_path, 1.0);
 
-      const auto& vertices = mesh->vertices();
-      int num_tri = mesh->num_triangles();
+      const auto& vertices = mesh.vertices();
+      int num_tri = mesh.num_triangles();
 
       std::vector<Face> object_faces;
       std::vector<double> object_bins;
       object_bins.push_back(0.0);
 
       double cumulative_area = 0.0;
+      std::map<std::pair<int, int>, int> oriented_edges;
+      double volume = 0.0;
 
       for (int i = 0; i < num_tri; ++i) {
-        auto tri = mesh->triangles()[i];
+        auto tri = mesh.triangles()[i];
         Eigen::Vector3d v0 = vertices[tri.vertex(0)];
         Eigen::Vector3d v1 = vertices[tri.vertex(1)];
         Eigen::Vector3d v2 = vertices[tri.vertex(2)];
-        Eigen::Vector3d normal = (v1 - v0).cross(v2 - v0).normalized();
+        const Eigen::Vector3d cross = (v1 - v0).cross(v2 - v0);
+        const double double_area = cross.norm();
+        if (section_sampling) {
+          if (!v0.allFinite() || !v1.allFinite() || !v2.allFinite() ||
+              double_area <= 2e-18) {
+            throw std::runtime_error("Section sampling mesh contains invalid triangles: " + mesh_path);
+          }
+          volume += v0.dot(v1.cross(v2)) / 6.0;
+          for (int edge = 0; edge < 3; ++edge) {
+            const int a = tri.vertex(edge), b = tri.vertex((edge + 1) % 3);
+            oriented_edges[{std::min(a, b), std::max(a, b)}] += (a < b ? 1 : -1);
+          }
+        }
+        Eigen::Vector3d normal = cross.normalized();
 
         // reject faces with normal vectors that are too vertical, with some
         // buffer to account for inaccurate object tracking
         double z_accept =
             std::pow(sampling_params_.buffer_distance, 2) -
             std::pow(sampling_params_.sample_projection_clearance, 2);
-        if (std::pow(std::abs(normal[2]), 2) < z_accept + 0.04) {
-          double area = 0.5 * (v1 - v0).cross(v2 - v0).norm();
+        if (section_sampling || std::pow(std::abs(normal[2]), 2) < z_accept + 0.04) {
+          double area = 0.5 * double_area;
           object_faces.push_back({area, normal, {v0, v1, v2}});
           cumulative_area += area;
           object_bins.push_back(cumulative_area);
         }
+      }
+
+      if (section_sampling &&
+          (volume <= 0.0 || std::any_of(oriented_edges.begin(), oriented_edges.end(),
+              [](const auto& edge) { return edge.second != 0; }))) {
+        throw std::runtime_error("Section sampling requires a closed outward-oriented mesh: " + mesh_path);
       }
 
       if (object_faces.empty()) {
