@@ -14,6 +14,7 @@ import argparse
 import csv
 import math
 import os
+from pathlib import Path
 
 import numpy as np
 import yaml
@@ -34,8 +35,9 @@ RELU_W, RELU_EPS = 200.0, 0.01
 BODY_POINT_SPACING = 0.005  # 5 mm along the footprint boundary (object frame).
 
 
-def load_scene(scene):
-    with (CONFIG_DIR / f"{scene}.yaml").open() as f:
+def load_scene(scene, scene_config=None):
+    path = Path(scene_config) if scene_config is not None else CONFIG_DIR / f"{scene}.yaml"
+    with path.open() as f:
         cfg = yaml.safe_load(f)
     obs = cfg.get("obstacles") or {}
     return {
@@ -110,8 +112,8 @@ def read_metrics(run_dir):
                                        for c, v in data.items()}
 
 
-def obs_curve(obstacle_cost, scene, x, y, yaw):
-    sc = load_scene(scene)
+def obs_curve(obstacle_cost, scene, x, y, yaw, scene_config=None):
+    sc = load_scene(scene, scene_config)
     discs, polys = sc["discs"], sc["polys"]
     if not (discs or polys):
         return np.zeros_like(x), False
@@ -149,6 +151,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-dir", required=True)
     ap.add_argument("--scene", required=True, choices=SCENES)
+    ap.add_argument("--scene-config", type=Path,
+                    help="Saved evaluation_scene_config.yaml for the selected object and goal")
     ap.add_argument("--obstacle_cost", required=True,
                     choices=OBSTACLE_COSTS)
     a = ap.parse_args()
@@ -167,7 +171,7 @@ def main():
     j_rot = np.where(latched, W_ROT_POST * eyaw**2, W_ROT_PRE * eyaw**2)
     j_task = j_trans + j_rot
     j_obs, has_obs = obs_curve(a.obstacle_cost, a.scene, m["object_x"],
-                               m["object_y"], m["object_yaw"])
+                               m["object_y"], m["object_yaw"], a.scene_config)
     obs_label = ("obstacle_ReLU" if a.obstacle_cost == "relu" else "obstacle") + \
         ("" if has_obs else " (no obstacles)")
 

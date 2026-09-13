@@ -8,11 +8,14 @@ import math
 from pathlib import Path
 import re
 import shutil
+import xml.etree.ElementTree as ET
 
 REPO = Path(__file__).resolve().parents[2]
 TOOL_DIR = Path(__file__).resolve().parent
 CONFIG_DIR = TOOL_DIR / "scene_configs"
 OBSTACLE_COSTS = ("exponential", "relu")
+MESH_OBJECTS = ("sugar_box", "power_drill", "hammer", "banana")
+OBJECTS = ("Tblock", "Cblock", *MESH_OBJECTS)
 MODELS = {
     "open_task": ("push_t_oimscale_m01.sdf", None),
     "single_obstacle": ("push_t_oimscale_m01.sdf", "single_obstacle_box_oimframe.sdf"),
@@ -114,8 +117,15 @@ def planner_environment(config) -> dict[str, str]:
     return environment
 
 
-def demo_name(scene, start, goal):
-    return DEMO_FAMILIES[scene] + (f"t{start}" if start == goal else f"s{start}g{goal}")
+def demo_name(scene, start, goal, object_name=None):
+    prefix = DEMO_FAMILIES[scene]
+    if object_name in MESH_OBJECTS:
+        if scene != "open_task":
+            raise ValueError("Imported objects currently support --scene open_task only")
+        prefix = f"open_table_mesh_{object_name}_xarm6_"
+    elif object_name is not None and object_name not in OBJECTS:
+        raise ValueError(f"Unknown object: {object_name}")
+    return prefix + (f"t{start}" if start == goal else f"s{start}g{goal}")
 
 
 def _read_yaml(path):
@@ -145,11 +155,17 @@ def _yaml_dependencies(value, repo):
             continue
         configs[path] = _read_yaml(path)
         pending.extend(_yaml_references(configs[path], repo))
+    controller = value.get("controller", {}) if isinstance(value, dict) else {}
+    if controller.get("sampling_mesh_files"):
+        channels = configs[repo / controller["lcm_channels_simulation_file"]]
+        channels["object_state_channels"][0] = f"OBJECT_{controller['object_body_name']}_STATE_SIMULATION"
     return configs
 
 
 def _demo_selection(demo):
-    for scene, prefix in DEMO_FAMILIES.items():
+    families = [(scene, prefix, None) for scene, prefix in DEMO_FAMILIES.items()]
+    families.extend(("open_task", f"open_table_mesh_{name}_xarm6_", name) for name in MESH_OBJECTS)
+    for scene, prefix, object_name in families:
         if not demo.startswith(prefix):
             continue
         match = re.fullmatch(r"(?:t([1-5])|s([1-5])g([1-5]))", demo[len(prefix):])
@@ -157,9 +173,10 @@ def _demo_selection(demo):
             raise ValueError(f"Invalid indexed demo: {demo}")
         start = int(match[1] or match[2])
         goal = int(match[1] or match[3])
-        if demo != demo_name(scene, start, goal):
-            raise ValueError(f"Use the canonical indexed demo name: {demo_name(scene, start, goal)}")
-        return scene, start, goal
+        canonical = demo_name(scene, start, goal, object_name)
+        if demo != canonical:
+            raise ValueError(f"Use the canonical indexed demo name: {canonical}")
+        return scene, start, goal, object_name
     return None
 
 
@@ -206,22 +223,49 @@ def _override_goal_yaw(goal, degrees):
     goal.update(fixed_target_orientation=quaternion, fixed_target_orientations=[deepcopy(quaternion)])
 
 
-def compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=None):
+def resolve_object_profile(scene, object_name=None, repo=REPO):
+    """Resolve an object and its recorded physics/evaluation metadata."""
+    repo = Path(repo)
+    data = _read_yaml(repo / EXPERIMENTS_FILE)
+    scene_config = _scene_config(data["scenes"], scene)
+    name = object_name or scene_config["object_profile"]
+    if name not in OBJECTS:
+        raise ValueError(f"Unknown object: {name}")
+    if name in MESH_OBJECTS and scene != "open_task":
+        raise ValueError("Imported objects currently support --scene open_task only")
+    if name not in MESH_OBJECTS and name != scene_config["object_profile"]:
+        raise ValueError(f"Scene {scene} uses {scene_config['object_profile']}; object override supports imported meshes only")
+    profile = _scene_config(data["object_profiles"], name)
+    profile["object_name"] = name
+    if name in MESH_OBJECTS:
+        document = json.loads((repo / profile["physics_metadata_file"]).read_text())
+        metadata = document["objects"][name]
+        profile.update(metadata["evaluation"])
+        profile["physics"] = {**{key: value for key, value in document.items() if key != "objects"}, **metadata}
+        profile["object_channel_substring"] = profile["object_body_name"]
+    return profile
+
+
+def compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=None, object_name=None):
     """Compose one native trial from independent positions and orientations."""
     repo = Path(repo)
     selection = _demo_selection(demo)
     if selection is None:
+        if object_name is not None:
+            raise ValueError("Object selection requires an indexed experiment")
         path = repo / "examples/sampling_c3" / demo / "parameters/sampling_c3_controller_params.yaml"
         controller = _read_yaml(path)
         goal = _read_yaml(repo / controller.pop("goal_params_file"))
         simulation = _read_yaml(repo / controller.pop("sim_params_file"))
     else:
-        scene_name, start, goal_index = selection
+        scene_name, start, goal_index, encoded_object = selection
+        if encoded_object is not None and object_name not in (None, encoded_object):
+            raise ValueError("Object selection does not match the demo identifier")
         data = _read_yaml(repo / EXPERIMENTS_FILE)
         if data["schema_version"] != 1:
             raise ValueError("Unsupported experiment configuration schema")
         scene = _scene_config(data["scenes"], scene_name)
-        profile = data["object_profiles"][scene["object_profile"]]
+        profile = resolve_object_profile(scene_name, object_name or encoded_object, repo)
         defaults = data["defaults"]
         start_refs = _merge(profile["start_positions"], scene.get("start_positions", {}))
         start_orientation_refs = _merge(_merge(defaults["start_orientations"],
@@ -245,6 +289,7 @@ def compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=None):
                           object_model=profile["controller_model"], object_models=[profile["controller_model"]],
                           object_body_name=profile["object_body_name"], base_name=profile["base_name"],
                           base_names=[profile["object_body_name"]])
+        controller.update(deepcopy(profile.get("controller", {})))
         simulation = deepcopy(defaults["simulation"])
         initial_pose = [*start_q, *start_xy, height]
         simulation.update(object_model=profile["simulation_model"], object_models=[profile["simulation_model"]],
@@ -252,6 +297,7 @@ def compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=None):
         if [start, goal_index] in scene.get("visualize_pairs", []):
             simulation["visualize_drake_sim"] = True
         goal = deepcopy(defaults["goal"])
+        goal.update(deepcopy(profile.get("goal", {})))
         position = [*goal_xy, height]
         goal.update(fixed_target_position=position, fixed_target_positions=[deepcopy(position)],
                     fixed_target_orientation=goal_q, fixed_target_orientations=[deepcopy(goal_q)])
@@ -263,11 +309,11 @@ def compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=None):
     return {"controller": controller, "simulation": simulation, "goal": goal}
 
 
-def load_demo_configs(demo, repo=REPO):
+def load_demo_configs(demo, repo=REPO, object_name=None):
     """Read source YAMLs for a demo, following only its selected dependencies."""
     repo = Path(repo)
     if _demo_selection(demo) is not None:
-        composed = compose_demo_configs(demo, repo)
+        composed = compose_demo_configs(demo, repo, object_name=object_name)
         return {repo / EXPERIMENTS_FILE: _read_yaml(repo / EXPERIMENTS_FILE),
                 **_yaml_dependencies(composed, repo)}
     path = repo / "examples/sampling_c3" / demo / "parameters/sampling_c3_controller_params.yaml"
@@ -275,18 +321,48 @@ def load_demo_configs(demo, repo=REPO):
     return {path: controller, **_yaml_dependencies(controller, repo)}
 
 
-def demo_config_digest(demo, repo=REPO, goal_yaw_degrees=None):
+def model_assets(composed, repo=REPO):
+    """Find selected object models and their meshes for hashing and snapshots."""
+    repo = Path(repo).resolve()
+    pending = [repo / path for role in ("controller", "simulation")
+               for path in composed[role]["object_models"]]
+    pending.extend(repo / path for path in composed["controller"].get("sampling_mesh_files", []))
+    paths = set()
+    while pending:
+        path = pending.pop().resolve()
+        if path in paths:
+            continue
+        path.relative_to(repo)  # Only checkout assets are reproducible here.
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        paths.add(path)
+        if path.suffix == ".sdf":
+            for uri in ET.fromstring(path.read_text()).iter("uri"):
+                value = (uri.text or "").strip()
+                if "://" in value:
+                    raise ValueError(f"Object model must reference local mesh assets: {value}")
+                pending.append(repo / value if value.startswith("examples/") else path.parent / value)
+    return sorted(paths)
+
+
+def demo_config_digest(demo, repo=REPO, goal_yaw_degrees=None, object_name=None):
     """Fingerprint effective settings and dependencies, excluding unused trials."""
     repo = Path(repo)
-    composed = compose_demo_configs(demo, repo, goal_yaw_degrees)
+    composed = compose_demo_configs(demo, repo, goal_yaw_degrees, object_name)
     dependencies = {str(path.relative_to(repo)): data
                     for path, data in _yaml_dependencies(composed, repo).items()}
     payload = {"composed": composed, "dependencies": dependencies}
+    if composed["controller"].get("sampling_mesh_files"):
+        payload["assets"] = {str(path.relative_to(repo.resolve())): hashlib.sha256(path.read_bytes()).hexdigest()
+                             for path in model_assets(composed, repo)}
+        selection = _demo_selection(demo)
+        profile = resolve_object_profile(selection[0], object_name or selection[3], repo)
+        payload["physics"] = profile["physics"]
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
                                      allow_nan=False).encode()).hexdigest()
 
 
-def write_demo_configs(demo, directory, repo=REPO, goal_yaw_degrees=None):
+def write_demo_configs(demo, directory, repo=REPO, goal_yaw_degrees=None, object_name=None):
     """Save an isolated native configuration and every selected YAML dependency."""
     import yaml
 
@@ -294,10 +370,11 @@ def write_demo_configs(demo, directory, repo=REPO, goal_yaw_degrees=None):
     directory = Path(directory).resolve()
     if directory.exists():
         raise FileExistsError(f"Refusing to overwrite configuration directory: {directory}")
-    composed = compose_demo_configs(demo, repo, goal_yaw_degrees)
+    composed = compose_demo_configs(demo, repo, goal_yaw_degrees, object_name)
     dependencies = _yaml_dependencies(composed, repo)
+    assets = model_assets(composed, repo) if composed["controller"].get("sampling_mesh_files") else []
     copies = {str(path.relative_to(repo)): directory / "repository" / path.relative_to(repo)
-              for path in dependencies}
+              for path in (*dependencies, *assets)}
 
     def localize(value):
         if isinstance(value, dict):
@@ -314,6 +391,19 @@ def write_demo_configs(demo, directory, repo=REPO, goal_yaw_degrees=None):
         target = copies[str(source.relative_to(repo))]
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(yaml.safe_dump(localize(data), sort_keys=False))
+    for source in assets:
+        target = copies[str(source.relative_to(repo))]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if source.suffix == ".sdf":
+            ET.register_namespace("drake", "http://drake.mit.edu")
+            tree = ET.fromstring(source.read_text())
+            for uri in tree.iter("uri"):
+                value = uri.text.strip()
+                referenced = (repo / value if value.startswith("examples/") else source.parent / value).resolve()
+                uri.text = str(copies[str(referenced.relative_to(repo))])
+            target.write_text(ET.tostring(tree, encoding="unicode") + "\n")
+        else:
+            shutil.copy2(source, target)
     for role, data in resolved.items():
         (directory / f"{role}.yaml").write_text(yaml.safe_dump(data, sort_keys=False))
     if _demo_selection(demo) is not None:
@@ -321,12 +411,12 @@ def write_demo_configs(demo, directory, repo=REPO, goal_yaw_degrees=None):
     return directory / "controller.yaml"
 
 
-def load_controller_goal(demo, repo=REPO):
+def load_controller_goal(demo, repo=REPO, object_name=None):
     """Return the source and planar goal for a composed or legacy demo."""
     repo = Path(repo)
     if _demo_selection(demo) is not None:
         goal_file = repo / EXPERIMENTS_FILE
-        config = compose_demo_configs(demo, repo)["goal"]
+        config = compose_demo_configs(demo, repo, object_name=object_name)["goal"]
     else:
         parameters = repo / "examples/sampling_c3" / demo / "parameters"
         controller = _read_yaml(parameters / "sampling_c3_controller_params.yaml")

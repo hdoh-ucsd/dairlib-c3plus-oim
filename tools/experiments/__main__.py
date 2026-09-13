@@ -17,6 +17,7 @@ COMMANDS = {
     "run_launch_simple_s2": ("run_grid_campaign.py", "Start-2 run: 36 trials at goal 2 with yaw 90/0/-90 degrees"),
     "postprocess": ("postprocess_run.py", "Recompute metrics from an existing run"),
     "render": ("render_run_3d.py", "Render an existing trace to MP4"),
+    "visualize_mesh": ("visualize_mesh.py", "Save a PNG of an object in simulation coordinates"),
     "cost-figure": ("cost_fig.py", "Plot cost diagnostics from existing metrics"),
 }
 

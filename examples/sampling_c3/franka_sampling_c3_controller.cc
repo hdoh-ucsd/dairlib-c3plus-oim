@@ -102,6 +102,25 @@ int DoMain(int argc, char* argv[]) {
   SamplingC3ControllerParams controller_params =
       drake::yaml::LoadYamlFile<SamplingC3ControllerParams>(
           controller_params_path);
+  const bool mesh_object_demo = FLAGS_demo_name.rfind("open_table_mesh_", 0) == 0;
+  const bool mesh_section_sampler = controller_params.sampling_params.sampling_strategy ==
+                                    SamplingStrategy::kMeshSectionPerimeter;
+  if (mesh_object_demo || mesh_section_sampler) {
+    const auto& scenario = controller_params.scenario_params;
+    if (!mesh_object_demo || !mesh_section_sampler || !FLAGS_is_simulation ||
+        FLAGS_robot_model != "xarm6" || controller_params.num_objects != 1 ||
+        controller_params.object_models.size() != 1 ||
+        controller_params.include_end_effector_orientation ||
+        controller_params.sampling_c3_options.include_walls ||
+        scenario.scenario_name != "open_table" || !scenario.obstacles.empty() ||
+        (scenario.obstacle_model && !scenario.obstacle_model->empty()) ||
+        !controller_params.sampling_mesh_files ||
+        controller_params.sampling_mesh_files->size() != 1) {
+      throw std::runtime_error(
+          "Mesh objects require a single-object open_task xarm6 simulation, "
+          "open_table_mesh_ demo, sampling strategy 8 and one sampling_mesh_files entry");
+    }
+  }
   if (override_goal_yaw) {
     auto& goal = controller_params.goal_params;
     if (goal.goal_mode != kFixedGoal || controller_params.num_objects != 1 ||
@@ -299,7 +318,7 @@ int DoMain(int argc, char* argv[]) {
         SortedPair(contact_geoms["BOTTOM_SPHERE"], contact_geoms["GROUND"]));
   } else if (FLAGS_demo_name.rfind("anything", 0) == 0 ||
              FLAGS_demo_name.rfind("open_table_glyph", 0) == 0 ||
-             FLAGS_demo_name.rfind("open_table_c_ira", 0) == 0) {
+             FLAGS_demo_name.rfind("open_table_c_ira", 0) == 0 || mesh_object_demo) {
     if (sampling_c3_options.include_walls) {
       drake::geometry::GeometryId left_wall_geoms =
           plant_lcs.GetCollisionGeometriesForBody(
@@ -341,6 +360,17 @@ int DoMain(int argc, char* argv[]) {
               plant_lcs.GetBodyByName(body_name))[object_geoms.size() - 2];
       const auto& bottom_sphere_geoms = plant_lcs.GetCollisionGeometriesForBody(
           plant_lcs.GetBodyByName(body_name))[object_geoms.size() - 1];
+      if (mesh_object_demo) {
+        for (const auto gid : {top_left_sphere_geoms, top_right_sphere_geoms,
+                               bottom_sphere_geoms}) {
+          const auto* sphere = dynamic_cast<const drake::geometry::Sphere*>(
+              &scene_graph.model_inspector().GetShape(gid));
+          if (sphere == nullptr || std::abs(sphere->radius() - 0.001) > 1e-12) {
+            throw std::runtime_error(
+                "Mesh controller model must end with three 1 mm ground witness spheres");
+          }
+        }
+      }
       contact_geoms["TOP_LEFT_SPHERE_" + std::to_string(i)] =
           top_left_sphere_geoms;
       contact_geoms["TOP_RIGHT_SPHERE_" + std::to_string(i)] =
@@ -466,7 +496,7 @@ int DoMain(int argc, char* argv[]) {
         plant_object, controller_params.goal_params, object_indices);
   } else if (FLAGS_demo_name.rfind("anything", 0) == 0 ||
              FLAGS_demo_name.rfind("open_table_glyph", 0) == 0 ||
-             FLAGS_demo_name.rfind("open_table_c_ira", 0) == 0) {
+             FLAGS_demo_name.rfind("open_table_c_ira", 0) == 0 || mesh_object_demo) {
     target_generator = std::make_unique<systems::SamplingC3GoalGeneratorPlanar>(
         plant_object, controller_params.goal_params, object_indices);
 

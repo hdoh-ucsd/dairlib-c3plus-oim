@@ -24,7 +24,9 @@ enum SamplingStrategy {
   kRandomOnPerimeter,
   kRandomOnShell,
   kMeshNormal,
-  kMeshNormalMultiObject
+  kMeshNormalMultiObject,
+  // Closed mesh/plane section; validates full triangle clearance and exterior.
+  kMeshSectionPerimeter
 };
 
 struct SamplingParams {

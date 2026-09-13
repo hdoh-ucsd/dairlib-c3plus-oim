@@ -1,0 +1,231 @@
+{
+  "units": "metres",
+  "object_frame": "XY bounding-box centre; bottom at local Z=0. Place at world Z=-0.029 for the open table.",
+  "source_location": "User-provided Windows Downloads files",
+  "tool": "trimesh 5.0.0",
+  "processing": [
+    "Weld equal-position vertices, ignoring UV and normal indexing.",
+    "Remove degenerate and duplicate triangles.",
+    "Keep the connected component with greatest surface area.",
+    "Fill triangular or quadrilateral boundary holes using existing vertices.",
+    "Orient faces consistently and outward using positive signed volume.",
+    "Export geometry and computed vertex normals; omit references to unavailable textures."
+  ],
+  "objects": {
+    "sugar_box": {
+      "source_filename": "sugar_box_centered.obj",
+      "source_sha256": "39a61ed31a870e85fe256e8cc8e3915fd6a2522fe9025a52432198309e579150",
+      "file": "sugar_box_centered.obj",
+      "sha256": "0c411af662e8aa3265b511ef6330873ce0c43ba4cdfc907cfc1f3416183e3791",
+      "vertices": 8194,
+      "triangles": 16384,
+      "bounds_m": [
+        [
+          -0.088008,
+          -0.047081,
+          0.0
+        ],
+        [
+          0.088008,
+          0.047081,
+          0.049496
+        ]
+      ],
+      "dimensions_m": [
+        0.176016,
+        0.094162,
+        0.049496
+      ],
+      "cleanup": {
+        "loaded_vertices_before_uv_weld": 8393,
+        "vertices_after_uv_weld": 8194,
+        "source_triangles": 16384,
+        "degenerate_triangles_removed": 0,
+        "duplicate_triangles_removed": 0,
+        "small_components_discarded": 0,
+        "component_triangles_discarded": 0,
+        "component_surface_area_discarded_fraction": 0.0,
+        "boundary_cap_triangles_added": 0,
+        "face_normals_flipped": 0,
+        "vertex_positions_changed": false,
+        "bounds_changed": false
+      },
+      "watertight_manifold": true,
+      "consistent_winding": true,
+      "closed_oriented_surface": true,
+      "signed_volume_m3": 0.0006379334997410698,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "appearance": "Untextured; source materials are absent."
+    },
+    "power_drill": {
+      "source_filename": "power_drill_centered.obj",
+      "source_sha256": "a9b49d1062e655e50d6bc656fc57a44d5b50b033382acfb8eef13adba89e0c77",
+      "file": "power_drill_centered.obj",
+      "sha256": "fe3f11ac16582dbb9b6b364a19c0def3bd6510438bf81d0a6655625804380a94",
+      "vertices": 8192,
+      "triangles": 16380,
+      "bounds_m": [
+        [
+          -0.073683,
+          -0.075006,
+          0.0
+        ],
+        [
+          0.073683,
+          0.075006,
+          0.045834
+        ]
+      ],
+      "dimensions_m": [
+        0.147366,
+        0.150012,
+        0.045834
+      ],
+      "cleanup": {
+        "loaded_vertices_before_uv_weld": 9090,
+        "vertices_after_uv_weld": 8193,
+        "source_triangles": 16384,
+        "degenerate_triangles_removed": 2,
+        "duplicate_triangles_removed": 1,
+        "small_components_discarded": 1,
+        "component_triangles_discarded": 1,
+        "component_surface_area_discarded_fraction": 2.7492709886445255e-08,
+        "boundary_cap_triangles_added": 0,
+        "face_normals_flipped": 0,
+        "vertex_positions_changed": false,
+        "bounds_changed": false
+      },
+      "watertight_manifold": true,
+      "consistent_winding": true,
+      "closed_oriented_surface": true,
+      "signed_volume_m3": 0.000297419121248961,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "appearance": "Untextured; source materials are absent."
+    },
+    "hammer": {
+      "source_filename": "hammer_centered.obj",
+      "source_sha256": "5f42329fc8ec1904773b60dce1f04f54e98fe2dee2cb11e843d4748aec7c2fb1",
+      "file": "hammer_centered.obj",
+      "sha256": "1500b20d1ee937a9ba2d044cf9d966ff44fdbb901190bced5e0a02e3bb29c869",
+      "vertices": 5207,
+      "triangles": 10414,
+      "bounds_m": [
+        [
+          -0.065983,
+          -0.090173,
+          0.0
+        ],
+        [
+          0.065983,
+          0.090173,
+          0.032494
+        ]
+      ],
+      "dimensions_m": [
+        0.131966,
+        0.180346,
+        0.032494
+      ],
+      "cleanup": {
+        "loaded_vertices_before_uv_weld": 5338,
+        "vertices_after_uv_weld": 5241,
+        "source_triangles": 10502,
+        "degenerate_triangles_removed": 4,
+        "duplicate_triangles_removed": 0,
+        "small_components_discarded": 93,
+        "component_triangles_discarded": 105,
+        "component_surface_area_discarded_fraction": 0.0031620846525020063,
+        "boundary_cap_triangles_added": 21,
+        "face_normals_flipped": 5240,
+        "vertex_positions_changed": false,
+        "bounds_changed": false,
+        "boundary_cap_plane_object_y_m": 0.090173,
+        "boundary_cap_area_m2": 2.2824600000000748e-07,
+        "boundary_cap_to_original_cap_sampled_max_distance_m": 4.210312928267189e-06,
+        "boundary_cap_distance_check_samples": 1000
+      },
+      "watertight_manifold": false,
+      "consistent_winding": true,
+      "closed_oriented_surface": true,
+      "signed_volume_m3": 0.000146743250396629,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 2,
+      "appearance": "Untextured; source materials are absent.",
+      "note": "Two pinched edges remain, each with four incident triangles and balanced orientation. Generalized winding checks use the closed oriented surface. The 21 added cap triangles close small gaps at the flat shortened-handle end; dimensions and existing vertices are unchanged.",
+      "nonmanifold_edge_coordinates_m": [
+        [
+          [
+            0.061668,
+            -0.03981,
+            0.020232
+          ],
+          [
+            0.062246,
+            -0.040474,
+            0.022112
+          ]
+        ],
+        [
+          [
+            -0.008341,
+            -0.022384,
+            0.005536
+          ],
+          [
+            -0.008637,
+            -0.022841,
+            0.005671
+          ]
+        ]
+      ]
+    },
+    "banana": {
+      "source_filename": "banana_centered.obj",
+      "source_sha256": "dd6d931df23ef71ca9999b66e571274c8f29fb47de03013336a84266471ca98e",
+      "file": "banana_centered.obj",
+      "sha256": "6bf61c24d90525e392193f7ff14d71b38af698637f2463390b3aa178ca28dc4b",
+      "vertices": 8194,
+      "triangles": 16384,
+      "bounds_m": [
+        [
+          -0.054471,
+          -0.089223,
+          0.0
+        ],
+        [
+          0.054471,
+          0.089223,
+          0.03674
+        ]
+      ],
+      "dimensions_m": [
+        0.108942,
+        0.178446,
+        0.03674
+      ],
+      "cleanup": {
+        "loaded_vertices_before_uv_weld": 8368,
+        "vertices_after_uv_weld": 8194,
+        "source_triangles": 16384,
+        "degenerate_triangles_removed": 0,
+        "duplicate_triangles_removed": 0,
+        "small_components_discarded": 0,
+        "component_triangles_discarded": 0,
+        "component_surface_area_discarded_fraction": 0.0,
+        "boundary_cap_triangles_added": 0,
+        "face_normals_flipped": 0,
+        "vertex_positions_changed": false,
+        "bounds_changed": false
+      },
+      "watertight_manifold": true,
+      "consistent_winding": true,
+      "closed_oriented_surface": true,
+      "signed_volume_m3": 0.000171532420943819,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "appearance": "Untextured; source materials are absent."
+    }
+  }
+}

@@ -2,7 +2,10 @@
 #include "multibody/geom_geom_collider.h"
 
 #include <math.h>
+#include <algorithm>
 #include <iostream>
+#include <limits>
+#include <unordered_set>
 
 using drake::AutoDiffVecXd;
 using drake::AutoDiffXd;
@@ -28,6 +31,154 @@ constexpr int kMaxSampleAttempts = 10000;
   std::cout << "SAMPLING_C3_SAMPLER_EXHAUSTED attempts=" << kMaxSampleAttempts
             << std::endl;
   throw std::runtime_error("SAMPLING_C3_SAMPLER_EXHAUSTED");
+}
+
+struct MeshSectionSegment {
+  Vector3d start;
+  Vector3d end;
+  Vector3d normal;
+  double cumulative_length;
+};
+
+// Exact unsigned point/triangle distance, including face, edge and vertex
+// regions. Keeping the original triangles preserves narrow concavities.
+double TriangleDistanceSquared(const Vector3d& point, const Face& face) {
+  const double plane_distance = (point - face.v[0]).dot(face.normal);
+  const Vector3d projection = point - plane_distance * face.normal;
+  bool inside_face = true;
+  double distance_squared = std::numeric_limits<double>::infinity();
+  for (int edge = 0; edge < 3; ++edge) {
+    const Vector3d& a = face.v[edge];
+    const Vector3d direction = face.v[(edge + 1) % 3] - a;
+    inside_face = inside_face && direction.cross(projection - a).dot(face.normal) >= 0.0;
+    const double fraction = std::clamp((point - a).dot(direction) / direction.squaredNorm(), 0.0, 1.0);
+    distance_squared = std::min(distance_squared,
+        (point - (a + fraction * direction)).squaredNorm());
+  }
+  if (inside_face) distance_squared = std::min(distance_squared, plane_distance * plane_distance);
+  return distance_squared;
+}
+
+bool MeshPointHasClearance(const Vector3d& point, const std::vector<Face>& faces,
+                           double clearance) {
+  double angle_sum = 0.0;
+  for (const Face& face : faces) {
+    if (TriangleDistanceSquared(point, face) < clearance * clearance) return false;
+    const Vector3d a = face.v[0] - point, b = face.v[1] - point, c = face.v[2] - point;
+    const double la = a.norm(), lb = b.norm(), lc = c.norm();
+    const double denominator = la * lb * lc + a.dot(b) * lc + b.dot(c) * la + c.dot(a) * lb;
+    angle_sum += 2.0 * std::atan2(a.dot(b.cross(c)), denominator);
+  }
+  const double winding = angle_sum / (4.0 * std::acos(-1.0));
+  return std::isfinite(winding) && std::abs(winding) <= 1e-5;
+}
+
+std::vector<MeshSectionSegment> BuildMeshSection(const std::vector<Face>& faces,
+                                                double height) {
+  constexpr double kPlaneTolerance = 1e-12;
+  std::vector<MeshSectionSegment> segments;
+  double cumulative_length = 0.0;
+  for (const Face& face : faces) {
+    Vector3d normal(face.normal.x(), face.normal.y(), 0.0);
+    if (normal.norm() < kPlaneTolerance) continue;
+    std::vector<Vector3d> points;
+    int on_plane = 0;
+    double off_plane = 0.0;
+    for (const Vector3d& vertex : face.v) {
+      if (std::abs(vertex.z() - height) <= kPlaneTolerance) ++on_plane;
+      else off_plane = vertex.z() - height;
+    }
+    // A plane through a shared edge contributes once, from its positive side.
+    if (on_plane == 3 || (on_plane == 2 && off_plane < 0.0)) continue;
+    auto add_point = [&points](const Vector3d& point) {
+      if (std::none_of(points.begin(), points.end(), [&point](const Vector3d& old) {
+            return (old - point).squaredNorm() < 1e-24;
+          })) points.push_back(point);
+    };
+    for (int edge = 0; edge < 3; ++edge) {
+      const Vector3d& a = face.v[edge];
+      const Vector3d& b = face.v[(edge + 1) % 3];
+      const double da = a.z() - height, db = b.z() - height;
+      if (std::abs(da) <= kPlaneTolerance) add_point(a);
+      if ((da < -kPlaneTolerance && db > kPlaneTolerance) ||
+          (db < -kPlaneTolerance && da > kPlaneTolerance)) {
+        add_point(a + da / (da - db) * (b - a));
+      }
+    }
+    if (points.size() != 2) continue;
+    const double length = (points[1] - points[0]).norm();
+    if (length <= kPlaneTolerance) continue;
+    cumulative_length += length;
+    segments.push_back({points[0], points[1], normal.normalized(), cumulative_length});
+  }
+  return segments;
+}
+
+std::vector<VectorXd> MeshSectionSamples(
+    const VectorXd& state, int count, const SamplingParams& params,
+    const SamplingC3Options& options, const std::vector<Face>& object_faces,
+    const MatrixXd& unsuccessful_samples,
+    const drake::geometry::QueryObject<double>& query,
+    const std::unordered_set<GeometryId>& object_geometries, double ee_radius) {
+  if (state.size() != 19 || !state.allFinite() || !params.gen_planar_samples ||
+      options.include_walls || !std::isfinite(params.z_height) ||
+      !std::isfinite(params.sample_projection_clearance) ||
+      !std::isfinite(params.buffer_distance) ||
+      params.sample_projection_clearance < ee_radius ||
+      params.buffer_distance < params.sample_projection_clearance ||
+      params.z_height - ee_radius < -0.029 || params.max_attempts <= 0) {
+    throw std::runtime_error("Invalid single-object open-table mesh section sampling configuration");
+  }
+  Eigen::Quaterniond quaternion(state[3], state[4], state[5], state[6]);
+  if (quaternion.norm() < 1e-12) throw std::runtime_error("Invalid mesh object quaternion");
+  const Eigen::Matrix3d rotation = quaternion.normalized().toRotationMatrix();
+  const Vector3d position = state.segment<3>(7);
+  std::vector<Face> faces;
+  faces.reserve(object_faces.size());
+  for (const Face& local : object_faces) {
+    faces.push_back({local.area, rotation * local.normal,
+        {rotation * local.v[0] + position, rotation * local.v[1] + position,
+         rotation * local.v[2] + position}});
+  }
+  const auto segments = BuildMeshSection(faces, params.z_height);
+  if (segments.empty()) throw std::runtime_error("Mesh has no section at the configured EE height");
+  std::mt19937 nondeterministic_gen(std::random_device{}());
+  std::mt19937& gen = SamplingC3RandomGenerator(nondeterministic_gen);
+  std::uniform_real_distribution<double> choose_segment(0.0, segments.back().cumulative_length);
+  std::uniform_real_distribution<double> along_segment(0.0, 1.0);
+  std::vector<VectorXd> samples;
+  for (int i = 0; i < count; ++i) {
+    bool accepted = false;
+    for (int attempt = 0; attempt < params.max_attempts; ++attempt) {
+      const double draw = choose_segment(gen);
+      const auto found = std::lower_bound(segments.begin(), segments.end(), draw,
+          [](const MeshSectionSegment& segment, double value) { return segment.cumulative_length < value; });
+      const MeshSectionSegment& segment = found == segments.end() ? segments.back() : *found;
+      const double fraction = along_segment(gen);
+      const Vector3d point = (1.0 - fraction) * segment.start + fraction * segment.end +
+                             params.buffer_distance * segment.normal;
+      VectorXd candidate = state;
+      candidate.head<3>() = point;
+      candidate[2] = params.z_height;
+      if (!SampleIsAcceptable(candidate, params, options, unsuccessful_samples) ||
+          !MeshPointHasClearance(point, faces, params.sample_projection_clearance)) continue;
+      // Convex decomposition can extend slightly beyond the visible original
+      // surface; validate the controller's actual convex pieces as well.
+      const auto distances = query.ComputeSignedDistanceToPoint(point);
+      const bool clear_collision_model = std::none_of(distances.begin(), distances.end(),
+          [&](const auto& distance) {
+            return object_geometries.count(distance.id_G) &&
+                   distance.distance < params.sample_projection_clearance;
+          });
+      if (!clear_collision_model) continue;
+      samples.push_back(std::move(candidate));
+      accepted = true;
+      break;
+    }
+    if (!accepted) throw std::runtime_error("Mesh section sampler exhausted " +
+        std::to_string(params.max_attempts) + " attempts; check height, clearance and workspace");
+  }
+  return samples;
 }
 }  // namespace
 
@@ -179,9 +330,24 @@ std::vector<Eigen::VectorXd> GenerateSampleStates(
                   candidate_states[i], sampling_params, sampling_c3_options,
                   unsuccessful_sample_buffer));
     }
-  }
-  
-  else {
+  } else if (strategy == SamplingStrategy::kMeshSectionPerimeter) {
+    if (n_q != 10 || n_v != 9 || faces_per_object.size() != 1) {
+      throw std::runtime_error("Mesh section sampling requires one object and a translational EE");
+    }
+    UpdateContext(n_q, n_v, n_u, plant, context, plant_ad, context_ad, x_lcs);
+    const GeometryId ee_geometry = plant.GetCollisionGeometriesForBody(
+        plant.GetBodyByName("end_effector_simple")).at(0);
+    const auto* sphere = dynamic_cast<const Sphere*>(&query_object.inspector().GetShape(ee_geometry));
+    if (sphere == nullptr) throw std::runtime_error("Mesh section sampling requires a spherical EE");
+    std::unordered_set<GeometryId> object_geometries;
+    for (const auto& pair : contact_geoms.at(1)) {
+      if (pair.first() != ee_geometry) object_geometries.insert(pair.first());
+      if (pair.second() != ee_geometry) object_geometries.insert(pair.second());
+    }
+    if (object_geometries.empty()) throw std::runtime_error("Mesh object has no EE collision pieces");
+    candidate_states = MeshSectionSamples(x_lcs, num_samples, sampling_params, sampling_c3_options,
+        faces_per_object.front(), unsuccessful_sample_buffer, query_object, object_geometries, sphere->radius());
+  } else {
     throw std::runtime_error("Error:  Sampling strategy not recognized.");
   }
   return candidate_states;

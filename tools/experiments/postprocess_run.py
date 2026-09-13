@@ -15,6 +15,7 @@ Scene config YAML schema (--scene-config):
                                           # CCW, closed implicitly
   pusher_radius: float                    # tip sphere radius (m)
   block_half_height: float                # object half height (m)
+  tip_floor_z_real: float                 # optional world-frame floor for tip centre (m)
   tip_target_z: float                     # OIM tip target z = block mid-height
   obstacles:                              # optional; both lists optional
     polygons: [ [[x,y],...], ... ]        # world-frame convex polygons
@@ -235,8 +236,9 @@ def compute_row(k, x, y, yaw, ex, ey, ez, R_tip, goal, cfg, geo, q, q_prev, dt):
 
     tz = cfg["tip_target_z"]
     if cfg.get("tip_floor_branch", "real") == "real":
-        quad = W_Z_TIP * (100.0 * (max(ez, TIP_FLOOR_Z_REAL) - tz)) ** 2
-        gap = max(TIP_FLOOR_Z_REAL - ez, 0.0) / TIP_FLOOR_SCALE
+        tip_floor = float(cfg.get("tip_floor_z_real", TIP_FLOOR_Z_REAL))
+        quad = W_Z_TIP * (100.0 * (max(ez, tip_floor) - tz)) ** 2
+        gap = max(tip_floor - ez, 0.0) / TIP_FLOOR_SCALE
         b["tip_z_cost"] = quad + W_Z_TIP_EXP * (math.exp(min(gap ** 2, EXP_ARG_MAX)) - 1.0)
     else:
         if ez >= tz:
@@ -292,7 +294,8 @@ def main():
     ap.add_argument("--demo", default="")
     args = ap.parse_args()
 
-    cfg = yaml.safe_load(open(args.scene_config))
+    with open(args.scene_config) as stream:
+        cfg = yaml.safe_load(stream)
     goal = [float(v) for v in cfg["goal"]]
     sub = cfg["object_channel_substring"]
     spacing = float(cfg.get("boundary_sample_spacing", 0.002))
@@ -305,8 +308,8 @@ def main():
                   if cfg.get("table") else None),
     }
 
-    steps = [json.loads(l) for l in
-             open(os.path.join(args.run_dir, "steps_raw.jsonl")) if l.strip()]
+    with open(os.path.join(args.run_dir, "steps_raw.jsonl")) as stream:
+        steps = [json.loads(line) for line in stream if line.strip()]
     if not steps:
         sys.exit("no steps in steps_raw.jsonl")
     final = parse_final(os.path.join(args.run_dir, "recorder.log"))
@@ -409,8 +412,13 @@ def main():
         "n_control_steps": len(rows),
         "sim_time_end": last["sim_time"],
     }
+    object_identity = ({key: cfg[key] for key in ("object_name", "simulation_model", "controller_model",
+                                                "object_body_name", "object_channel_substring")}
+                       if "object_name" in cfg else {})
+    result.update(object_identity)
     json_path = os.path.join(args.run_dir, f"{args.run_id}_result.json")
-    json.dump(result, open(json_path, "w"), indent=2)
+    with open(json_path, "w") as stream:
+        json.dump(result, stream, indent=2)
 
     # ---------- manifest ----------
     try:
@@ -426,8 +434,10 @@ def main():
         "tolerances": {"pos_tol": pos_tol, "ang_tol": ang_tol},
         "generated": datetime.datetime.now().isoformat(),
     }
+    manifest.update(object_identity)
     man_path = os.path.join(args.run_dir, f"{args.run_id}_manifest.yaml")
-    yaml.safe_dump(manifest, open(man_path, "w"), sort_keys=False)
+    with open(man_path, "w") as stream:
+        yaml.safe_dump(manifest, stream, sort_keys=False)
 
     # ---------- validation ----------
     mono = all(b["control_step"] > a["control_step"]
