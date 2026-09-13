@@ -30,6 +30,9 @@ Scene config YAML schema (--scene-config):
 Outputs into --run-dir:
   RUNID_metrics.csv, RUNID_eval_metrics.png, RUNID_result.json,
   RUNID_manifest.yaml
+  The result retains summary fields and adds schema/run/hyperparameters/static/
+  dynamic sections projected from recorded data. --export-only enriches only
+  an existing result using its CSV, raw samples and saved configuration.
 
 Formulas follow results/archive/_provenance/xarm6_c3plus_scene_smoke/metrics/
 task_diagnostics_definition.md (local historical reference).
@@ -43,17 +46,22 @@ Usage:
 import argparse
 import csv
 import datetime
+import hashlib
 import json
 import math
 import os
+from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 import numpy as np
 import yaml
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+
+if __package__:
+    from .result_metadata import build_metadata
+else:
+    from result_metadata import build_metadata
 
 WT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -285,6 +293,234 @@ def parse_final(log_path):
     return final or {}
 
 
+def diagnostic_cost_parameters(cfg):
+    """Weights of this offline evaluator, separate from the native objective."""
+    return dict(q_pos=Q_POS, q_theta=Q_THETA, q_ramp_per_step=Q_RAMP_PER_STEP,
+                q_ramp_max=Q_RAMP_MAX, w_obstacle=W_OBSTACLE, obstacle_decay=OBSTACLE_DECAY,
+                w_support=W_SUPPORT, support_margin=SUPPORT_MARGIN, w_robot_effort=W_EFFORT,
+                w_approach=W_APPROACH, r0=APPROACH_R0, w_align=W_ALIGN,
+                gamma0_deg=math.degrees(ALIGN_GAMMA0), w_tilt=W_TILT,
+                w_z_tip=W_Z_TIP, w_z_tip_exp=W_Z_TIP_EXP, w_contact_z_exp=W_CONTACT_Z_EXP,
+                contact_z_slab=CONTACT_Z_SLAB, contact_z_margin=CONTACT_Z_MARGIN,
+                shaping_fade_dist=SHAPING_FADE_DIST,
+                tip_floor_z=cfg.get("tip_floor_z_real", TIP_FLOOR_Z_REAL),
+                tip_floor_scale=TIP_FLOOR_SCALE, exp_arg_max=EXP_ARG_MAX)
+
+
+def _number(value):
+    return None if value is None or value == "" else float(value)
+
+
+def _differences(values, times, angular=()):
+    """Backward estimates at recorded times; never invent an initial velocity."""
+    width = len(values[0])
+    result = [[None] * width]
+    for previous, current, t0, t1 in zip(values, values[1:], times, times[1:]):
+        dt = t1 - t0
+        row = []
+        for j, (a, b) in enumerate(zip(previous, current)):
+            if dt <= 0 or a is None or b is None or not math.isfinite(a + b):
+                row.append(None)
+            else:
+                row.append((wrap(b - a) if j in angular else b - a) / dt)
+        result.append(row)
+    return result
+
+
+def project_result(run_dir, scene, run_id, cfg, summary, steps, rows,
+                   pos_tol=0.05, ang_tol=0.1, evaluation_costs=None):
+    """Project recorded snapshots into the reference's state/interval layout.
+
+    M observed states define M-1 observed intervals. There is no synthetic t=0
+    state and no claim that a recorded effort caused the next sampled state.
+    Legacy summary fields retain their meanings; steps_run counts intervals.
+    """
+    if not rows:
+        raise ValueError("Cannot export an empty trajectory")
+    if summary.get("run_id") != run_id or summary.get("scenario") != scene:
+        raise ValueError("Result run_id/scenario does not match the requested run")
+    raw = {}
+    for step in steps:
+        channels = [ch for ch in step["objects"] if cfg["object_channel_substring"] in ch]
+        if not channels:
+            continue
+        if len(channels) != 1:
+            raise ValueError("Ambiguous manipulated object channel")
+        k = int(step["control_step"])
+        if k in raw:
+            raise ValueError("Duplicate raw control_step")
+        raw[k] = (step, step["objects"][channels[0]])
+    indices = [int(row["control_step"]) for row in rows]
+    if len(raw) != len(rows) or set(indices) != set(raw) or any(
+            b <= a for a, b in zip(indices, indices[1:])):
+        raise ValueError("CSV and raw control steps do not match in increasing order")
+    if summary.get("n_control_steps") != len(rows):
+        raise ValueError("Summary n_control_steps does not match recorded rows")
+    times, poses, poses_3d, robot_q, robot_v, efforts, tips, tilts = [], [], [], [], [], [], [], []
+    nq = len(raw[indices[0]][0]["robot_q"])
+    for k, row in zip(indices, rows):
+        step, pose = raw[k]
+        if row.get("run_id", run_id) != run_id or row.get("scenario", scene) != scene:
+            raise ValueError("CSV run_id/scenario does not match the requested run")
+        t = float(row["sim_time"])
+        if not math.isfinite(t) or not math.isclose(t, float(step["sim_time"]), abs_tol=1e-9, rel_tol=0):
+            raise ValueError("CSV and raw sim_time do not match")
+        planar = [float(row[key]) for key in ("object_x", "object_y", "object_yaw")]
+        if len(pose) < 7 or len(step["robot_q"]) != nq:
+            raise ValueError("Inconsistent raw pose or robot joint dimensions")
+        if not all(math.isfinite(v) for v in [*planar, *pose[:7], *cfg["goal"]]):
+            raise ValueError("Nonfinite object pose or goal")
+        if (not math.isclose(planar[0], pose[4], abs_tol=1e-9, rel_tol=0)
+                or not math.isclose(planar[1], pose[5], abs_tol=1e-9, rel_tol=0)
+                or abs(wrap(planar[2] - quat_yaw(pose[:4]))) > 1e-9):
+            raise ValueError("CSV and raw object poses do not match")
+        for j, key in enumerate(("goal_x", "goal_y", "goal_yaw")):
+            if key in row:
+                delta = float(row[key]) - cfg["goal"][j]
+                if not math.isfinite(delta) or abs(wrap(delta) if j == 2 else delta) > 1e-9:
+                    raise ValueError("CSV goal does not match the scene configuration")
+        times.append(t)
+        poses.append(planar)
+        poses_3d.append(list(pose[:7]))
+        robot_q.append(list(step["robot_q"]))
+        for key, target in (("robot_v", robot_v), ("robot_u", efforts)):
+            vector = step.get(key) or [None] * nq
+            if len(vector) != nq:
+                raise ValueError(f"Inconsistent {key} dimensions")
+            target.append(list(vector))
+        tips.append([_number(row.get(key)) for key in ("tip_x", "tip_y", "tip_z")])
+        roll, pitch = (_number(row.get(key)) for key in ("tip_roll", "tip_pitch"))
+        tilts.append(None if roll is None or pitch is None or not math.isfinite(roll + pitch)
+                     else math.acos(max(-1.0, min(1.0, -math.cos(roll) * math.cos(pitch)))))
+
+    n = len(rows) - 1
+    dt = [b - a for a, b in zip(times, times[1:])]
+    constant_dt = (dt[0] if dt and all(d > 0 and
+        math.isclose(d, dt[0], abs_tol=1e-6, rel_tol=1e-6) for d in dt) else None)
+    object_v = _differences(poses, times, angular=(2,))
+    robot_xy = [p[:2] for p in tips]
+    robot_xy_v = _differences(robot_xy, times)
+    object_z_v = _differences([[p[6]] for p in poses_3d], times)
+    metadata = build_metadata(run_dir, scene, run_id, cfg,
+                              {**summary, "pos_tol": pos_tol, "ang_tol": ang_tol}, n, constant_dt)
+    metadata["provenance"]["trajectory_sources"] = [
+        {"path": name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for name in ("steps_raw.jsonl", f"{run_id}_metrics.csv")
+        if (path := Path(run_dir) / name).is_file()]
+    metadata["provenance"]["evaluation_scene_config"] = cfg
+    metadata["hyperparameters"]["costs"] = evaluation_costs
+    metadata["hyperparameters"]["costs_source"] = (
+        "Saved offline diagnostic weights; native planner weights are under c3plus."
+        if evaluation_costs is not None else
+        "Historical diagnostic weights were not recorded; no current defaults substituted.")
+    metadata["static"].update(
+        qpos_size=nq + 4, qvel_size=nq + 4,
+        block_qpos_adr=[nq, nq + 1, nq + 2], block_dof_adr=[nq, nq + 1, nq + 2],
+        block_z_qpos_adr=nq + 3, block_z_dof_adr=nq + 3,
+        state_layout=[f"robot_joint_{i + 1}" for i in range(nq)] + ["object_x", "object_y", "object_yaw", "object_z"])
+    schema = {
+        "version": "c3plus-reference-projection-v1",
+        "indexing": "State arrays have steps_run+1 entries. steps_run is the number of adjacent "
+                    "recorded intervals, not executed control actions; n_control_steps counts snapshots. "
+                    "Entry 0 is the first observed state, not the initial condition. Interval arrays have "
+                    "steps_run entries; tip_z and tip_tilt use state[i+1]. No applied transition control is recorded.",
+        "frames": "object_pose=[x,y,theta] and robot_pos=tip [x,y] in world coordinates; "
+                  "object_footprint_body is in object coordinates. object_pose_3d=[qw,qx,qy,qz,x,y,z].",
+        "units": {"time": "s (simulation)", "compute_time": "s (wall)", "position": "m",
+                  "orientation": "rad", "linear_velocity": "m/s", "angular_velocity": "rad/s",
+                  "robot_joint_effort": "N m", "contact_force": "N"},
+        "sampling": "Asynchronous latest-message snapshots on C3_DEBUG_CURR. Object/robot timestamps "
+                    "were not retained individually. Times are preserved, without resampling or a synthetic t=0. "
+                    "control_dt is null unless observed intervals are constant; use dynamic.time.",
+        "velocities": "object_velocity and robot_vel are backward finite-difference estimates at actual "
+                      "sample times (yaw differences wrapped to [-pi,pi)). First estimates and nonpositive-dt "
+                      "intervals are null. Repeated cached poses may produce zero despite physical motion.",
+        "qpos": "Projected layout in static.state_layout: recorded robot joints, then object [x,y,yaw,z]. "
+                "qvel combines recorded robot joint velocities with estimated object [vx,vy,omega,vz]. "
+                "These are not Drake's complete generalized coordinates; object_pose_3d preserves quaternion pose.",
+        "controls": "robot_control contains null vectors: applied transition controls were not recorded. "
+                    "robot_joint_effort preserves published efforts at each snapshot, without action alignment.",
+        "plans": "Predicted trajectories and wrench/consensus series were not recorded and are omitted.",
+        "missing": {"robot_control": "No aligned control input recording",
+                    "compute_time": "No per-step optimization timing recording",
+                    "contact_normal_force_z": "No measured contact force recording",
+                    "robot_contact_force": "No measured contact force recording",
+                    "object_limit_surface_d": "No equivalent native C3+ limit surface parameters",
+                    "object_wrench_limit": "No equivalent native C3+ planar wrench limit"},
+        "evaluation": "evaluation_costs and diagnostic arrays are state-aligned CSV values; evaluation_total "
+                      "sums available terms only. Null denotes unavailable data, including CSV NaN. "
+                      "physical_contact_active is a planar proximity flag, not measured contact. "
+                      "Legacy success means ever meeting both tolerances, not final-state success.",
+    }
+    dynamic = dict(time=times, object_pose=poses, object_velocity=object_v,
+                   robot_pos=robot_xy, robot_vel=robot_xy_v,
+                   robot_control=[[None] * nq for _ in range(n)],
+                   qpos=[q + p + [full[6]] for q, p, full in zip(robot_q, poses, poses_3d)],
+                   qvel=[q + v + z for q, v, z in zip(robot_v, object_v, object_z_v)],
+                   compute_time=[None] * n, tip_z=[p[2] for p in tips[1:]], tip_tilt=tilts[1:],
+                   contact_normal_force_z=[None] * n, robot_contact_force=[None] * n,
+                   control_step=indices, object_pose_3d=poses_3d, robot_joint_effort=efforts,
+                   tip_z_state=[p[2] for p in tips], tip_tilt_state=tilts,
+                   evaluation_costs={key: [_number(row.get(key)) for row in rows] for key in BLOCKS})
+    for key in ("position_error_m", "orientation_error_rad", "physical_contact_active",
+                "pusher_object_gap", "min_obstacle_clearance", "evaluation_total"):
+        dynamic[key] = [_number(row.get(key)) for row in rows]
+    return {**summary, "steps_run": n, "schema": schema, **metadata, "dynamic": dynamic}
+
+
+def _json_values(value):
+    if isinstance(value, np.ndarray):
+        value = value.tolist()
+    if isinstance(value, dict):
+        return {key: _json_values(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_values(item) for item in value]
+    if isinstance(value, np.generic):
+        value = value.item()
+    return None if isinstance(value, float) and not math.isfinite(value) else value
+
+
+def write_result_json(path, result):
+    """Serialize before replacing the result, with strict JSON nulls for missing data."""
+    path = Path(path)
+    text = json.dumps(_json_values(result), indent=2, allow_nan=False) + "\n"
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
+                                         prefix=f".{path.name}.", delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(text)
+        if path.exists():
+            os.chmod(temporary, path.stat().st_mode & 0o777)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def export_existing_result(args, cfg):
+    """Enrich only the saved result JSON; never recompute metrics or run dynamics."""
+    directory = Path(args.run_dir)
+    result_path = directory / f"{args.run_id}_result.json"
+    summary = json.loads(result_path.read_text())
+    with (directory / "steps_raw.jsonl").open() as stream:
+        steps = [json.loads(line) for line in stream if line.strip()]
+    with (directory / f"{args.run_id}_metrics.csv").open() as stream:
+        rows = list(csv.DictReader(stream))
+    manifest_path = directory / f"{args.run_id}_manifest.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text()) if manifest_path.exists() else {}
+    tolerances = manifest.get("tolerances") or {}
+    final_path = directory / "recorder.log"
+    final = parse_final(final_path) if final_path.exists() else {}
+    pos_tol = tolerances.get("pos_tol", final.get("pos_tol"))
+    ang_tol = tolerances.get("ang_tol", final.get("ang_tol"))
+    costs = (manifest.get("evaluation") or {}).get("costs")
+    result = project_result(directory, args.scene, args.run_id, cfg, summary, steps, rows,
+                            pos_tol=pos_tol, ang_tol=ang_tol, evaluation_costs=costs)
+    write_result_json(result_path, result)
+    print("WROTE", result_path)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-dir", required=True)
@@ -292,10 +528,18 @@ def main():
     ap.add_argument("--run-id", required=True)
     ap.add_argument("--scene-config", required=True)
     ap.add_argument("--demo", default="")
+    ap.add_argument("--export-only", action="store_true",
+                    help="Enrich the existing result JSON from saved CSV/logs/configs; leave other artifacts untouched")
     args = ap.parse_args()
 
     with open(args.scene_config) as stream:
         cfg = yaml.safe_load(stream)
+    if args.export_only:
+        export_existing_result(args, cfg)
+        return
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
     goal = [float(v) for v in cfg["goal"]]
     sub = cfg["object_channel_substring"]
     spacing = float(cfg.get("boundary_sample_spacing", 0.002))
@@ -416,9 +660,10 @@ def main():
                                                 "object_body_name", "object_channel_substring")}
                        if "object_name" in cfg else {})
     result.update(object_identity)
+    result = project_result(args.run_dir, args.scene, args.run_id, cfg, result, steps, rows,
+                            pos_tol, ang_tol, diagnostic_cost_parameters(cfg))
     json_path = os.path.join(args.run_dir, f"{args.run_id}_result.json")
-    with open(json_path, "w") as stream:
-        json.dump(result, stream, indent=2)
+    write_result_json(json_path, result)
 
     # ---------- manifest ----------
     try:
@@ -432,6 +677,7 @@ def main():
         "files": [os.path.basename(p) for p in (csv_path, png_path, json_path)],
         "git_commit": commit,
         "tolerances": {"pos_tol": pos_tol, "ang_tol": ang_tol},
+        "evaluation": {"costs": diagnostic_cost_parameters(cfg), "source": "offline diagnostic evaluator"},
         "generated": datetime.datetime.now().isoformat(),
     }
     manifest.update(object_identity)

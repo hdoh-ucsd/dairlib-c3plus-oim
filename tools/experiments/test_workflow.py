@@ -7,11 +7,16 @@ import io
 import json
 import math
 from pathlib import Path
+import re
+import runpy
 import shlex
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
+import threading
+import types
 import unittest
 from unittest.mock import patch
 
@@ -136,6 +141,167 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(observed["cwd"], str(repo))
             self.assertEqual(observed["header"], f"{command_line}\n{cwd_line}\n")
             self.assertFalse((repo / "unexpected").exists())
+
+    def test_logged_command_forwards_only_progress_live_and_preserves_log_and_exit_code(self):
+        first = "[sugar_box] step=0010 sim=0.36s wall=1.2s pos_err=0.842m yaw_err=4.2deg within_goal=no"
+        second = "[sugar_box] step=0020 sim=0.72s wall=2.4s pos_err=0.020m yaw_err=2.9deg within_goal=yes"
+        flushed = threading.Event()
+
+        class Output(io.StringIO):
+            def flush(self):
+                if first in self.getvalue():
+                    flushed.set()
+                super().flush()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            gate = directory / "allow_exit"
+            script = directory / "progress_child.py"
+            script.write_text(
+                "import sys, time\nfrom pathlib import Path\n"
+                "print('recorder startup noise', flush=True)\n"
+                f"print({first!r}, flush=True)\n"
+                "deadline = time.monotonic() + 5\n"
+                "while not Path(sys.argv[1]).exists():\n"
+                "    if time.monotonic() > deadline: sys.exit(99)\n"
+                "    time.sleep(.01)\n"
+                "print('[GOAL-YAW] goal_yaw_degrees=90', flush=True)\n"
+                "print(' prefix [sugar_box] step=0030 ignored', flush=True)\n"
+                "print('[sugar_box] step=bad ignored', flush=True)\n"
+                "print('SUCCESS t=0.36', flush=True)\n"
+                "print('stderr details', file=sys.stderr, flush=True)\n"
+                f"print({second!r}, flush=True)\n"
+                "sys.exit(17)\n"
+            )
+            log = directory / "launcher.log"
+            output, outcomes = Output(), []
+
+            def run():
+                try:
+                    outcomes.append(R.logged_command([sys.executable, str(script), str(gate)],
+                                                     log, R.os.environ.copy()))
+                except BaseException as exc:
+                    outcomes.append(exc)
+
+            with patch.object(R, "REPO", directory), redirect_stdout(output):
+                worker = threading.Thread(target=run, daemon=True)
+                worker.start()
+                try:
+                    self.assertTrue(flushed.wait(timeout=3), "Progress was buffered until child exit")
+                    self.assertTrue(worker.is_alive(), "Child exited before its release gate")
+                    self.assertFalse(gate.exists())
+                finally:
+                    gate.touch()
+                    worker.join(timeout=6)
+            self.assertFalse(worker.is_alive())
+            self.assertEqual(outcomes, [17])
+            self.assertEqual(output.getvalue().splitlines(), [first, second])
+            lines = log.read_text().splitlines()
+            self.assertTrue(lines[0].startswith("[COMMAND] "))
+            self.assertTrue(lines[1].startswith("[CWD] "))
+            self.assertEqual(lines[2:], ["recorder startup noise", first,
+                "[GOAL-YAW] goal_yaw_degrees=90", " prefix [sugar_box] step=0030 ignored",
+                "[sugar_box] step=bad ignored", "SUCCESS t=0.36", "stderr details", second])
+
+    def test_recorder_progress_every_ten_steps_reports_current_goal_and_keeps_all_rows(self):
+        goal = [.4, -.3, math.pi - .025]
+        channel = "OBJECT_sugar_box_base_STATE_SIMULATION"
+        samples = []
+        for step in range(1, 31):
+            yaw = goal[2] + .2 if 11 <= step <= 20 else -math.pi + .025
+            x = goal[0] + (.2 if step > 20 else 0)
+            samples.append((step * 20000,
+                            [math.cos(yaw / 2), 0, 0, math.sin(yaw / 2), x, goal[1], -.029]))
+
+        def encode_string(value):
+            encoded = value.encode() + b"\0"
+            return struct.pack(">i", len(encoded)) + encoded
+
+        def robot_message(utime):
+            header = b"\0" * 8 + struct.pack(">qiii", utime, 5, 5, 5)
+            names = b"".join(encode_string(f"joint_{index}") for index in range(5))
+            return header + names + struct.pack(">5d", *range(5)) + names + \
+                struct.pack(">5d", *([.1] * 5)) + names + struct.pack(">5d", *([.2] * 5))
+
+        def object_message(utime, pose):
+            return (b"\0" * 8 + struct.pack(">q", utime) + encode_string("sugar_box_base")
+                    + struct.pack(">ii", 7, 6)
+                    + b"".join(encode_string(f"q{index}") for index in range(7))
+                    + struct.pack(">7d", *pose))
+
+        class Clock:
+            wall = 10000.0
+            monotonic = 1000.0
+
+        clock = Clock()
+
+        class FakeLcm:
+            def __init__(self, url):
+                self.index = 0
+
+            def SubscribeAllChannels(self, callback):
+                self.callback = callback
+
+            def HandleSubscriptions(self, timeout_millis):
+                if self.index >= len(samples):
+                    raise AssertionError("Recorder did not stop at its synthetic deadline")
+                utime, pose = samples[self.index]
+                self.index += 1
+                clock.monotonic = 1000.0 + .12 * self.index
+                # A wall-clock adjustment must not change the elapsed display.
+                clock.wall = 10000.0 + .2 * self.index - (3600 if self.index >= 15 else 0)
+                self.callback("FRANKA_STATE_SIMULATION", robot_message(utime))
+                self.callback(channel, object_message(utime, pose))
+                self.callback("C3_DEBUG_CURR", b"\0" * 8 + struct.pack(">q", utime))
+                if self.index == len(samples):
+                    clock.wall, clock.monotonic = 20000.0, 2000.0
+
+        pydrake = types.ModuleType("pydrake")
+        lcm = types.ModuleType("pydrake.lcm")
+        lcm.DrakeLcm = FakeLcm
+        pydrake.lcm = lcm
+        recorder = Path(__file__).with_name("record_metrics.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            steps_file, trace_file = Path(tmp) / "steps.jsonl", Path(tmp) / "trace.jsonl"
+            argv = [str(recorder), "--goal", *map(str, goal), "--object-name", "sugar_box_base",
+                    "--out-steps", str(steps_file), "--out-trace", str(trace_file),
+                    "--url", "memq://fake", "--duration", "10"]
+            output = io.StringIO()
+            with patch.dict(sys.modules, {"pydrake": pydrake, "pydrake.lcm": lcm}), \
+                    patch.object(sys, "argv", argv), patch("time.time", side_effect=lambda: clock.wall), \
+                    patch("time.monotonic", side_effect=lambda: clock.monotonic), redirect_stdout(output):
+                namespace = runpy.run_path(str(recorder), run_name="__main__")
+            try:
+                rows = [json.loads(line) for line in steps_file.read_text().splitlines()]
+                self.assertEqual(len(rows), 30)
+                self.assertEqual([row["control_step"] for row in rows], list(range(1, 31)))
+                for row, (utime, pose) in zip(rows, samples):
+                    self.assertEqual(set(row), {"control_step", "sim_time", "robot_q", "robot_v", "robot_u", "objects"})
+                    self.assertEqual(row["sim_time"], utime / 1e6)
+                    self.assertEqual(row["objects"], {channel: pose})
+                    self.assertEqual(row["robot_q"], list(range(5)))
+                    self.assertEqual(row["robot_v"], [.1] * 5)
+                    self.assertEqual(row["robot_u"], [.2] * 5)
+                pattern = re.compile(r"^\[sugar_box\] step=(\d+) sim=([\d.]+)s wall=([\d.]+)s "
+                                     r"pos_err=([\d.]+)m yaw_err=([\d.]+)deg within_goal=(yes|no)$")
+                progress = [pattern.fullmatch(line) for line in output.getvalue().splitlines()
+                            if line.startswith("[sugar_box]")]
+                self.assertEqual(len(progress), 3, output.getvalue())
+                self.assertTrue(all(progress), output.getvalue())
+                self.assertEqual([match[1] for match in progress], ["0010", "0020", "0030"])
+                self.assertEqual([float(match[2]) for match in progress], [.2, .4, .6])
+                self.assertEqual([float(match[3]) for match in progress], [1.2, 2.4, 3.6])
+                self.assertEqual([float(match[4]) for match in progress], [0, 0, .2])
+                self.assertEqual([float(match[5]) for match in progress], [2.9, 11.5, 2.9])
+                self.assertEqual([match[6] for match in progress], ["yes", "no", "no"])
+                final, = [json.loads(line[len("FINAL "):]) for line in output.getvalue().splitlines()
+                          if line.startswith("FINAL ")]
+                self.assertEqual(final["control_steps"], 30)
+                self.assertEqual(final["first_success_t"], .02)
+                self.assertEqual(sum(line.startswith("SUCCESS ") for line in output.getvalue().splitlines()), 1)
+            finally:
+                namespace["steps_f"].close()
+                namespace["trace_f"].close()
 
     def test_campaign_dry_run_never_creates_output(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -485,6 +651,80 @@ class WorkflowTests(unittest.TestCase):
                 self.assertIn(f"--controller_params={config}", call)
             self.assertIn("--goal_yaw_degrees=0", native["franka_sampling_c3_controller"])
             self.assertNotIn("--goal_yaw_degrees=0", native["franka_sim"])
+
+    def test_launcher_tees_recorder_progress_preserves_failure_and_cleans_process_groups(self):
+        if not shutil.which("setsid"):
+            self.skipTest("setsid is unavailable")
+        progress = "[sugar_box] step=0010 sim=0.36s wall=1.2s pos_err=0.842m yaw_err=4.2deg within_goal=no"
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "stub checkout"
+            launcher = repo / "tools/experiments/launch_run.sh"
+            launcher.parent.mkdir(parents=True)
+            shutil.copy2(S.TOOL_DIR / "launch_run.sh", launcher)
+            binaries = repo / "bazel-bin/examples/sampling_c3"
+            binaries.mkdir(parents=True)
+            captures = repo / "processes"
+            captures.mkdir()
+            native_source = (f"#!{sys.executable}\n"
+                "import json, os, signal, sys\nfrom pathlib import Path\n"
+                "signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))\n"
+                "record = {'pid': os.getpid(), 'pgid': os.getpgrp()}\n"
+                "path = Path(os.environ['TEST_PROCESS_CAPTURE']) / ('native_' + Path(sys.argv[0]).name + '.json')\n"
+                "path.write_text(json.dumps(record))\n"
+                "signal.pause()\n")
+            for name in S.BINARIES:
+                binary = binaries / name
+                binary.write_text(native_source)
+                binary.chmod(0o755)
+            stubs = repo / "stubs"
+            stubs.mkdir()
+            sleep = stubs / "sleep"
+            sleep.write_text("#!/bin/sh\nexit 0\n")
+            sleep.chmod(0o755)
+            python = stubs / "recorder_python"
+            python.write_text(f"#!{sys.executable}\n"
+                "import json, os, sys, time\nfrom pathlib import Path\n"
+                "directory = Path(os.environ['TEST_PROCESS_CAPTURE'])\n"
+                "(directory / 'recorder.json').write_text(json.dumps({'pid': os.getpid(), 'pgid': os.getpgrp()}))\n"
+                "deadline = time.monotonic() + 5\n"
+                "while len(list(directory.glob('native_*.json'))) != 3:\n"
+                "    if time.monotonic() > deadline: sys.exit(98)\n"
+                "    time.sleep(.01)\n"
+                f"print({progress!r}, flush=True)\n"
+                "print('synthetic recorder stderr', file=sys.stderr, flush=True)\n"
+                "print('FINAL {\"control_steps\": 10}', flush=True)\n"
+                "sys.exit(17)\n")
+            python.chmod(0o755)
+            out = repo / "output"
+            env = dict(R.os.environ, PATH=str(stubs) + ":" + R.os.environ["PATH"],
+                       PYTHON=str(python), TEST_PROCESS_CAPTURE=str(captures))
+            command = ["bash", str(launcher), "open_table_mesh_sugar_box_xarm6_t2", "sugar_box_base",
+                       ".4", "-.4", "0", "600", "19001", str(out)]
+            try:
+                result = subprocess.run(command, capture_output=True, text=True, env=env, timeout=10)
+                self.assertEqual(result.returncode, 17, result.stdout + result.stderr)
+                self.assertEqual((out / "recorder.log").read_text().splitlines(),
+                                 [progress, "synthetic recorder stderr", 'FINAL {"control_steps": 10}'])
+                for line in (progress, "synthetic recorder stderr", 'FINAL {"control_steps": 10}'):
+                    self.assertEqual(result.stdout.count(line), 1)
+                processes = [json.loads(path.read_text()) for path in captures.glob("*.json")]
+                self.assertEqual(len(processes), 4)
+                self.assertEqual(len({process["pgid"] for process in processes}), 4)
+                for process in processes:
+                    stat = Path(f"/proc/{process['pid']}/stat")
+                    if stat.exists():
+                        self.assertEqual(stat.read_text().rsplit(")", 1)[1].split()[0], "Z",
+                                         f"Stub process remained alive: {process}")
+                recorder_group = json.loads((captures / "recorder.json").read_text())["pgid"]
+                with self.assertRaises(ProcessLookupError):
+                    R.os.killpg(recorder_group, 0)
+            finally:
+                # Limit emergency cleanup to process groups created by this test.
+                for path in captures.glob("*.json"):
+                    try:
+                        R.os.killpg(json.loads(path.read_text())["pgid"], 9)
+                    except ProcessLookupError:
+                        pass
 
     def renderer(self):
         try:
