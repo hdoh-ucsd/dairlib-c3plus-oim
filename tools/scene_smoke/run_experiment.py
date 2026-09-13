@@ -14,7 +14,8 @@ import time
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "tools/relu_chomp"))
+
+# Keep the active toolchain in one folder: scene_smoke.
 import common as C
 
 SCENES = tuple(C.SCENES)
@@ -139,7 +140,7 @@ def run_one(scene, variant, start, goal, out, cap=600, port=18001,
                             "--run-dir", str(out), "--scene", scene, "--run-id", run_id,
                             "--scene-config", str(config_path), "--demo", demo],
             "render": render,
-            "cost_fig": [sys.executable, str(REPO / "tools/relu_chomp/cost_fig.py"),
+            "cost_fig": [sys.executable, str(REPO / "tools/scene_smoke/cost_fig.py"),
                          "--run-dir", str(out), "--scene", scene, "--variant", variant],
         }
         for phase, command in commands.items():
