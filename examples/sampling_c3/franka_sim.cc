@@ -224,8 +224,17 @@ int DoMain(int argc, char* argv[]) {
   int nq = plant.num_positions();
   int nv = plant.num_velocities();
 
+  // Serve the true physical scene over Meshcat when visualisation is enabled.
+  // Passing a Meshcat instance is what selects the browser-based visualiser;
+  // with the default nullptr, AddDefaultVisualization wires up only the
+  // LCM-based DrakeVisualizer, which needs drake-director and an X display.
+  // This shows the real simulated arm/object rather than the reduced-order
+  // planner view, so it does not depend on franka_visualizer.
+  std::shared_ptr<drake::geometry::Meshcat> meshcat;
   if (sim_params.visualize_drake_sim) {
-    drake::visualization::AddDefaultVisualization(&builder);
+    meshcat = std::make_shared<drake::geometry::Meshcat>();
+    drake::visualization::AddDefaultVisualization(&builder, meshcat);
+    std::cout << "Drake sim Meshcat: " << meshcat->web_url() << std::endl;
   }
 
   auto diagram = builder.Build();
