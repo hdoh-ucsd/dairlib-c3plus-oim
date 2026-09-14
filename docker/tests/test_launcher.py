@@ -1,4 +1,5 @@
 """Launcher contracts tested without a Docker daemon or expensive image build."""
+import errno
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,12 @@ class LauncherTests(unittest.TestCase):
         self.context.mkdir()
         for name in ("shell.sh", "entrypoint.sh", "Dockerfile", "requirements.txt", ".dockerignore"):
             shutil.copy2(DOCKER_DIR / name, self.context / name)
+        # Substitute only the container's absolute cache mount in our copied
+        # entrypoint, so its real filesystem checks stay inside the fixture.
+        self.cache = self.root / ".cache" / "bazel"
+        entrypoint = self.context / "entrypoint.sh"
+        entrypoint.write_text(entrypoint.read_text().replace(
+            "/home/dairlib/.cache/bazel", str(self.cache)))
         for name in ("snopt7.6.tar.gz", "gurobi10.0.3_linux64.tar.gz"):
             (self.context / name).write_bytes(b"archive input")
         self.bin = self.root / "bin"
@@ -30,6 +37,7 @@ class LauncherTests(unittest.TestCase):
         self.env.update(PATH=f"{self.bin}:{os.environ['PATH']}", MOCK_LOG=str(self.log),
                         MOCK_UID="1234", MOCK_GID="2345")
         self.executable("id", '#!/bin/bash\nif [[ "$1" == -u ]]; then echo "$MOCK_UID"; else echo "$MOCK_GID"; fi\n')
+        self.executable("sudo", '#!/bin/bash\nexec "$@"\n')
         self.executable("docker", f"#!{sys.executable}\n" + '''
 import json, os, sys
 args = sys.argv[1:]
@@ -179,12 +187,56 @@ if args[0] == "run":
 
     def test_entrypoint_writes_runtime_bazel_settings_and_forwards_status(self):
         self.executable("ip", "#!/bin/bash\nexit 0\n")
-        self.env.update(HOME=str(self.root), MOCK_UID="0", DAIRLIB_BAZEL_JOBS="3", DAIRLIB_BAZEL_RAM_MB="6000")
+        self.env.update(HOME=str(self.root), MOCK_UID=str(os.getuid()), MOCK_GID=str(os.getgid()),
+                        DAIRLIB_BAZEL_JOBS="3", DAIRLIB_BAZEL_RAM_MB="6000")
         result = subprocess.run(["bash", str(self.context / "entrypoint.sh"), "bash", "-c", "exit 9"], env=self.env)
         self.assertEqual(result.returncode, 9)
         settings = (self.root / ".bazelrc").read_text()
+        self.assertIn(f"startup --output_user_root={self.cache}", settings)
+        self.assertEqual(self.cache.stat().st_uid, os.getuid())
         self.assertIn("build --jobs=3", settings)
         self.assertIn("build --local_ram_resources=6000", settings)
+
+    @unittest.skipUnless(os.geteuid() == 0, "Requires root to model Docker's image-owned volume")
+    def test_root_entrypoint_repairs_only_image_owned_cache_root(self):
+        self.executable("ip", "#!/bin/bash\nexit 0\n")
+        self.env.update(HOME=str(self.root), MOCK_UID="0", MOCK_GID="0")
+        self.cache.mkdir(parents=True)
+        self.cache.chmod(0o755)
+        cached_file = self.cache / "existing-cache-entry"
+        cached_file.write_text("preserve cached build")
+        cached_file.chmod(0o640)
+        try:
+            os.chown(self.cache, 1000, 1000)
+        except OSError as exc:
+            if exc.errno in (errno.EINVAL, errno.EPERM):
+                self.skipTest("User namespace cannot assign the image user's UID/GID")
+            raise
+        os.chown(cached_file, 1000, 1000)
+        result = subprocess.run(["bash", str(self.context / "entrypoint.sh"), "true"],
+                                env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.cache.stat().st_uid, self.cache.stat().st_gid), (0, 0))
+        self.assertEqual(self.cache.stat().st_mode & 0o777, 0o755)
+        self.assertEqual((cached_file.stat().st_uid, cached_file.stat().st_gid), (1000, 1000))
+        self.assertEqual(cached_file.stat().st_mode & 0o777, 0o640)
+        self.assertEqual(cached_file.read_text(), "preserve cached build")
+
+    def test_nonroot_entrypoint_rejects_cache_owned_by_another_user(self):
+        self.executable("ip", "#!/bin/bash\nexit 0\n")
+        self.cache.mkdir(parents=True)
+        owner = self.cache.stat().st_uid
+        runtime_uid = str(owner + 1)
+        self.env.update(HOME=str(self.root), MOCK_UID=runtime_uid)
+        marker = self.root / "command-ran"
+        result = subprocess.run(["bash", str(self.context / "entrypoint.sh"), "touch", str(marker)],
+                                env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn(f"belongs to UID {owner}; running as UID {runtime_uid}", result.stderr)
+        self.assertIn("DAIRLIB_CACHE_VOLUME", result.stderr)
+        self.assertEqual(self.cache.stat().st_uid, owner)
+        self.assertFalse(marker.exists())
+        self.assertFalse((self.root / ".bazelrc").exists())
 
     def test_entrypoint_does_not_hide_network_setup_failure(self):
         self.executable("ip", "#!/bin/bash\nexit 4\n")

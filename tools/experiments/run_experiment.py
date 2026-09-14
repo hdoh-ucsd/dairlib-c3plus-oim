@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run and package xArm6 exponential/ReLU experiments from this checkout."""
 import argparse
+import base64
 import fcntl
 import hashlib
 import json
@@ -11,6 +12,7 @@ from pathlib import Path
 from importlib.metadata import PackageNotFoundError, version
 import re
 import shlex
+import stat
 import subprocess
 import sys
 import time
@@ -18,12 +20,14 @@ import time
 import yaml
 
 if __package__:
-    from .catalog import (BINARIES, CONFIG_DIR, MESH_OBJECTS, MODELS, OBSTACLE_COSTS, REPO,
+    from .run_artifacts import compact_run
+    from .catalog import (BINARIES, CONFIG_DIR, MESH_OBJECTS, MODELS, OBSTACLE_COSTS, REPO, RUN_OBJECTS,
                           SCENES, TOOL_DIR, demo_name, load_controller_goal,
                           compose_demo_configs, demo_config_digest, model_assets, planner_environment,
                           resolve_object_profile, write_demo_configs)
 else:
-    from catalog import (BINARIES, CONFIG_DIR, MESH_OBJECTS, MODELS, OBSTACLE_COSTS, REPO,
+    from run_artifacts import compact_run
+    from catalog import (BINARIES, CONFIG_DIR, MESH_OBJECTS, MODELS, OBSTACLE_COSTS, REPO, RUN_OBJECTS,
                          SCENES, TOOL_DIR, demo_name, load_controller_goal,
                          compose_demo_configs, demo_config_digest, model_assets, planner_environment,
                          resolve_object_profile, write_demo_configs)
@@ -112,10 +116,14 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         raise ValueError("Start/goal indices must be between 1 and 5")
     if cap <= 0 or not 1024 <= port <= 65535 or max_frames <= 0:
         raise ValueError("Invalid cap, port, or frame count")
-    if object_name is not None and object_name not in MESH_OBJECTS:
-        raise ValueError(f"Unsupported run object: {object_name}; choose one of {', '.join(MESH_OBJECTS)}")
+    if object_name is not None and object_name not in RUN_OBJECTS:
+        raise ValueError(f"Unsupported run object: {object_name}; choose one of {', '.join(RUN_OBJECTS)}")
     object_options = {"object_name": object_name} if object_name is not None else {}
     profile = resolve_object_profile(scene, repo=REPO, **object_options) if object_options else None
+    if profile is not None and object_name not in MESH_OBJECTS:
+        # Built-in objects retain the scene's existing recorder channel.
+        scene_config = yaml.safe_load((CONFIG_DIR / f"{scene}.yaml").read_text())
+        profile["object_channel_substring"] = scene_config["object_channel_substring"]
     suffix = yaw_suffix(goal_yaw_degrees)
     demo = demo_name(scene, start, goal, **object_options)
     goal_file, controller_goal = load_controller_goal(demo, repo=REPO, **object_options)
@@ -169,6 +177,72 @@ def runtime_versions():
             "container_image_id": os.environ.get("C3PLUS_CONTAINER_IMAGE_ID")}
 
 
+def capture_source_state(repo):
+    """Capture launch-time source bytes without changing the worktree or index.
+
+    The binary patch reproduces the net tracked working tree relative to HEAD;
+    staging distinctions and ignored files are not part of this source snapshot.
+    Existing binary hashes identify executables separately and do not prove they
+    were built from this captured checkout.
+    """
+    repo = Path(repo).resolve()
+
+    def git(*arguments):
+        try:
+            return subprocess.check_output(["git", "--no-optional-locks", *arguments],
+                                           cwd=repo, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError("Cannot capture source state: " +
+                               exc.stderr.decode("utf-8", errors="replace").strip()) from exc
+
+    def encoded(raw):
+        try:
+            content, encoding = raw.decode("utf-8"), "utf-8"
+        except UnicodeDecodeError:
+            content, encoding = base64.b64encode(raw).decode("ascii"), "base64"
+        return {"encoding": encoding, "content": content, "size_bytes": len(raw),
+                "sha256": hashlib.sha256(raw).hexdigest()}
+
+    if Path(os.fsdecode(git("rev-parse", "--show-toplevel")).strip()).resolve() != repo:
+        raise ValueError("Source capture requires the repository root")
+    base_commit = git("rev-parse", "HEAD").decode("ascii").strip()
+    patch_args = ("diff", "--binary", "--full-index", "--no-ext-diff", "--no-textconv", "HEAD", "--")
+    status_args = ("status", "--porcelain=v1", "--untracked-files=all", "-z")
+    source_patch = git(*patch_args)
+    status = git(*status_args)
+    untracked = {}
+    for raw_name in git("ls-files", "--others", "--exclude-standard", "-z").split(b"\0"):
+        if not raw_name:
+            continue
+        name = os.fsdecode(raw_name)
+        relative = Path(name)
+        path = repo / relative
+        if relative.is_absolute() or ".." in relative.parts or not path.parent.resolve().is_relative_to(repo):
+            raise ValueError(f"Untracked source path escapes the repository: {name}")
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            raw, kind = os.readlink(os.fsencode(path)), "symlink"
+        elif stat.S_ISREG(info.st_mode):
+            with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), "rb") as stream:
+                raw, kind = stream.read(), "file"
+        else:
+            raise ValueError(f"Cannot capture non-file untracked source: {name}")
+        after = path.lstat()
+        if (info.st_ino, info.st_mode, info.st_size, info.st_mtime_ns) != (
+                after.st_ino, after.st_mode, after.st_size, after.st_mtime_ns):
+            raise RuntimeError(f"Untracked source changed during capture: {name}")
+        untracked[name] = {"kind": kind, "mode": format(stat.S_IMODE(info.st_mode), "04o"), **encoded(raw)}
+    if (git("rev-parse", "HEAD").decode("ascii").strip() != base_commit or
+            git(*patch_args) != source_patch or git(*status_args) != status):
+        raise RuntimeError("Repository changed during source capture; retry before launching")
+    return {"format": "git-source-state/v1", "base_commit": base_commit,
+            "worktree_dirty": bool(status),
+            "scope": "Net staged and unstaged tracked changes relative to HEAD, plus nonignored "
+                     "untracked files. Git index staging and ignored files are not reproduced.",
+            "tracked_patch": encoded(source_patch), "git_status": encoded(status),
+            "untracked_files": untracked}
+
+
 def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
             goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None):
     plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
@@ -179,12 +253,13 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         raise FileExistsError(f"Refusing to overwrite existing run directory: {out}")
     config = yaml.safe_load((CONFIG_DIR / f"{scene}.yaml").read_text())
     config["goal"] = list(pose)
-    if object_name is not None:
+    if object_name in MESH_OBJECTS:
         profile = plan["object_profile"]
         config.update({key: profile[key] for key in ("footprint", "block_half_height", "tip_target_z",
                                                     "object_channel_substring")})
         if "tip_floor_z_real" in profile:
             config["tip_floor_z_real"] = profile["tip_floor_z_real"]
+    if object_name is not None:
         config.update(object_name=object_name, simulation_model=plan["simulation_model"],
                       controller_model=plan["controller_model"], object_body_name=plan["object_body_name"])
     env = environment(obstacle_cost)
@@ -200,6 +275,7 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise RuntimeError("Another managed run or packaging job is active") from exc
+        source_state = capture_source_state(REPO)
         out.mkdir(parents=True, exist_ok=False)  # Never overwrite or wipe a run.
         run_id = plan["run_id"]
         demo = plan["demo"]
@@ -208,17 +284,24 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         controller_path = write_demo_configs(demo, out / "config", repo=REPO,
                                               goal_yaw_degrees=goal_yaw_degrees,
                                               **({"object_name": object_name} if object_name is not None else {}))
+        source_bytes = (json.dumps(source_state, indent=2, allow_nan=False) + "\n").encode("utf-8")
+        source_path = out / "config/source_state.json"
+        source_path.write_bytes(source_bytes)
         status = {**plan, "runtime": runtime_versions(), "goal": pose,
                   "controller_params_file": str(controller_path),
                   "config_sha256": {str(path.relative_to(out)): hashlib.sha256(path.read_bytes()).hexdigest()
                                     for path in sorted((out / "config").rglob("*.yaml"))},
                   "execution": "serial", "python": sys.executable,
-                  "worktree_dirty": bool(subprocess.check_output(
-                      ["git", "status", "--porcelain", "--untracked-files=no"], cwd=REPO)),
+                  "worktree_dirty": source_state["worktree_dirty"],
+                  "source_state": {"path": "config/source_state.json",
+                                   "sha256": hashlib.sha256(source_bytes).hexdigest(),
+                                   "size_bytes": len(source_bytes), "base_commit": source_state["base_commit"],
+                                   "scope": source_state["scope"]},
                   "sampler_settings": {k: v for k, v in env.items() if k.startswith("SAMPLING_C3_")},
-                  "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip(),
+                  "commit": source_state["base_commit"],
                   "binary_sha256": {name: hashlib.sha256((binary_dir / name).read_bytes()).hexdigest()
                                     for name in BINARIES}}
+        (out / "runtime_status.json").write_text(json.dumps(status, indent=2) + "\n")
         started = time.monotonic()
         launch = ["bash", str(TOOL_DIR / "launch_run.sh"),
                   demo, config["object_channel_substring"], *map(str, pose),
@@ -255,7 +338,7 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
             object_sdf = REPO / simulation["object_model"]
             status["render_object_model"] = str(object_sdf)
         render = [sys.executable, str(TOOL_DIR / "render_run_3d.py"),
-                  "--trace", str(out / "state_trace.jsonl"), "--out", str(out / f"{run_id}.mp4"),
+                  "--result", str(out / f"{run_id}_result.json"), "--out", str(out / f"{run_id}.mp4"),
                   "--object-sdf", str(object_sdf), "--goal", *map(str, pose),
                   "--title", run_id, "--max-frames", str(max_frames)]
         if obs:
@@ -265,18 +348,16 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
                             "--run-dir", str(out), "--scene", scene, "--run-id", run_id,
                             "--scene-config", str(config_path), "--demo", demo],
             "render": render,
-            "cost_fig": [sys.executable, str(TOOL_DIR / "cost_fig.py"),
-                         "--run-dir", str(out), "--scene", scene, "--obstacle_cost", obstacle_cost],
         }
-        if object_name is not None:
-            commands["cost_fig"].extend(["--scene-config", str(config_path)])
         for phase, command in commands.items():
             print(f"[PACKAGE] {run_id} {phase}", flush=True)
             status[phase + "_rc"] = logged_command(command, out / f"{phase}.log", env)
             status_path.write_text(json.dumps(status, indent=2) + "\n")
             if status[phase + "_rc"]:
                 raise RuntimeError(f"{phase} failed; inspect {out / (phase + '.log')}")
-        (out / "RUN_COMPLETE").touch()
+        # Commit one validated record before deleting redundant intermediate files.
+        print(f"[PACKAGE] {run_id} consolidate and clean", flush=True)
+        compact_run(out, run_id, status=status, require_legacy_complete=False)
         print(f"[COMPLETE] {run_id} failures={status['failures']} folder={out}", flush=True)
         return status
 
@@ -284,8 +365,9 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scene", choices=SCENES, required=True)
-    parser.add_argument("--objects", nargs="+", choices=MESH_OBJECTS,
-                        help="Objects to push on open_task, in serial order; multiple objects use OUT/object_name")
+    parser.add_argument("--objects", nargs="+", choices=RUN_OBJECTS,
+                        help="Objects to push serially; T_block uses its existing scenes, "
+                             "imported meshes require open_task; multiple objects use OUT/object_name")
     parser.add_argument("--obstacle_cost", choices=OBSTACLE_COSTS, default="exponential")
     parser.add_argument("--start", type=int, choices=range(1, 6), default=1)
     parser.add_argument("--goal", type=int, choices=range(1, 6), default=1)

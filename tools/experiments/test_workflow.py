@@ -1,11 +1,14 @@
 """Read-only regression tests for the reproducible run workflow."""
 import argparse
+import base64
 import copy
 from contextlib import redirect_stderr, redirect_stdout
 import csv
+import hashlib
 import io
 import json
 import math
+import os
 from pathlib import Path
 import re
 import runpy
@@ -39,6 +42,13 @@ else:
 
 
 class WorkflowTests(unittest.TestCase):
+    def source_state_fixture(self):
+        empty = {"encoding": "utf-8", "content": "", "size_bytes": 0,
+                 "sha256": hashlib.sha256(b"").hexdigest()}
+        return {"format": "git-source-state/v1", "base_commit": "test-commit",
+                "worktree_dirty": False, "scope": "test fixture",
+                "tracked_patch": empty, "git_status": dict(empty), "untracked_files": {}}
+
     def copy_demo_configs(self, demo, destination):
         for source in S.load_demo_configs(demo):
             target = destination / source.relative_to(S.REPO)
@@ -52,6 +62,113 @@ class WorkflowTests(unittest.TestCase):
 
     def test_checkout_paths(self):
         self.assertEqual(S.REPO, Path(__file__).resolve().parents[2])
+
+    def test_source_capture_reproduces_dirty_tree_without_changing_index(self):
+        def decode(entry):
+            raw = (entry["content"].encode("utf-8") if entry["encoding"] == "utf-8"
+                   else base64.b64decode(entry["content"], validate=True))
+            self.assertEqual(len(raw), entry["size_bytes"])
+            self.assertEqual(hashlib.sha256(raw).hexdigest(), entry["sha256"])
+            return raw
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "source"
+            repo.mkdir()
+
+            def git(*args):
+                return subprocess.check_output(["git", "--no-optional-locks", *args], cwd=repo,
+                                               stderr=subprocess.PIPE)
+
+            git("init", "-q")
+            git("config", "core.fileMode", "true")
+            (repo / ".gitignore").write_text("generated/\n")
+            for name in ("staged.txt", "unstaged.txt", "both.txt", "removed.txt", "renamed.txt", "script.sh"):
+                (repo / name).write_text("first\nsecond\n")
+            (repo / "binary.dat").write_bytes(b"\0before\xff")
+            git("add", ".")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                "-c", "commit.gpgsign=false", "commit", "-qm", "base")
+            clean = R.capture_source_state(repo)
+            self.assertFalse(clean["worktree_dirty"])
+            self.assertEqual(decode(clean["tracked_patch"]), b"")
+            self.assertEqual(clean["untracked_files"], {})
+
+            (repo / "staged.txt").write_text("staged edit\n")
+            (repo / "both.txt").write_text("staged first\nsecond\n")
+            (repo / "new_tracked.txt").write_text("staged new file\n")
+            git("add", "staged.txt", "both.txt", "new_tracked.txt")
+            git("mv", "renamed.txt", "new_name.txt")
+            (repo / "both.txt").write_text("staged first\nunstaged second\n")
+            (repo / "unstaged.txt").write_text("unstaged edit\n")
+            (repo / "new_tracked.txt").write_text("staged new file\nthen unstaged edit\n")
+            (repo / "removed.txt").unlink()
+            (repo / "script.sh").chmod(0o755)
+            (repo / "binary.dat").write_bytes(b"\0after\x80\xfe")
+            (repo / "new directory").mkdir()
+            (repo / "new directory/module\nname.py").write_text("print('π')\n")
+            (repo / "new directory/data.bin").write_bytes(b"\xff\x80\0")
+            (repo / "new directory/executable").write_text("#!/bin/sh\nexit 0\n")
+            (repo / "new directory/executable").chmod(0o750)
+            outside = root / "outside.txt"
+            outside.write_text("do not follow this symlink")
+            (repo / "outside-link").symlink_to(outside)
+            (repo / "generated").mkdir()
+            (repo / "generated/ignored.txt").write_text("not part of source capture")
+            before_index = (repo / ".git/index").read_bytes()
+            before_status = git("status", "--porcelain=v1", "--untracked-files=all", "-z")
+
+            saved = R.capture_source_state(repo)
+            self.assertEqual((repo / ".git/index").read_bytes(), before_index)
+            self.assertEqual(saved["base_commit"], clean["base_commit"])
+            self.assertTrue(saved["worktree_dirty"])
+            self.assertEqual(decode(saved["git_status"]), before_status)
+            source_patch = decode(saved["tracked_patch"])
+            self.assertIn(b"GIT binary patch", source_patch)
+            self.assertEqual(set(saved["untracked_files"]), {
+                "new directory/module\nname.py", "new directory/data.bin",
+                "new directory/executable", "outside-link"})
+            self.assertEqual(saved["untracked_files"]["new directory/data.bin"]["encoding"], "base64")
+            self.assertEqual(decode(saved["untracked_files"]["outside-link"]), os.fsencode(outside))
+
+            restored = root / "restored"
+            subprocess.run(["git", "clone", "-q", "--no-local", str(repo), str(restored)],
+                           check=True, capture_output=True)
+            subprocess.run(["git", "apply", "--binary", "-"], cwd=restored, input=source_patch,
+                           check=True, capture_output=True)
+            for name, entry in saved["untracked_files"].items():
+                path = restored / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if entry["kind"] == "symlink":
+                    os.symlink(decode(entry), os.fsencode(path))
+                else:
+                    path.write_bytes(decode(entry))
+                    path.chmod(int(entry["mode"], 8))
+            names = [os.fsdecode(name) for name in git("ls-files", "-z").split(b"\0") if name]
+            for name in {*names, *saved["untracked_files"]}:
+                original, copy_path = repo / name, restored / name
+                self.assertEqual(original.is_symlink(), copy_path.is_symlink(), name)
+                self.assertEqual(original.exists(), copy_path.exists(), name)
+                if original.is_symlink():
+                    self.assertEqual(original.readlink(), copy_path.readlink(), name)
+                elif original.exists():
+                    self.assertEqual(original.read_bytes(), copy_path.read_bytes(), name)
+                    self.assertEqual(original.stat().st_mode & 0o7777, copy_path.stat().st_mode & 0o7777, name)
+            self.assertFalse((restored / "renamed.txt").exists())
+            self.assertFalse((restored / "generated").exists())
+
+    def test_source_capture_failure_prevents_output_and_launch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.copy_demo_configs("matched_single_obstacle_xarm6_t1", repo)
+            out = repo / "output"
+            with patch.object(R, "REPO", repo), patch.object(R, "BINARIES", ()), \
+                    patch.object(R, "capture_source_state", side_effect=RuntimeError("capture failed")), \
+                    patch.object(R, "logged_command") as launch, \
+                    self.assertRaisesRegex(RuntimeError, "capture failed"):
+                R.run_one("single_obstacle", "exponential", 1, 1, out)
+            launch.assert_not_called()
+            self.assertFalse(out.exists())
 
     def test_six_scene_grid(self):
         jobs = G.jobs(self.args())
@@ -395,14 +512,17 @@ class WorkflowTests(unittest.TestCase):
             def complete(scene, cost, start, goal, out, cap, port, goal_pose, **yaw):
                 plan = R.plan_run(scene, cost, start, goal, out, cap, port, goal_pose, **yaw)
                 out.mkdir(parents=True, exist_ok=False)
-                result = {"success": False, "t_success": None, "final_position_error": 0.2,
+                result = {"run_id": plan["run_id"], "scenario": scene,
+                          "success": False, "t_success": None, "final_position_error": 0.2,
                           "final_orientation_error": 0.3}
                 status = {"failures": [], "wrapper_rc": 0, "seed_verified": True,
                           "goal_yaw_verified": True, "simulation_wall_seconds": 600}
+                video = out / f"{plan['run_id']}.mp4"
+                video.write_bytes(b"validated video fixture")
+                result.update(runtime_status=status, package={"status": "complete", "cleanup_complete": True,
+                    "video": {"file": video.name, "size_bytes": video.stat().st_size,
+                              "sha256": R.hashlib.sha256(video.read_bytes()).hexdigest()}})
                 (out / f"{plan['run_id']}_result.json").write_text(json.dumps(result))
-                (out / "runtime_status.json").write_text(json.dumps(status))
-                (out / f"{plan['run_id']}.mp4").touch()
-                (out / "RUN_COMPLETE").touch()
                 completed.append(plan["run_id"])
                 if len(completed) == 1:
                     (root / "STOP_AFTER_CURRENT").touch()
@@ -495,7 +615,8 @@ class WorkflowTests(unittest.TestCase):
 
                 with patch.object(R, "REPO", repo), patch.object(R, "BINARIES", ()), \
                         patch.object(R, "logged_command", side_effect=logged), \
-                        patch.object(R.subprocess, "check_output", side_effect=lambda cmd, **kw: "test" if kw.get("text") else b""):
+                        patch.object(R, "compact_run") as compact, \
+                        patch.object(R, "capture_source_state", return_value=self.source_state_fixture()):
                     if condition == "correct":
                         status = R.run_one("single_obstacle", "relu", 2, 2, out, goal_yaw_degrees=yaw)
                         self.assertTrue(status["goal_yaw_verified"])
@@ -504,7 +625,8 @@ class WorkflowTests(unittest.TestCase):
                             R.run_one("single_obstacle", "relu", 2, 2, out, goal_yaw_degrees=yaw)
                 saved = json.loads((out / "runtime_status.json").read_text())
                 self.assertEqual(saved["goal_yaw_degrees"], yaw)
-                self.assertEqual((out / "RUN_COMPLETE").exists(), condition == "correct")
+                self.assertEqual(compact.call_count, int(condition == "correct"))
+                self.assertFalse((out / "RUN_COMPLETE").exists())
                 self.assertEqual(phases[0][1][-1], str(yaw))
                 self.assertEqual(phases[0][1][-2], "--goal-yaw-degrees")
                 self.assertIn("--controller-params", phases[0][1])
@@ -555,17 +677,31 @@ class WorkflowTests(unittest.TestCase):
                         (out / name).write_text("test-data")
                 return 0
 
-            def git(command, **kwargs):
-                return "test-commit" if kwargs.get("text") else b""
+            def capture(repo_path):
+                self.assertEqual(repo_path, repo)
+                self.assertFalse(out.exists())
+                saved = self.source_state_fixture()
+                saved["worktree_dirty"] = True
+                return saved
 
             with patch.object(R, "REPO", repo), patch.object(R, "BINARIES", ()), \
                     patch.object(R, "logged_command", side_effect=logged), \
+                    patch.object(R, "compact_run") as compact, \
                     patch.dict(R.os.environ, {"C3PLUS_CONTAINER_IMAGE": "test:tag",
                                               "C3PLUS_CONTAINER_IMAGE_ID": "sha256:test",
                                               "SAMPLING_C3_OBS_BOXES": "stale"}), \
-                    patch.object(R.subprocess, "check_output", side_effect=git):
+                    patch.object(R, "capture_source_state", side_effect=capture) as capture_call:
                 status = R.run_one("single_obstacle", "exponential", 1, 1, out)
-            self.assertTrue((out / "RUN_COMPLETE").is_file())
+            capture_call.assert_called_once_with(repo)
+            source_bytes = (out / "config/source_state.json").read_bytes()
+            self.assertEqual(status["source_state"]["sha256"], hashlib.sha256(source_bytes).hexdigest())
+            self.assertEqual(status["source_state"]["size_bytes"], len(source_bytes))
+            self.assertEqual(status["source_state"]["path"], "config/source_state.json")
+            self.assertEqual(status["commit"], "test-commit")
+            self.assertTrue(status["worktree_dirty"])
+            compact.assert_called_once_with(out, status["run_id"], status=status,
+                                            require_legacy_complete=False)
+            self.assertFalse((out / "RUN_COMPLETE").exists())
             self.assertEqual(status["runtime"]["container_image"], "test:tag")
             self.assertEqual(status["runtime"]["container_image_id"], "sha256:test")
             self.assertEqual(status["goal"], status["controller_goal"])
@@ -583,8 +719,8 @@ class WorkflowTests(unittest.TestCase):
             render = next(command for phase, command, _ in calls if phase == "render.log")
             index = render.index("--goal")
             self.assertEqual(render[index + 1:index + 4], list(map(str, status["goal"])))
-            cost_figure = next(command for phase, command, _ in calls if phase == "cost_fig.log")
-            self.assertEqual(cost_figure[-2:], ["--obstacle_cost", "exponential"])
+            self.assertEqual(render[render.index("--result") + 1], str(out / f"{status['run_id']}_result.json"))
+            self.assertEqual([phase for phase, _, _ in calls], ["launcher.log", "postprocess.log", "render.log"])
 
     def test_launcher_requires_config_support_in_each_native_binary(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1008,6 +1144,9 @@ class WorkflowTests(unittest.TestCase):
             done = Path(tmp) / "exponential/open_task/s01g01"
             done.mkdir(parents=True)
             (done / "RUN_COMPLETE").touch()
+            run_id = "exponential_open_task_s01g01_seed42"
+            (done / f"{run_id}_result.json").write_text(json.dumps({"run_id": run_id}))
+            (done / f"{run_id}.mp4").write_bytes(b"legacy video fixture")
             argv = ["run_grid_campaign.py", "--output-root", tmp,
                     "--scenes", "open_task", "--resume"]
             with patch("sys.argv", argv), patch.object(G, "run_one", return_value={"failures": []}) as run:

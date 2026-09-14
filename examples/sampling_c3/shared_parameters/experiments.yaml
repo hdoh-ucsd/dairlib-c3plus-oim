@@ -111,7 +111,7 @@ defaults:
 # Imported objects share the open-table poses and one controller profile.
 # Mass, collision approximations, and evaluation geometry are recorded with the assets.
 mesh_object_defaults: &mesh_object_defaults
-  extends: Tblock
+  extends: T_block
   object_height: -0.029
   sampling_c3_options_file: examples/sampling_c3/shared_parameters/profiles/mesh_objects/sampling_c3plus_options.yaml
   sampling_params_file: examples/sampling_c3/shared_parameters/profiles/mesh_objects/sampling_params.yaml
@@ -119,7 +119,7 @@ mesh_object_defaults: &mesh_object_defaults
 
 # Default independent selections for start/goal indices 1 through 5.
 object_profiles:
-  Tblock:
+  T_block:
     controller_model: examples/sampling_c3/urdf/push_t_oimscale_m01_control.sdf
     simulation_model: examples/sampling_c3/urdf/push_t_oimscale_m01.sdf
     object_body_name: vertical_link
@@ -211,14 +211,14 @@ object_profiles:
 # Slalom inherits shelf-gap goal choices and changes only its differing poses.
 scenes:
   open_task:
-    object_profile: Tblock
+    object_profile: T_block
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/open_task/scenario_params.yaml
     visualize_pairs: [[1, 1]]
   single_obstacle:
-    object_profile: Tblock
+    object_profile: T_block
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/single_obstacle/scenario_params.yaml
   shelf_gap:
-    object_profile: Tblock
+    object_profile: T_block
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/shelf_gap/scenario_params.yaml
     goal_positions:
       2: t_shape_g03
@@ -231,7 +231,7 @@ scenes:
       4: t_shape_g05
       5: shelf_gap_g05
   ycb_clutter:
-    object_profile: Tblock
+    object_profile: T_block
     scenario_params_file: examples/sampling_c3/shared_parameters/scenes/ycb_clutter/scenario_params.yaml
     goal_orientations:
       2: ycb_clutter_g02

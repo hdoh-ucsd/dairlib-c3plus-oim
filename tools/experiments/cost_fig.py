@@ -2,6 +2,8 @@
 """Per-run cost-diagnostics figure for the relu/exponential grid runs.
 
 Standalone cost reconstruction, independent of historical campaign layouts.
+Loads the run's metrics CSV or consolidated result JSON, and uses embedded
+evaluation scene geometry when the original files have been compacted.
 
 --obstacle_cost exponential: obstacle curve = exp reconstruction
     sum_obs 5000*exp(-(d_center - r)/0.04)   (object CENTER distance)
@@ -12,6 +14,7 @@ Usage: cost_fig.py --run-dir DIR --scene SCENE --obstacle_cost exponential|relu
 """
 import argparse
 import csv
+import json
 import math
 import os
 from pathlib import Path
@@ -36,9 +39,12 @@ BODY_POINT_SPACING = 0.005  # 5 mm along the footprint boundary (object frame).
 
 
 def load_scene(scene, scene_config=None):
-    path = Path(scene_config) if scene_config is not None else CONFIG_DIR / f"{scene}.yaml"
-    with path.open() as f:
-        cfg = yaml.safe_load(f)
+    if isinstance(scene_config, dict):
+        cfg = scene_config
+    else:
+        path = Path(scene_config) if scene_config is not None else CONFIG_DIR / f"{scene}.yaml"
+        with path.open() as f:
+            cfg = yaml.safe_load(f)
     obs = cfg.get("obstacles") or {}
     return {
         "footprint": [tuple(map(float, v)) for v in cfg["footprint"]],
@@ -95,11 +101,49 @@ def wrap(a):
     return (a + np.pi) % (2 * np.pi) - np.pi
 
 
-def read_metrics(run_dir):
-    fns = [f for f in os.listdir(run_dir) if f.endswith("_metrics.csv")]
+def load_saved_result(run_dir, required=False):
+    paths = sorted(Path(run_dir).glob("*_result.json"))
+    if len(paths) > 1:
+        raise ValueError(f"Multiple result JSON files in {run_dir}; select a single-run directory")
+    if not paths:
+        if required:
+            raise ValueError(f"No *_metrics.csv or *_result.json in {run_dir}")
+        return None
+    result = json.loads(paths[0].read_text())
+    if result.get("run_id") != paths[0].name[:-len("_result.json")]:
+        raise ValueError("Result run_id does not match its filename")
+    return result
+
+
+def read_metrics(run_dir, saved_result=None):
+    """Load legacy CSV or project the consolidated JSON entirely in memory."""
+    fns = sorted(f.name for f in Path(run_dir).glob("*_metrics.csv"))
+    if len(fns) > 1:
+        raise ValueError(f"Multiple metrics CSV files in {run_dir}; select a single-run directory")
     if not fns:
-        raise SystemExit(f"no *_metrics.csv in {run_dir} "
-                         "(run postprocess_run.py first)")
+        result = saved_result if saved_result is not None else load_saved_result(run_dir, required=True)
+        dynamic, static = result.get("dynamic") or {}, result.get("static") or {}
+        poses = np.asarray(dynamic.get("object_pose"), dtype=float)
+        goal = np.asarray(static.get("goal"), dtype=float)
+        if poses.ndim != 2 or poses.shape[1] != 3 or len(poses) == 0 or goal.shape != (3,):
+            raise ValueError("Result requires recorded dynamic.object_pose and static.goal")
+        if not np.isfinite(poses).all() or not np.isfinite(goal).all():
+            raise ValueError("Result object poses and goal must contain finite values")
+        count = len(poses)
+        steps = np.asarray(dynamic.get("control_step"), dtype=float)
+        if steps.shape != (count,) or not np.isfinite(steps).all():
+            raise ValueError("Result control_step must align with recorded object poses")
+        data = {"control_step": steps,
+                **{name: poses[:, index] for index, name in enumerate(("object_x", "object_y", "object_yaw"))},
+                **{name: np.full(count, goal[index]) for index, name in enumerate(("goal_x", "goal_y", "goal_yaw"))}}
+        estimates = {"position_error_m": np.linalg.norm(poses[:, :2] - goal[:2], axis=1),
+                     "orientation_error_rad": np.abs(wrap(poses[:, 2] - goal[2]))}
+        for name, estimate in estimates.items():
+            values = np.asarray(dynamic[name], dtype=float) if name in dynamic else estimate
+            if values.shape != (count,):
+                raise ValueError(f"Result {name} must align with recorded object poses")
+            data[name] = values
+        return result["run_id"], data
     fn = fns[0]
     cols = ["control_step", "object_x", "object_y", "object_yaw", "goal_x",
             "goal_y", "goal_yaw", "position_error_m", "orientation_error_rad"]
@@ -110,6 +154,27 @@ def read_metrics(run_dir):
                 data[c].append(float(row[c]))
     return fn[:-len("_metrics.csv")], {c: np.asarray(v)
                                        for c, v in data.items()}
+
+
+def saved_scene_config(run_dir, scene, explicit=None, saved_result=None):
+    """Use saved scene geometry for compacted results, without current defaults."""
+    if explicit is not None:
+        return explicit
+    result = saved_result if saved_result is not None else load_saved_result(run_dir)
+    if result is not None:
+        if result.get("scenario") != scene:
+            raise ValueError("Requested scene does not match the saved result")
+        embedded = (result.get("provenance") or {}).get("evaluation_scene_config")
+        if embedded is not None:
+            if not isinstance(embedded, dict):
+                raise ValueError("Saved evaluation_scene_config must be a mapping")
+            return embedded
+    local = Path(run_dir) / "evaluation_scene_config.yaml"
+    if local.is_file():
+        return local
+    if not any(Path(run_dir).glob("*_metrics.csv")):
+        raise ValueError("Compacted result has no saved evaluation scene configuration; supply --scene-config")
+    return None  # Preserve legacy CSV-only behavior.
 
 
 def obs_curve(obstacle_cost, scene, x, y, yaw, scene_config=None):
@@ -147,7 +212,7 @@ def obs_curve(obstacle_cost, scene, x, y, yaw, scene_config=None):
     return RELU_W * np.maximum(0.0, (RELU_EPS - d_fp) / RELU_EPS) ** 2, True
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-dir", required=True)
     ap.add_argument("--scene", required=True, choices=SCENES)
@@ -155,8 +220,10 @@ def main():
                     help="Saved evaluation_scene_config.yaml for the selected object and goal")
     ap.add_argument("--obstacle_cost", required=True,
                     choices=OBSTACLE_COSTS)
-    a = ap.parse_args()
-    stem, m = read_metrics(a.run_dir)
+    a = ap.parse_args(argv)
+    saved_result = load_saved_result(a.run_dir)
+    stem, m = read_metrics(a.run_dir, saved_result)
+    scene_config = saved_scene_config(a.run_dir, a.scene, a.scene_config, saved_result)
     k = m["control_step"]
     epos = m["position_error_m"]
     eth = m["orientation_error_rad"]
@@ -171,7 +238,7 @@ def main():
     j_rot = np.where(latched, W_ROT_POST * eyaw**2, W_ROT_PRE * eyaw**2)
     j_task = j_trans + j_rot
     j_obs, has_obs = obs_curve(a.obstacle_cost, a.scene, m["object_x"],
-                               m["object_y"], m["object_yaw"], a.scene_config)
+                               m["object_y"], m["object_yaw"], scene_config)
     obs_label = ("obstacle_ReLU" if a.obstacle_cost == "relu" else "obstacle") + \
         ("" if has_obs else " (no obstacles)")
 
