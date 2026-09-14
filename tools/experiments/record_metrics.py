@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Scene-smoke recorder: one raw row per C3+ control step (C3_DEBUG_CURR msg).
+"""Snapshot recorder: one raw row per received C3_DEBUG_CURR message after readiness.
 
-Passive instrumentation only. Subscribes to all channels; on every planner
-solve tick it snapshots the latest robot joints and every OBJECT_*_STATE
+Passive instrumentation only. Subscribes to all channels; on each debug
+message it snapshots the latest robot joints and every OBJECT_*_STATE
 pose. Errors/costs are computed offline by postprocess_run.py.
 
 Also writes a 10 Hz state_trace.jsonl compatible with the existing 3D
-renderer, prints progress every 10 recorded controller steps, and prints
-SUCCESS/FINAL summary lines.
+renderer, prints progress every 10 recorded snapshots, and prints
+SUCCESS/FINAL summary lines. The control_step field counts these snapshots;
+native physical execution boundaries live in sim.log; planning updates in planner.log.
 """
 import argparse, json, math, struct, time
 from pathlib import Path
@@ -29,6 +30,8 @@ p.add_argument('--ang-tol', type=float, default=0.1)
 p.add_argument('--exit-on-success', action='store_true')
 p.add_argument('--settle', type=float, default=5.0,
                help='extra seconds recorded after first success')
+p.add_argument('--stop-file', type=Path,
+               help='native completion marker for an explicitly configured execution-step budget')
 args = p.parse_args()
 
 
@@ -171,18 +174,26 @@ def on_step():
 
 lc = DrakeLcm(args.url)
 lc.SubscribeAllChannels(handle)
+def budget_finished():
+    return args.stop_file is not None and args.stop_file.is_file()
+
 deadline = time.time() + args.duration
 while time.time() < deadline:
     lc.HandleSubscriptions(timeout_millis=500)
+    if budget_finished():
+        break
     if args.exit_on_success and S['first_success_t'] is not None:
         t_end = time.time() + args.settle
         while time.time() < t_end:
             lc.HandleSubscriptions(timeout_millis=200)
+            if budget_finished():
+                break
         break
 steps_f.flush(); trace_f.flush()
 print("FINAL " + json.dumps({
     'first_success_t': S['first_success_t'], 'control_steps': S['step'],
     'best_pos_err': S['best_pos'], 'best_ang_err': S['best_ang'],
-    'termination_reason': ('goal_reached' if args.exit_on_success and S['first_success_t'] is not None
+    'termination_reason': ('execution_step_budget' if budget_finished() else
+                           'goal_reached' if args.exit_on_success and S['first_success_t'] is not None
                            else 'wall_time_cap'),
     'pos_tol': args.pos_tol, 'ang_tol': args.ang_tol}), flush=True)

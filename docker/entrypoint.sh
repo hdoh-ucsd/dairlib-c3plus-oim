@@ -3,14 +3,16 @@ set -euo pipefail
 
 # Every simulation process must live in this one network namespace. Fail early
 # if --cap-add NET_ADMIN is missing instead of silently losing LCM messages.
-if [[ "$(id -u)" == 0 ]]; then
-    ip link set lo multicast on
-    ip route replace 224.0.0.0/4 dev lo
+network_prefix=()
+if [[ "$(id -u)" != 0 ]]; then network_prefix=(sudo); fi
+if "${network_prefix[@]}" ip link set lo multicast on && \
+        "${network_prefix[@]}" ip route replace 224.0.0.0/4 dev lo; then
+    :
 else
-    sudo ip link set lo multicast on
-    sudo ip route replace 224.0.0.0/4 dev lo
+    status=$?
+    echo 'Cannot configure LCM multicast. Start the container with docker/shell.sh (NET_ADMIN is required).' >&2
+    exit "$status"
 fi
-
 jobs="${DAIRLIB_BAZEL_JOBS:-8}"
 ram="${DAIRLIB_BAZEL_RAM_MB:-14000}"
 for value in "$jobs" "$ram"; do
@@ -40,16 +42,24 @@ if [[ "$cache_uid" != "$runtime_uid" ]]; then
         exit 2
     fi
 fi
+if [[ ! -w "$bazel_cache" || ! -x "$bazel_cache" ]]; then
+    echo "Bazel cache $bazel_cache is not writable by UID $runtime_uid. Use a writable UID/GID-specific cache volume." >&2
+    exit 2
+fi
 
 # This file lives in the disposable container, outside the host checkout.
 # CFS quotas do not reliably change nproc, so explicitly cap Bazel concurrency.
-cat > "$HOME/.bazelrc" <<EOF
+if ! cat > "$HOME/.bazelrc" <<EOF
 startup --output_user_root=$bazel_cache
 startup --host_jvm_args=-Xmx2g
 build --jobs=$jobs
-build --local_ram_resources=$ram
+build --local_resources=memory=$ram
 build --verbose_failures
 EOF
+then
+    echo "Cannot write $HOME/.bazelrc; the container user's home must be writable." >&2
+    exit 2
+fi
 
 if [[ $# -eq 0 ]]; then set -- bash; fi
 exec "$@"

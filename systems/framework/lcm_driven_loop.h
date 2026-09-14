@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -233,8 +234,11 @@ class LcmDrivenLoop {
   /// time). `max_loops` optionally caps the number of loop iterations -- one
   /// iteration is one control step of the driven diagram. A negative value
   /// (the default) means unlimited, so existing callers are unaffected.
+  /// `on_step_published`, when provided, observes each completed forced
+  /// publication after a driven update. It is not called for periodic events.
   void Simulate(double end_time = std::numeric_limits<double>::infinity(),
-                int max_loops = -1) {
+                int max_loops = -1,
+                std::function<void()> on_step_published = {}) {
     // Get mutable contexts
     auto& diagram_context = simulator_->get_mutable_context();
 
@@ -356,6 +360,9 @@ class LcmDrivenLoop {
         if (is_forced_publish_) {
           // Force-publish via the diagram
           diagram_ptr_->ForcedPublish(diagram_context);
+          if (on_step_published) {
+            on_step_published();
+          }
         }
         // Clear messages in the current input channel
         name_to_input_sub_map_.at(active_channel_).clear();
@@ -387,6 +394,9 @@ class LcmDrivenLoop {
         if (is_forced_publish_) {
           // Force-publish via the diagram
           diagram_ptr_->ForcedPublish(diagram_context);
+          if (on_step_published) {
+            on_step_published();
+          }
         }
 
         // Clear messages in the switch channel

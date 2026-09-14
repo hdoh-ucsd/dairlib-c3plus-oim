@@ -108,7 +108,7 @@ def verify_goal_yaw(log, plan):
 
 
 def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
-             goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None):
+             goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None):
     """Validate inputs and describe a run without launching or writing files."""
     if scene not in SCENES or obstacle_cost not in OBSTACLE_COSTS:
         raise ValueError("Unknown scene or obstacle cost")
@@ -116,6 +116,8 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
         raise ValueError("Start/goal indices must be between 1 and 5")
     if cap <= 0 or not 1024 <= port <= 65535 or max_frames <= 0:
         raise ValueError("Invalid cap, port, or frame count")
+    if steps is not None and (type(steps) is not int or steps <= 0):
+        raise ValueError("--steps must be a positive execution-step budget")
     if object_name is not None and object_name not in RUN_OBJECTS:
         raise ValueError(f"Unsupported run object: {object_name}; choose one of {', '.join(RUN_OBJECTS)}")
     object_options = {"object_name": object_name} if object_name is not None else {}
@@ -152,6 +154,8 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
                                                         **object_options),
             "out": str(Path(out).resolve()), "wall_cap_seconds": cap, "port": port,
             "max_frames": max_frames}
+    if steps is not None:
+        plan["execution_step_budget"] = steps
     if goal_yaw_degrees is not None:
         plan.update(goal_yaw_degrees=int(goal_yaw_degrees), source_controller_goal=source_controller_goal)
     if profile is not None:
@@ -244,9 +248,9 @@ def capture_source_state(repo):
 
 
 def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
-            goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None):
+            goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None):
     plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
-                    goal_yaw_degrees, object_name)
+                    goal_yaw_degrees, object_name, steps)
     pose = plan["evaluation_goal"]
     out = Path(out).resolve()
     if out.exists():
@@ -264,7 +268,7 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
                       controller_model=plan["controller_model"], object_body_name=plan["object_body_name"])
     env = environment(obstacle_cost)
     env.update(planner_environment(config))
-    binary_dir = REPO / "bazel-bin/examples/sampling_c3"
+    binary_dir = REPO / ".build/bin/examples/sampling_c3"
     for name in BINARIES:
         if not os.access(binary_dir / name, os.X_OK):
             raise RuntimeError(f"Build {name} from this checkout first")
@@ -308,6 +312,8 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
                   str(cap), str(port), str(out), "--controller-params", str(controller_path)]
         if goal_yaw_degrees is not None:
             launch.extend(["--goal-yaw-degrees", str(plan["goal_yaw_degrees"])])
+        if steps is not None:
+            launch.extend(["--steps", str(steps)])
         rc = logged_command(launch, out / "launcher.log", env)
         # A launcher preflight failure happens before process logs exist.
         # Preserve its actual error without masking it with a missing-file error.
@@ -375,6 +381,7 @@ def main(argv=None):
                         help="Absolute world yaw; preserve the indexed goal position")
     parser.add_argument("--seed", type=int, choices=[42], default=42)
     parser.add_argument("--cap", type=int, default=600, help="Recorder wall-time cap, seconds")
+    parser.add_argument("--steps", type=int, help="Maximum actually applied outer policies, including reposition; default unlimited")
     parser.add_argument("--port", type=int, default=18001)
     parser.add_argument("--out", type=Path, required=True, help="New directory; existing dirs are refused")
     parser.add_argument("--max-frames", type=int, default=1200)
@@ -385,6 +392,8 @@ def main(argv=None):
         if len(set(selected)) != len(selected):
             raise ValueError("--objects must not contain duplicates")
         options = dict(max_frames=args.max_frames, goal_yaw_degrees=args.goal_yaw_degrees)
+        if args.steps is not None:
+            options["steps"] = args.steps
         jobs = [(name, args.out / name if len(selected) > 1 else args.out) for name in selected]
         plans = [plan_run(args.scene, args.obstacle_cost, args.start, args.goal,
                           out, args.cap, args.port, **options,

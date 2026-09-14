@@ -30,6 +30,9 @@
 # Default to an optimized build.
 build -c opt
 
+# Group convenience links here; build data stays in Bazel's output/cache root.
+build --symlink_prefix=.build/
+
 # Default build options.
 build:linux --force_pic
 build --strip=never

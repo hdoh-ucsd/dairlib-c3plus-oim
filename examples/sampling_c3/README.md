@@ -19,7 +19,7 @@ positions, goal positions, and orientations, with shared object profiles and
 scene overrides. The runner composes each trial's native YAMLs in its output
 directory and passes `--controller_params` to the native processes. The 150
 matched demo names remain identifiers without individual directories. Three
-`push_t_bt010_*_xarm6` entrypoints remain for the root `bash_run.sh` workflow;
+`push_t_bt010_*_xarm6` configuration directories remain for native compatibility;
 omitting `--controller_params` retains the legacy `--demo_name` file lookup.
 
 The copied Procman launch files targeted retired demos and have been removed.

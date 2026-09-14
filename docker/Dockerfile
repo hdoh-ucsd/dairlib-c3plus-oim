@@ -9,7 +9,7 @@
 #
 # Use docker/shell.sh -- it builds this image on first use and drops you in.
 #
-FROM ubuntu:noble
+FROM ubuntu:noble@sha256:224a1869083a311ef3f13648a154ba79832fbef6364d31493642ca03082da254
 
 # Keep in sync with MODULE.bazel (DRAKE_VERSION) and .bazeliskrc.
 ARG DRAKE_VERSION=1.51.1

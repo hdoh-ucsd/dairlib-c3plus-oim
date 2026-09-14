@@ -1,5 +1,6 @@
 #include <math.h>
 #include <algorithm>
+#include <csignal>
 #include <vector>
 
 #include <drake/geometry/geometry_roles.h>
@@ -25,6 +26,7 @@
 #include "common/eigen_utils.h"
 #include "common/find_resource.h"
 #include "examples/sampling_c3/sampling_c3_utils.h"
+#include "examples/sampling_c3/execution_boundary_logger.h"
 #include "examples/sampling_c3/parameter_headers/sampling_c3_controller_params.h"
 #include "examples/sampling_c3/parameter_headers/sampling_c3_options.h"
 #include "examples/sampling_c3/parameter_headers/lcm_channels.h"
@@ -68,8 +70,20 @@ DEFINE_bool(matched_mu, false,
             "Override collision friction to match the OIM MJX benchmark: "
             "object 0.3, ground/platform 0.3, end-effector 1.5 "
             "(harmonic pairs: T-table 0.3, EE-T 0.5).");
+DEFINE_bool(execution_logging, false,
+            "Record exact physical boundaries of adopted planner policies.");
+DEFINE_int64(execution_step_budget, -1,
+             "Optional maximum adopted execution policies; -1 is unlimited.");
+DEFINE_string(execution_stop_file, "",
+              "Optional completion marker for an explicit execution budget.");
 
 namespace {
+
+volatile std::sig_atomic_t execution_stop_signal = 0;
+
+void RequestExecutionStop(int signal_number) {
+  execution_stop_signal = signal_number;
+}
 
 // Re-assigns the CoulombFriction of every collision geometry on `body` via
 // the scene graph's proximity properties (RoleAssign::kReplace).
@@ -98,6 +112,12 @@ void SetBodyFriction(const drake::multibody::MultibodyPlant<double>& plant,
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  if (FLAGS_execution_step_budget != -1 && FLAGS_execution_step_budget < 1) {
+    throw std::runtime_error("execution_step_budget must be positive or -1");
+  }
+  if (!FLAGS_execution_logging && FLAGS_execution_step_budget > 0) {
+    throw std::runtime_error("execution_step_budget requires execution_logging");
+  }
 
   // Load parameters.
   std::string controller_params_path =
@@ -204,10 +224,12 @@ int DoMain(int argc, char* argv[]) {
   drake::lcm::DrakeLcm drake_lcm(FLAGS_lcm_url);
   auto lcm =
       builder.AddSystem<drake::systems::lcm::LcmInterfaceSystem>(&drake_lcm);
+  const drake::systems::OutputPort<double>* command_message_output = nullptr;
   AddActuationRecieverAndStateSenderLcm(
       &builder, plant, lcm, lcm_channel_params.franka_input_channel,
       lcm_channel_params.franka_state_channel, sim_params.franka_publish_rate,
-      franka_index, sim_params.publish_efforts, sim_params.actuator_delay);
+      franka_index, sim_params.publish_efforts, sim_params.actuator_delay,
+      &command_message_output);
   
   std::vector<systems::ObjectStateSender*> object_state_senders;
   std::vector<LcmPublisherSystem*> object_state_pubs;
@@ -242,6 +264,21 @@ int DoMain(int argc, char* argv[]) {
     std::cout << "Drake sim Meshcat: " << meshcat->web_url() << std::endl;
   }
 
+  // Added last so its observation follows successful calculations of the
+  // existing systems while still reading the same pre-update Context.
+  ExecutionBoundaryLogger* execution_logger = nullptr;
+  if (FLAGS_execution_logging) {
+    execution_logger = builder.AddSystem<ExecutionBoundaryLogger>(
+        plant, franka_index, object_indices,
+        std::vector<std::string>(lcm_channel_params.object_state_channels.begin(),
+                                 lcm_channel_params.object_state_channels.begin() +
+                                     num_objects),
+        sim_params.actuator_delay, FLAGS_execution_step_budget,
+        FLAGS_execution_stop_file);
+    builder.Connect(plant.get_state_output_port(), execution_logger->state_input());
+    builder.Connect(*command_message_output, execution_logger->command_input());
+  }
+
   auto diagram = builder.Build();
 
   drake::systems::Simulator<double> simulator(*diagram);
@@ -249,6 +286,22 @@ int DoMain(int argc, char* argv[]) {
   simulator.set_publish_every_time_step(false);
   simulator.set_publish_at_initialization(false);
   simulator.set_target_realtime_rate(sim_params.realtime_rate);
+
+  if (execution_logger != nullptr) {
+    execution_stop_signal = 0;
+    std::signal(SIGTERM, RequestExecutionStop);
+    std::signal(SIGINT, RequestExecutionStop);
+    simulator.set_monitor([&](const Context<double>& context) {
+      if (execution_stop_signal != 0) {
+        execution_logger->LogTerminal(
+            diagram->GetSubsystemContext(*execution_logger, context),
+            "shutdown", execution_stop_signal);
+        return drake::systems::EventStatus::ReachedTermination(
+            execution_logger, "execution observation ended on shutdown");
+      }
+      return drake::systems::EventStatus::Succeeded();
+    });
+  }
 
   auto& plant_context = diagram->GetMutableSubsystemContext(
       plant, &simulator.get_mutable_context());
@@ -270,7 +323,13 @@ int DoMain(int argc, char* argv[]) {
   plant.SetVelocities(&plant_context, v);
 
   simulator.Initialize();
-  simulator.AdvanceTo(std::numeric_limits<double>::infinity());
+  try {
+    simulator.AdvanceTo(std::numeric_limits<double>::infinity());
+  } catch (const ExecutionStepBudgetReached&) {
+    execution_logger->LogTerminal(
+        diagram->GetSubsystemContext(*execution_logger, simulator.get_context()),
+        "step_budget");
+  }
 
   return 0;
 }

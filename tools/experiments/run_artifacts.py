@@ -192,9 +192,9 @@ def _validate(result, recording, cfg, directory):
     if not isinstance(result.get("schema"), dict) or not isinstance(result.get("dynamic"), dict):
         raise ValueError("Enrich the result with postprocess --export-only before compacting")
     if __package__:
-        from .postprocess_run import project_result, _json_values, add_result_semantics
+        from .postprocess_run import project_result, _json_values, add_result_semantics, add_execution_projection
     else:
-        from postprocess_run import project_result, _json_values, add_result_semantics
+        from postprocess_run import project_result, _json_values, add_result_semantics, add_execution_projection
     rows = list(csv.DictReader(io.StringIO(recording["metrics_csv"])))
     if not rows:
         raise ValueError("The original metrics CSV is empty")
@@ -213,19 +213,36 @@ def _validate(result, recording, cfg, directory):
                                pos_tol=hyperparameters.get("goal_pos_tol"),
                                ang_tol=hyperparameters.get("goal_theta_tol"),
                                evaluation_costs=(result.get("evaluation") or {}).get("weights", hyperparameters.get("costs")),
-                               include_semantics=False)
+                               include_semantics=False, execution_steps=recording.get("execution_steps"))
+    if "execution_timing" in result:
+        if "execution_steps" not in recording or result["execution_timing"] != projected.get("execution_timing"):
+            raise ValueError("Execution timing disagrees with the recorded dispatch events")
     def without_unavailable_timing(dynamic):
         values = dict(dynamic)
         timing = values.get("compute_time")
         if isinstance(timing, list) and len(timing) == result["steps_run"] and all(value is None for value in timing):
             values.pop("compute_time")
         return values
+    aligned = (result.get("execution") or {}).get("alignment") == "physical_policy_boundaries_v1"
+    snapshot_dynamic = recording.get("snapshot_dynamic") if aligned else result["dynamic"]
     if (result.get("steps_run") != projected["steps_run"]
-            or without_unavailable_timing(result["dynamic"]) != without_unavailable_timing(_json_values(projected["dynamic"]))):
+            or without_unavailable_timing(snapshot_dynamic) != without_unavailable_timing(_json_values(projected["dynamic"]))):
         raise ValueError("Result trajectory does not faithfully represent the raw steps and CSV")
     # Recheck additive semantics against the original embedded metadata. The
     # temporary projection above may have no native files after prior cleanup.
-    semantics = add_result_semantics(deepcopy(result), directory)
+    semantics = deepcopy(result)
+    semantics["dynamic"] = deepcopy(snapshot_dynamic)
+    add_result_semantics(semantics, directory)
+    if aligned:
+        native = recording.get("execution_native")
+        if native is None:
+            raise ValueError("Missing original native execution boundary records")
+        add_execution_projection(semantics, cfg, native, recording.get("planning_updates"))
+        for key in ("dynamic", "execution", "planning"):
+            if result[key] != _json_values(semantics[key]):
+                raise ValueError(f"Result {key} disagrees with native physical execution records")
+        if hyperparameters.get("steps") != semantics["hyperparameters"]["steps"]:
+            raise ValueError("Result execution step budget disagrees with native configuration")
     if result["schema"].get("semantics_version", 0) >= 3:
         for key in ("control_dt", "control_dt_source"):
             if hyperparameters.get(key) != semantics["hyperparameters"].get(key):
@@ -319,9 +336,23 @@ def compact_run(run_dir, run_id=None, status=None, require_legacy_complete=True)
         recording = result["recording"]
         cfg = result["provenance"]["configuration"]["files"]["evaluation_scene_config.yaml"]["data"]
     else:
-        recording = {key: [_json(line) for line in (directory / filename).read_text().splitlines() if line.strip()]
-                     for key, filename in (("steps_raw", "steps_raw.jsonl"), ("state_trace", "state_trace.jsonl"))}
+        recording = dict(result.get("recording") or {})
+        recording.update({key: [_json(line) for line in (directory / filename).read_text().splitlines() if line.strip()]
+                          for key, filename in (("steps_raw", "steps_raw.jsonl"), ("state_trace", "state_trace.jsonl"))})
         recording["metrics_csv"] = (directory / f"{run_id}_metrics.csv").read_bytes().decode("utf-8")
+        if __package__:
+            from .postprocess_run import read_execution_steps, read_native_execution, read_planning_updates
+        else:
+            from postprocess_run import read_execution_steps, read_native_execution, read_planning_updates
+        execution_steps = read_execution_steps(directory)
+        if execution_steps is not None:
+            recording["execution_steps"] = execution_steps
+        native = read_native_execution(directory)
+        if native is not None:
+            recording["execution_native"] = native
+            recording["planning_updates"] = read_planning_updates(directory)
+            if (result.get("execution") or {}).get("step_budget") != runtime.get("execution_step_budget"):
+                raise ValueError("Native execution budget disagrees with the recorded launch arguments")
         configuration = _configuration(directory, inventory)
         cfg = configuration["files"]["evaluation_scene_config.yaml"]["data"]
         logs = {name: _logs(directory / name) for name in sorted(LOGS & inventory.keys())}

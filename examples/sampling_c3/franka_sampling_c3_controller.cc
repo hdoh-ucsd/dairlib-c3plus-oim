@@ -1,7 +1,10 @@
 
+#include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <iomanip>
 #include <limits>
+#include <locale>
 #include <sstream>
 #include <stdexcept>
 
@@ -862,7 +865,33 @@ int DoMain(int argc, char* argv[]) {
     return true;
   });
   std::cout << "After LcmHandleSubscriptionsUntil" << std::endl;
-  loop.Simulate(FLAGS_end_time, FLAGS_max_control_loops);
+  // Observe completed high-level policy dispatches on the unified tracking
+  // channel, including both C3 and repositioning modes. This measures native
+  // dispatch cadence, independently of solver timers and LCM recorder receipt.
+  std::chrono::steady_clock::time_point first_planning_dispatch;
+  int64_t planning_update = 0;
+  loop.Simulate(FLAGS_end_time, FLAGS_max_control_loops, [&]() {
+    const auto now = std::chrono::steady_clock::now();
+    if (planning_update == 0) {
+      first_planning_dispatch = now;
+    }
+    const auto& controller_context = shared_diagram->GetSubsystemContext(
+        *controller, loop.get_diagram_mutable_context());
+    const auto& debug = controller->get_output_port_debug()
+                            .Eval<dairlib::lcmt_sampling_c3_debug>(
+                                controller_context);
+    std::ostringstream record;
+    record.imbue(std::locale::classic());
+    record << std::setprecision(17)
+           << "[C3_PLANNING_UPDATE] {\"update\":" << planning_update
+           << ",\"wall_time\":"
+           << std::chrono::duration<double>(now - first_planning_dispatch)
+                  .count()
+           << ",\"utime\":" << debug.utime << ",\"mode\":\""
+           << (debug.is_c3_mode ? "c3" : "reposition") << "\"}";
+    std::cout << record.str() << std::endl;
+    ++planning_update;
+  });
   return 0;
 }
 

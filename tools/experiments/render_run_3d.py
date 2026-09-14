@@ -64,7 +64,7 @@ def load_result_trace(result):
         if not isinstance(rows, list):
             raise ValueError("recording.state_trace must be a list of trace frames")
         return rows
-    dynamic = result.get("dynamic") or {}
+    dynamic = recording.get("snapshot_dynamic") or result.get("dynamic") or {}
     static = result.get("static") or {}
     times = dynamic.get("time")
     positions = dynamic.get("qpos")

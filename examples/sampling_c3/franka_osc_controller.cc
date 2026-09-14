@@ -66,6 +66,8 @@ using systems::controllers::RotTaskSpaceTrackingData;
 using systems::controllers::TransTaskSpaceTrackingData;
 
 DEFINE_bool(is_simulation, true, "True for simulation, false for hardware");
+DEFINE_bool(execution_logging, false,
+            "Attach informational planner provenance to actuator commands.");
 DEFINE_string(lcm_url, "udpm://239.255.76.67:7667?ttl=0",
               "LCM URL with IP, port, and TTL settings");
 DEFINE_string(demo_name, "jacktoy",
@@ -506,7 +508,14 @@ int DoMain(int argc, char* argv[]) {
     auto executor = builder.AddSystem<Xarm6FiveJointVelocityExecutor>(
         plant, kEndEffectorName);
     auto franka_command_sender =
-        builder.AddSystem<systems::RobotCommandSender>(plant);
+        builder.AddSystem<systems::RobotCommandSender>(plant,
+                                                       FLAGS_execution_logging);
+    if (FLAGS_execution_logging) {
+      builder.Connect(end_effector_trajectory_sub->get_output_port(),
+                      franka_command_sender->get_input_port_source_trajectory());
+      builder.Connect(radio_sub->get_output_port(),
+                      franka_command_sender->get_input_port_source_radio());
+    }
     auto franka_command_pub =
         builder.AddSystem(LcmPublisherSystem::Make<dairlib::lcmt_robot_input>(
             lcm_channel_params.franka_input_channel, &lcm,
@@ -592,9 +601,11 @@ int DoMain(int argc, char* argv[]) {
           lcm_channel_params.osc_channel, &lcm,
           TriggerTypeSet({TriggerType::kForced})));
   auto franka_command_sender =
-      builder.AddSystem<systems::RobotCommandSender>(plant);
+      builder.AddSystem<systems::RobotCommandSender>(plant,
+                                                     FLAGS_execution_logging);
   auto osc_command_sender =
-      builder.AddSystem<systems::RobotCommandSender>(plant);
+      builder.AddSystem<systems::RobotCommandSender>(plant,
+                                                     FLAGS_execution_logging);
   auto end_effector_trajectory =
       builder.AddSystem<EndEffectorPositionTrajectoryGenerator>(
           plant, plant_context.get(), osc_params.neutral_position,
@@ -611,6 +622,14 @@ int DoMain(int argc, char* argv[]) {
   auto radio_sub =
       builder.AddSystem(LcmSubscriberSystem::Make<dairlib::lcmt_radio_out>(
           lcm_channel_params.radio_channel, &lcm));
+  if (FLAGS_execution_logging) {
+    for (auto* sender : {franka_command_sender, osc_command_sender}) {
+      builder.Connect(end_effector_trajectory_sub->get_output_port(),
+                      sender->get_input_port_source_trajectory());
+      builder.Connect(radio_sub->get_output_port(),
+                      sender->get_input_port_source_radio());
+    }
+  }
   auto osc = builder.AddSystem<systems::controllers::OperationalSpaceControl>(
       plant, plant_context.get(), false);
   if (osc_params.publish_debug_info) {
@@ -695,7 +714,7 @@ int DoMain(int argc, char* argv[]) {
     builder.Connect(osc->get_output_port_osc_command(),
                     gravity_compensator->get_input_port());
     builder.Connect(gravity_compensator->get_output_port(),
-                    franka_command_sender->get_input_port());
+                    franka_command_sender->get_input_port(0));
   } else {
     if (!FLAGS_is_simulation) {
       std::cerr<<"HW OSC needs cancel_gravity_compensation: true"<<std::endl;

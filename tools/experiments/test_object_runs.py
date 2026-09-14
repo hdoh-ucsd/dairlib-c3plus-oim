@@ -29,6 +29,19 @@ class ObjectRunTests(unittest.TestCase):
         launch.assert_not_called()
         return json.loads(stream.getvalue())
 
+    def test_execution_budget_is_explicit_and_does_not_change_native_parameters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "planned"
+            unlimited = self.dry_run(out)
+            bounded = self.dry_run(out, "--steps", "25")
+            self.assertIsNone(unlimited.get("execution_step_budget"))
+            self.assertEqual(bounded.pop("execution_step_budget"), 25)
+            self.assertEqual(bounded, unlimited)
+            for value in ("0", "-1"):
+                with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                    self.dry_run(out, "--steps", value)
+            self.assertFalse(out.exists())
+
     def test_five_object_dry_run_preserves_identity_and_creates_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "planned"
@@ -377,6 +390,116 @@ class ResultProjectionTests(unittest.TestCase):
     def project(self, directory, cfg, summary, steps, rows, **kwargs):
         return P.project_result(Path(directory), "open_task", summary["run_id"],
                                 cfg, summary, steps, rows, **kwargs)
+
+    def test_execution_timing_adds_only_native_wall_clock_fields(self):
+        cfg, summary, steps, rows = self.fixture()
+        # Native execution has its own axis, unrelated to the five snapshots
+        # with repeated/decreasing simulation timestamps in this fixture.
+        events = [{"execution_step": i, "execution_wall_time": t,
+                   "utime": 10_000_000 + i, "mode": "c3" if i == 1 else "reposition"}
+                  for i, t in enumerate([0.0, .0213, .0428])]
+        with tempfile.TemporaryDirectory() as tmp:
+            before = self.project(tmp, cfg, summary, steps, rows)
+            (Path(tmp) / "planner.log").write_text("unrelated log\n" + "".join(
+                "[C3_EXECUTION_STEP] " + json.dumps(event) + "\n" for event in events))
+            after = self.project(tmp, cfg, summary, steps, rows)
+        self.assertEqual(after["dynamic"].pop("execution_step"), [0, 1, 2])
+        self.assertEqual(after["dynamic"].pop("execution_wall_time"), [0.0, .0213, .0428])
+        timing = after.pop("execution_timing")
+        self.assertEqual(timing["n_steps"], 3)
+        self.assertEqual(timing["n_intervals"], 2)
+        self.assertAlmostEqual(timing["elapsed_wall_time_s"], .0428)
+        self.assertAlmostEqual(timing["mean_step_wall_time_s"], .0214)
+        self.assertAlmostEqual(timing["frequency_hz"], 1 / np.mean(np.diff([0.0, .0213, .0428])))
+        self.assertEqual(timing["source"], "monotonic_wall_time_at_execution_step")
+        self.assertEqual(after, before)
+
+    def physical_fixture(self):
+        updates = [{"update": i, "utime": 100_000+i, "mode": "c3" if i else "reposition"}
+                   for i in range(4)]
+        states = [{"boundary_step": i, "plan_utime": 100_000 if i == 0 else 100_002,
+                   "sim_time": sim, "wall_time": wall,
+                   "objects": [{"q": [1, 0, 0, 0, .2+.1*i, -.4, -.02], "v": [0]*6}],
+                   "robot_q": [0]*5, "robot_v": [0]*5}
+                  for i, (sim, wall) in enumerate(zip([7.1, 7.2, 7.35], [0.0, .035, .08]))]
+        states[-1]["reason"] = "step_budget"
+        native = {"headers": [{"alignment": "physical_policy_boundaries_v1", "step_budget": 2,
+                               "object_channels": ["OBJECT_banana_base_STATE_SIMULATION"]}],
+                  "boundaries": states[:2], "terminals": states[2:]}
+        return native, updates
+
+    def test_physical_execution_uses_exact_states_and_preserves_all_snapshots(self):
+        cfg, summary, steps, rows = self.fixture()
+        native, updates = self.physical_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            before = self.project(tmp, cfg, summary, steps, rows)
+            after = self.project(tmp, cfg, summary, steps, rows,
+                                 execution_native=native, planning_updates=updates)
+        self.assertEqual(after["recording"]["snapshot_dynamic"], before["dynamic"])
+        self.assertEqual(after["recording"]["n_snapshots"], 5)
+        self.assertEqual(after["planning"]["n_updates"], 4)
+        self.assertEqual(after["execution"]["n_steps_executed"], 2)
+        self.assertEqual(after["execution"]["mode"], ["reposition", "c3"])
+        self.assertEqual(after["dynamic"]["object_pose"][0], [.2, -.4, 0.0])
+        self.assertEqual(after["dynamic"]["time"], [7.1, 7.2, 7.35])
+        self.assertEqual(len(after["dynamic"]["object_pose"]), 3)
+        self.assertEqual(after["dynamic"]["compute_time"], after["execution"]["step_wall_time"])
+        self.assertAlmostEqual(after["execution"]["frequency_hz"], 25.0)
+        self.assertEqual(after["hyperparameters"]["steps"], 2)
+        self.assertIsNone(after["hyperparameters"]["control_dt"])
+        for key in ("success", "t_success", "steps_run", "evaluation", "native_controller"):
+            self.assertEqual(after[key], before[key])
+
+    def test_physical_execution_rejects_unproven_or_inconsistent_alignment(self):
+        cfg, summary, steps, rows = self.fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            for mutation in ("missing_terminal", "duplicate_wall", "duplicate_sim", "unknown_policy", "duplicate_plan", "budget"):
+                native, updates = self.physical_fixture()
+                if mutation == "missing_terminal": native["terminals"] = []
+                if mutation == "duplicate_wall": native["boundaries"][1]["wall_time"] = 0
+                if mutation == "duplicate_sim": native["boundaries"][1]["sim_time"] = 7.1
+                if mutation == "unknown_policy": native["boundaries"][1]["plan_utime"] = 999
+                if mutation == "duplicate_plan": updates[-1]["utime"] = updates[0]["utime"]
+                if mutation == "budget": native["headers"][0]["step_budget"] = 1
+                with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                    self.project(tmp, cfg, summary, steps, rows,
+                                 execution_native=native, planning_updates=updates)
+
+    def test_physical_execution_unlimited_budget_stays_null(self):
+        cfg, summary, steps, rows = self.fixture()
+        native, updates = self.physical_fixture()
+        native["headers"][0]["step_budget"] = None
+        native["terminals"][0]["reason"] = "shutdown"
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.project(tmp, cfg, summary, steps, rows,
+                                  execution_native=native, planning_updates=updates)
+        self.assertIsNone(result["execution"]["step_budget"])
+        self.assertIsNone(result["hyperparameters"]["steps"])
+
+    def test_execution_frequency_requires_two_valid_native_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "planner.log"
+            log.write_text("legacy planner output\n")
+            self.assertIsNone(P.read_execution_steps(tmp))
+            log.write_text("[C3_EXECUTION_TIMING] monotonic_wall_time_at_execution_step\n")
+            self.assertEqual(P.read_execution_steps(tmp), [])
+        for times in ([], [0.0]):
+            with self.subTest(times=times):
+                result = {"dynamic": {"time": [100, 200]}}
+                events = [{"execution_step": i, "execution_wall_time": t} for i, t in enumerate(times)]
+                P.add_execution_timing(result, events)
+                self.assertIsNone(result["execution_timing"]["frequency_hz"])
+                self.assertIsNone(result["execution_timing"]["mean_step_wall_time_s"])
+                self.assertEqual(result["dynamic"]["time"], [100, 200])
+        for times in ([1.0, 2.0], [0.0, 0.0], [0.0, -1.0], [0.0, float("nan")],
+                      [0.0, float("inf")], [False, 1.0], [0.0, "0.2"]):
+            with self.subTest(times=times), self.assertRaises(ValueError):
+                P.add_execution_timing({"dynamic": {}}, [
+                    {"execution_step": i, "execution_wall_time": t} for i, t in enumerate(times)])
+        for indices in ([1, 2], [0, 2], [0, 0], [False, 1]):
+            with self.subTest(indices=indices), self.assertRaises(ValueError):
+                P.add_execution_timing({"dynamic": {}}, [
+                    {"execution_step": i, "execution_wall_time": t} for i, t in zip(indices, [0.0, .02])])
 
     def test_state_and_interval_lengths_preserve_legacy_summary(self):
         cfg, summary, steps, rows = self.fixture()

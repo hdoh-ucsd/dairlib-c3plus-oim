@@ -7,4 +7,8 @@ struct lcmt_robot_input
 
   string effort_names [num_efforts];
   double efforts [num_efforts];
+
+  // Informational provenance only; zero means no tracked planner policy.
+  // Receivers must never use this field to calculate actuator commands.
+  int64_t source_plan_utime;
 }

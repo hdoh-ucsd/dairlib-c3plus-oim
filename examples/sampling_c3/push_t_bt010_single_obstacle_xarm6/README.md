@@ -1,5 +1,10 @@
 # push_t_bt010_single_obstacle_xarm6
 
+Historical configuration and developer/debug reference. Use the
+[root Quick Start](../../../README.md#quick-start) and Python experiment CLI
+for supported builds and runs. The native commands below illustrate the legacy
+`--demo_name` interface; they do not provide current recording or packaging.
+
 Configuration files are shared under `../shared_parameters/`. Follow the file
 pointers in `parameters/sampling_c3_controller_params.yaml` for their current
 locations; the filenames below describe the original configuration roles.
@@ -44,16 +49,16 @@ export SAMPLING_C3_OBSTACLE_MODE=lcs_contact
   `SAMPLING_C3_OBS_SLOTS` (N_closest, default 2),
   `SAMPLING_C3_OBJ_MARGIN` (obs_margin, default 0.01 m).
 
-## Launch (sim trio)
+## Developer/debug: legacy native processes
 
 ```
-bazel-bin/examples/sampling_c3/franka_sim \
+.build/bin/examples/sampling_c3/franka_sim \
   --demo_name=push_t_bt010_single_obstacle_xarm6 --robot_model=xarm6 --matched_mu=true
-bazel-bin/examples/sampling_c3/franka_osc_controller \
+.build/bin/examples/sampling_c3/franka_osc_controller \
   --demo_name=push_t_bt010_single_obstacle_xarm6 --robot_model=xarm6 \
   --xarm6_five_joint=true --prelift_release=true
 SAMPLING_C3_OBSTACLE_MODE=lcs_contact \
-bazel-bin/examples/sampling_c3/franka_sampling_c3_controller \
+.build/bin/examples/sampling_c3/franka_sampling_c3_controller \
   --demo_name=push_t_bt010_single_obstacle_xarm6 --robot_model=xarm6
 ```
 
