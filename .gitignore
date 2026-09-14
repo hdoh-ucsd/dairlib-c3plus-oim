@@ -16,3 +16,5 @@ attic/multibody/solver_log/
 *.csv
 /examples/Cassie/saved_trajectories/
 /MODULE.bazel.lock
+/model_IIS.ilp
+/valgrind.log

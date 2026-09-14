@@ -1,0 +1,3 @@
+"""Shared native build support; native targets remain in their existing packages."""
+
+exports_files(["environ.bzl"])

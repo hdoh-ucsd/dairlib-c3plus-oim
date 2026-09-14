@@ -11,8 +11,8 @@ Usage: ./docker/shell.sh [--build | --build-only] [--] [COMMAND [ARG...]]
 
 No command opens Bash. Commands and arguments are forwarded without evaluation.
   ./docker/shell.sh --build-only
-  ./docker/shell.sh python3 -m tools.experiments check
-  ./docker/shell.sh python3 -m tools.experiments build
+  ./docker/shell.sh python3 -m tools check
+  ./docker/shell.sh python3 -m tools build
 
 --build       Build the local Dockerfile, then open a shell/run COMMAND.
 --build-only  Build the local Dockerfile and exit (does not compile C++ targets).
@@ -56,7 +56,7 @@ if [[ "$BUILD_ONLY" == 1 && $# -gt 0 ]]; then
 fi
 
 command -v docker >/dev/null 2>&1 || die 'Docker CLI required; install Docker first.'
-for marker in MODULE.bazel .bazeliskrc tools/experiments/__main__.py; do
+for marker in MODULE.bazel .bazeliskrc tools/__main__.py; do
     [[ -s "${REPO_ROOT}/${marker}" ]] || \
         die "Expected a complete repository at ${REPO_ROOT}; missing ${marker}. Run this checkout's docker/shell.sh."
 done
