@@ -2,7 +2,7 @@
 # slot empty; the pushed object is the C glyph (see push_c_glyph.sdf).
 # Discs below are the CIRCUMSCRIBED fallback per glyph (max hull-vertex
 # radius); the exact 10-vertex hulls are supplied via SAMPLING_C3_OBS_POLYS
-# (see results_icra_port/obstacles/obs_polys_env.txt) and override indices
+# (see tools/experiments/scene_configs/icra_sign.yaml) and override indices
 # 0-6. Index 7 is the upstream planner-only robot-base circle (scenes.py
 # _ROBOT_BASE_RADIUS = 0.09) and stays a true disc.
 scenario_name: icra_sign
