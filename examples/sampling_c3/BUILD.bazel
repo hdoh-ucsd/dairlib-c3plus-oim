@@ -30,6 +30,7 @@ cc_binary(
         "@drake_models//:franka_description",
     ],
     deps = [
+        ":execution_boundary_logger",
         "//examples/sampling_c3:sampling_c3_utils",
         "//examples/sampling_c3/parameter_headers:sampling_c3_controller_params",
         "//examples/sampling_c3/parameter_headers:lcm_channels",
@@ -44,6 +45,25 @@ cc_binary(
     linkopts = [
         "-L/lib/x86_64-linux-gnu",
         "-lopenblas",
+    ],
+)
+
+cc_library(
+    name = "execution_boundary_logger",
+    hdrs = ["execution_boundary_logger.h"],
+    deps = [
+        "//lcmtypes:lcmt_robot",
+        "@drake//:drake_shared_library",
+    ],
+)
+
+cc_test(
+    name = "execution_boundary_logger_test",
+    srcs = ["test/execution_boundary_logger_test.cc"],
+    deps = [
+        ":execution_boundary_logger",
+        "//systems:robot_lcm_systems",
+        "@drake//:drake_shared_library",
     ],
 )
 

@@ -1,4 +1,5 @@
 #include "robot_lcm_systems.h"
+#include <cmath>
 #include <iostream>
 
 #include "dairlib/lcmt_robot_input.hpp"
@@ -553,7 +554,9 @@ void RobotInputReceiver::CopyInputOut(const Context<double>& context,
 // methods implementation for RobotCommandSender.
 
 RobotCommandSender::RobotCommandSender(
-    const drake::multibody::MultibodyPlant<double>& plant) {
+    const drake::multibody::MultibodyPlant<double>& plant,
+    bool track_source_plan)
+    : track_source_plan_(track_source_plan) {
   num_actuators_ = plant.num_actuators();
   actuator_index_map_ = multibody::MakeNameToActuatorsMap(plant);
 
@@ -563,6 +566,17 @@ RobotCommandSender::RobotCommandSender(
 
   this->DeclareVectorInputPort("u, t",
                                TimestampedVector<double>(num_actuators_));
+  if (track_source_plan_) {
+    source_trajectory_port_ =
+        this->DeclareAbstractInputPort(
+                "source_trajectory",
+                drake::Value<dairlib::lcmt_timestamped_saved_traj>{})
+            .get_index();
+    source_radio_port_ =
+        this->DeclareAbstractInputPort(
+                "source_radio", drake::Value<dairlib::lcmt_radio_out>{})
+            .get_index();
+  }
   this->DeclareAbstractOutputPort("lcmt_robot_input",
                                   &RobotCommandSender::OutputCommand);
 }
@@ -585,6 +599,35 @@ void RobotCommandSender::OutputCommand(
       input_msg->efforts[i] = command->GetAtIndex(i);
     }
   }
+
+  input_msg->source_plan_utime = 0;
+  if (!track_source_plan_ ||
+      !get_input_port_source_trajectory().HasValue(context) ||
+      !get_input_port_source_radio().HasValue(context)) {
+    return;
+  }
+  const auto& radio = get_input_port_source_radio()
+                          .Eval<dairlib::lcmt_radio_out>(context);
+  if (radio.channel[14]) return;  // Teleoperation ignores the planner target.
+  const auto& source = get_input_port_source_trajectory()
+                           .Eval<dairlib::lcmt_timestamped_saved_traj>(context);
+  if (source.utime <= 0) return;
+  for (int i = 0; i < source.saved_traj.num_trajectories; ++i) {
+    if (source.saved_traj.trajectory_names[i] !=
+        "end_effector_position_target") {
+      continue;
+    }
+    const auto& target = source.saved_traj.trajectories[i];
+    if (target.num_datatypes < 3 || target.num_points < 1) return;
+    bool nonzero_target = false;
+    for (int axis = 0; axis < 3; ++axis) {
+      if (!std::isfinite(target.datapoints[axis][0])) return;
+      nonzero_target |= target.datapoints[axis][0] != 0.0;
+    }
+    // The executor retains its preceding target for an empty/zero trajectory.
+    if (nonzero_target) input_msg->source_plan_utime = source.utime;
+    return;
+  }
 }
 
 SubvectorPassThrough<double>* AddActuationRecieverAndStateSenderLcm(
@@ -593,11 +636,15 @@ SubvectorPassThrough<double>* AddActuationRecieverAndStateSenderLcm(
     drake::systems::lcm::LcmInterfaceSystem* lcm, std::string actuator_channel,
     std::string state_channel, double publish_rate,
     drake::multibody::ModelInstanceIndex model_instance_index,
-    bool publish_efforts, double actuator_delay) {
+    bool publish_efforts, double actuator_delay,
+    const drake::systems::OutputPort<double>** command_message_output) {
   // Create LCM input for actuators
   auto input_sub =
       builder->AddSystem(LcmSubscriberSystem::Make<dairlib::lcmt_robot_input>(
           actuator_channel, lcm));
+  if (command_message_output != nullptr) {
+    *command_message_output = &input_sub->get_output_port();
+  }
   auto input_receiver = builder->AddSystem<RobotInputReceiver>(plant);
   auto passthrough = builder->AddSystem<SubvectorPassThrough>(
       input_receiver->get_output_port(0).size(), 0,

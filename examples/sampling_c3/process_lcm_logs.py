@@ -32,7 +32,7 @@ from pydrake.visualization import VideoWriter
 
 """Import dairlib for LCM type definitions."""
 DAIRLIB_DIR = op.abspath(op.dirname(op.dirname(op.dirname(__file__))))
-sys.path.append(op.join(DAIRLIB_DIR, 'bazel-bin', 'lcmtypes'))
+sys.path.append(op.join(DAIRLIB_DIR, '.build/bin', 'lcmtypes'))
 import dairlib
 
 

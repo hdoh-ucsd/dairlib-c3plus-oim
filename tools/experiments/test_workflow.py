@@ -26,6 +26,7 @@ from unittest.mock import patch
 if __package__:
     from . import catalog as S
     from . import __main__ as cli
+    from . import check_environment as E
     from . import run_experiment as R
     from . import run_grid_campaign as G
     from . import visualize_mesh as V
@@ -36,6 +37,7 @@ else:
     spec = importlib.util.spec_from_file_location("experiments_cli", Path(__file__).with_name("__main__.py"))
     cli = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(cli)
+    import check_environment as E
     import run_experiment as R
     import run_grid_campaign as G
     import visualize_mesh as V
@@ -228,6 +230,164 @@ class WorkflowTests(unittest.TestCase):
         with patch.object(cli.subprocess, "call", return_value=17) as call:
             self.assertEqual(cli.main(["run", "--scene", "open_task", "--out", "a path"]), 17)
         self.assertEqual(call.call_args.args[0][-2:], ["--out", "a path"])
+
+    def test_build_cli_dry_run_and_jobs_use_all_native_targets(self):
+        output = io.StringIO()
+        with patch.object(cli.subprocess, "call") as call, redirect_stdout(output):
+            self.assertEqual(cli.main(["build", "--jobs", "4", "--dry-run"]), 0)
+        call.assert_not_called()
+        self.assertEqual(shlex.split(output.getvalue()), ["bazel", "build",
+                         "//examples/sampling_c3:franka_sim",
+                         "//examples/sampling_c3:franka_osc_controller",
+                         "//examples/sampling_c3:franka_sampling_c3_controller", "--jobs=4"])
+        with patch.object(cli.subprocess, "call", return_value=7) as call:
+            self.assertEqual(cli.main(["build", "--jobs", "2"]), 7)
+        self.assertEqual(call.call_args.kwargs["cwd"], S.REPO)
+        self.assertEqual(call.call_args.args[0][-1], "--jobs=2")
+
+    def test_build_cli_rejects_invalid_jobs_before_launch(self):
+        for value in ("0", "-1"):
+            with self.subTest(value=value), patch.object(cli.subprocess, "call") as call, \
+                    redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                cli.main(["build", "--jobs", value])
+            self.assertEqual(error.exception.code, 2)
+            call.assert_not_called()
+
+    def test_build_cli_missing_bazel_points_to_canonical_docker_workflow(self):
+        output = io.StringIO()
+        with patch.object(cli.subprocess, "call", side_effect=FileNotFoundError), \
+                redirect_stderr(output), self.assertRaises(SystemExit) as error:
+            cli.main(["build"])
+        self.assertEqual(error.exception.code, 1)
+        self.assertIn("./docker/shell.sh", output.getvalue())
+        self.assertIn("README.md", output.getvalue())
+        self.assertNotIn("docker/README.md", output.getvalue())
+
+    def test_environment_checks_current_native_flags_without_running_systems(self):
+        required = {
+            "franka_sim": ["controller_params", "execution_logging", "execution_step_budget", "execution_stop_file"],
+            "franka_osc_controller": ["controller_params", "execution_logging"],
+            "franka_sampling_c3_controller": ["controller_params", "goal_yaw_degrees"],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            for name, flags in required.items():
+                executable = repo / ".build/bin/examples/sampling_c3" / name
+                executable.parent.mkdir(parents=True, exist_ok=True)
+                executable.write_text("Must never execute this fixture")
+                executable.chmod(0o755)
+                for omitted in (None, *flags):
+                    help_text = "\n".join(f" -{flag} (flag)" for flag in flags if flag != omitted)
+                    # Gflags --helpshort can exit nonzero; emitted flags are authoritative.
+                    responses = [subprocess.CompletedProcess([], 0, "linked libraries", ""),
+                                 subprocess.CompletedProcess([], 1, help_text, "")]
+                    with self.subTest(binary=name, omitted=omitted), \
+                            patch.object(E.subprocess, "run", side_effect=responses) as run:
+                        if omitted is None:
+                            self.assertIn("verified", E.check_binary(name, repo=repo))
+                        else:
+                            with self.assertRaisesRegex(RuntimeError, "--" + omitted):
+                                E.check_binary(name, repo=repo)
+                        self.assertEqual([call.args[0] for call in run.call_args_list],
+                                         [["ldd", str(executable)], [str(executable), "--helpshort"]])
+            broken = subprocess.CompletedProcess([], 0, "libgurobi100.so => not found", "")
+            with patch.object(E.subprocess, "run", return_value=broken) as run, \
+                    self.assertRaisesRegex(RuntimeError, "libgurobi100.so"):
+                E.check_binary("franka_sim", repo=repo)
+            self.assertEqual(run.call_count, 1)
+
+    def test_environment_checks_selected_mesh_metadata_and_dependencies(self):
+        parsed = []
+        parser_module = types.ModuleType("pydrake.multibody.parsing")
+        plant_module = types.ModuleType("pydrake.multibody.plant")
+        class Parser:
+            def __init__(self, plant):
+                pass
+            def SetAutoRenaming(self, value):
+                pass
+            def AddModels(self, path):
+                parsed.append(Path(path))
+        parser_module.Parser = Parser
+        plant_module.MultibodyPlant = lambda timestep: object()
+        demo = S.demo_name("open_task", 1, 1, "sugar_box")
+        profile = S.resolve_object_profile("open_task", "sugar_box")
+        composed = S.compose_demo_configs(demo, object_name="sugar_box")
+        paths = set(S.load_demo_configs(demo, object_name="sugar_box"))
+        paths.update(S.model_assets(composed))
+        paths.update(S.REPO / name for name in (
+            profile["physics_metadata_file"], "tools/experiments/scene_configs/open_task.yaml",
+            "examples/sampling_c3/urdf/oim_xarm6_tabletop/xarm6/xarm6_policyport.xml",
+            "examples/sampling_c3/urdf/end_effector_xarm6_stick.urdf",
+            "examples/sampling_c3/urdf/ee_visualization_model.urdf",
+            "examples/sampling_c3/urdf/push_t.sdf",
+            "examples/sampling_c3/urdf/ground_oim_xarm6.urdf"))
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(sys.modules, {
+                "pydrake.multibody.parsing": parser_module, "pydrake.multibody.plant": plant_module}):
+            repo = Path(tmp)
+            for path in paths:
+                target = repo / path.relative_to(S.REPO)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, target)
+            detail = E.check_scene_assets("open_task", "sugar_box", repo=repo)
+            self.assertIn("25 start/goal", detail)
+            self.assertIn(repo / profile["simulation_model"], parsed)
+            self.assertIn(repo / profile["controller_model"], parsed)
+            # Each failure concerns selected inputs, not unselected catalogue entries.
+            for relative in (profile["physics_metadata_file"], profile["sampling_params_file"],
+                             composed["controller"]["sampling_mesh_files"][0]):
+                path = repo / relative
+                contents = path.read_bytes()
+                path.unlink()
+                with self.subTest(missing=relative), self.assertRaises((FileNotFoundError, RuntimeError)):
+                    E.check_scene_assets("open_task", "sugar_box", repo=repo)
+                path.write_bytes(contents)
+            mesh = repo / composed["controller"]["sampling_mesh_files"][0]
+            mesh.write_bytes(mesh.read_bytes() + b"\n# changed after metadata generation\n")
+            with self.assertRaisesRegex(RuntimeError, "hash differs"):
+                E.check_scene_assets("open_task", "sugar_box", repo=repo)
+
+    def test_environment_check_failures_are_structured_and_include_runtime_submodules(self):
+        imported = []
+        def import_module(name):
+            imported.append(name)
+            if name == "mpl_toolkits.mplot3d":
+                raise ImportError("broken Matplotlib namespace")
+            return types.SimpleNamespace(__name__=name)
+        fake_lcm = types.ModuleType("pydrake.lcm")
+        fake_lcm.DrakeLcm = lambda url: (_ for _ in ()).throw(RuntimeError("test multicast unavailable"))
+        output = io.StringIO()
+        with patch.dict(sys.modules, {"pydrake.lcm": fake_lcm}), \
+                patch.object(E.importlib, "import_module", side_effect=import_module), \
+                patch.object(E.shutil, "which", side_effect=lambda name: "/tools/" + name), \
+                patch.object(E, "version", return_value="1.51.1"), \
+                patch.object(E.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "<svg>", "")), \
+                patch.object(E, "check_binary", side_effect=RuntimeError("missing --execution_logging")), \
+                patch.object(E, "check_scene_assets", return_value="parsed only") as scenes, redirect_stdout(output):
+            self.assertEqual(E.main(["--runtime-only", "--require-binaries", "--check-scenes"]), 1)
+        report = json.loads(output.getvalue())
+        checks = {entry["check"]: entry for entry in report["checks"]}
+        self.assertFalse(checks["import mpl_toolkits.mplot3d"]["passed"])
+        self.assertIn("broken Matplotlib namespace", checks["import mpl_toolkits.mplot3d"]["detail"])
+        self.assertIn("--execution_logging", checks["franka_sim"]["detail"])
+        self.assertIn("pydrake.systems.sensors", imported)
+        self.assertNotIn("vhacdx", imported)
+        self.assertEqual(scenes.call_count, 10)
+        for name in S.MESH_OBJECTS:
+            self.assertIn("object open_task/" + name, checks)
+
+    def test_environment_legacy_drake_extensions_use_native_model_parser(self):
+        parser_module = types.ModuleType("pydrake.multibody.parsing")
+        plant_module = types.ModuleType("pydrake.multibody.plant")
+        parsed = []
+        parser = types.SimpleNamespace(SetAutoRenaming=lambda value: None,
+                                       AddModels=lambda path: parsed.append(Path(path)))
+        parser_module.Parser = lambda plant: parser
+        plant_module.MultibodyPlant = lambda timestep: object()
+        with patch.dict(sys.modules, {"pydrake.multibody.parsing": parser_module,
+                                      "pydrake.multibody.plant": plant_module}), \
+                patch.object(E, "model_assets", side_effect=AssertionError("strict mesh XML parser")):
+            self.assertIn("Cblock", E.check_scene_assets("icra_sign"))
+        self.assertIn(S.REPO / "examples/sampling_c3/urdf/push_c_glyph.sdf", parsed)
 
     def test_logged_command_records_literal_arguments_before_execution(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -648,7 +808,7 @@ class WorkflowTests(unittest.TestCase):
             launcher = repo / "tools/experiments/launch_run.sh"
             launcher.parent.mkdir(parents=True)
             shutil.copy2(S.TOOL_DIR / "launch_run.sh", launcher)
-            controller = repo / "bazel-bin/examples/sampling_c3/franka_sampling_c3_controller"
+            controller = repo / ".build/bin/examples/sampling_c3/franka_sampling_c3_controller"
             controller.parent.mkdir(parents=True)
             controller.write_text("#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\nprintf 'old controller flags\\n'\nexit 1\n")
             controller.chmod(0o755)
@@ -728,7 +888,7 @@ class WorkflowTests(unittest.TestCase):
             launcher = repo / "tools/experiments/launch_run.sh"
             launcher.parent.mkdir(parents=True)
             shutil.copy2(S.TOOL_DIR / "launch_run.sh", launcher)
-            binary_dir = repo / "bazel-bin/examples/sampling_c3"
+            binary_dir = repo / ".build/bin/examples/sampling_c3"
             binary_dir.mkdir(parents=True)
             config = repo / "controller.yaml"
             config.write_text("{}\n")
@@ -736,7 +896,7 @@ class WorkflowTests(unittest.TestCase):
                 for name in S.BINARIES:
                     binary = binary_dir / name
                     flag = "old_flags" if name == stale else "controller_params"
-                    binary.write_text(f"#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\necho ' -{flag} (path)'\nexit 1\n")
+                    binary.write_text(f"#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\necho ' -{flag} (path) -execution_logging (bool)'\nexit 1\n")
                     binary.chmod(0o755)
                 out = repo / stale
                 result = subprocess.run(["bash", str(launcher), "unused", "object", "0", "0", "0",
@@ -753,19 +913,27 @@ class WorkflowTests(unittest.TestCase):
             launcher = repo / "tools/experiments/launch_run.sh"
             launcher.parent.mkdir(parents=True)
             shutil.copy2(S.TOOL_DIR / "launch_run.sh", launcher)
-            binaries = repo / "bazel-bin/examples/sampling_c3"
+            binaries = repo / ".build/bin/examples/sampling_c3"
             binaries.mkdir(parents=True)
             for name in S.BINARIES:
                 binary = binaries / name
-                binary.write_text("#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\necho ' -controller_params (path) -goal_yaw_degrees (degrees)'\nexit 1\n")
+                binary.write_text("#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\necho ' -controller_params (path) -goal_yaw_degrees (degrees) -execution_logging (bool)'\nexit 1\n")
                 binary.chmod(0o755)
             stubs = repo / "stubs"
             stubs.mkdir()
             capture = repo / "calls.jsonl"
             setsid = stubs / "setsid"
-            setsid.write_text(f"#!{sys.executable}\nimport json, os, sys\n"
+            setsid.write_text(f"#!{sys.executable}\nimport json, os, sys, time\n"
                               "with open(os.environ['TEST_LAUNCH_CAPTURE'], 'a') as f:\n"
-                              "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n")
+                              "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                              # The launcher waits for the recorder. Keep its
+                              # stub alive until all fake native spawns report.
+                              "if sys.argv[1] == 'bash':\n"
+                              "    deadline = time.monotonic() + 3\n"
+                              "    while time.monotonic() < deadline:\n"
+                              "        with open(os.environ['TEST_LAUNCH_CAPTURE']) as f:\n"
+                              "            if len(f.readlines()) == 4: break\n"
+                              "        time.sleep(.01)\n")
             setsid.chmod(0o755)
             sleep = stubs / "sleep"
             sleep.write_text("#!/bin/sh\nexit 0\n")
@@ -787,6 +955,8 @@ class WorkflowTests(unittest.TestCase):
                 self.assertIn(f"--controller_params={config}", call)
             self.assertIn("--goal_yaw_degrees=0", native["franka_sampling_c3_controller"])
             self.assertNotIn("--goal_yaw_degrees=0", native["franka_sim"])
+            for name in ("franka_sim", "franka_osc_controller"):
+                self.assertIn("--execution_logging=true", native[name])
 
     def test_launcher_tees_recorder_progress_preserves_failure_and_cleans_process_groups(self):
         if not shutil.which("setsid"):
@@ -797,7 +967,7 @@ class WorkflowTests(unittest.TestCase):
             launcher = repo / "tools/experiments/launch_run.sh"
             launcher.parent.mkdir(parents=True)
             shutil.copy2(S.TOOL_DIR / "launch_run.sh", launcher)
-            binaries = repo / "bazel-bin/examples/sampling_c3"
+            binaries = repo / ".build/bin/examples/sampling_c3"
             binaries.mkdir(parents=True)
             captures = repo / "processes"
             captures.mkdir()

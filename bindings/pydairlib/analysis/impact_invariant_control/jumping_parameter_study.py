@@ -84,13 +84,13 @@ def main():
             elif traj == 'long_jump':
               gain_filename = 'osc_jumping_gains_long.yaml'
             controller_cmd = [
-              'bazel-bin/examples/Cassie/run_osc_jumping_controller',
+              '.build/bin/examples/Cassie/run_osc_jumping_controller',
               '--delay_time=%.1f' % delay_time,
               '--channel_u=OSC_JUMPING',
               '--gains_filename=examples/Cassie/osc_jump/osc_jumping_gains_param.yaml',
               '--traj_name=%s' % traj,
             ]
-            simulator_cmd = ['bazel-bin/examples/Cassie/multibody_sim',
+            simulator_cmd = ['.build/bin/examples/Cassie/multibody_sim',
                              '--init_height=%.1f' % 0.9,
                              '--toe_spread=0.12',
                              '--target_realtime_rate=%.2f' % realtime_rate,
@@ -101,13 +101,13 @@ def main():
                              ]
           elif traj == 'box_jump':
             controller_cmd = [
-              'bazel-bin/examples/Cassie/run_osc_jumping_controller',
+              '.build/bin/examples/Cassie/run_osc_jumping_controller',
               '--delay_time=%.1f' % delay_time,
               '--channel_u=OSC_JUMPING',
               '--traj_name=%s' % traj,
               '--gains_filename=examples/Cassie/osc_jump/osc_jumping_gains_param.yaml',
             ]
-            simulator_cmd = ['bazel-bin/examples/Cassie/multibody_sim_w_platform',
+            simulator_cmd = ['.build/bin/examples/Cassie/multibody_sim_w_platform',
                              '--init_height=%.1f' % 0.9,
                              '--target_realtime_rate=%.2f' % realtime_rate,
                              '--dt=%.5f' % 1e-3,
@@ -122,13 +122,13 @@ def main():
             gain_filename = 'osc_jumping_gains_box.yaml'
           elif traj == 'down_jump':
             controller_cmd = [
-              'bazel-bin/examples/Cassie/run_osc_jumping_controller',
+              '.build/bin/examples/Cassie/run_osc_jumping_controller',
               '--delay_time=%.1f' % delay_time,
               '--channel_u=OSC_JUMPING',
               '--traj_name=%s' % traj,
               '--gains_filename=examples/Cassie/osc_jump/osc_jumping_gains_param.yaml',
             ]
-            simulator_cmd = ['bazel-bin/examples/Cassie/multibody_sim_w_platform',
+            simulator_cmd = ['.build/bin/examples/Cassie/multibody_sim_w_platform',
                              '--init_height=%.1f' % 0.9,
                              '--target_realtime_rate=%.2f' % realtime_rate,
                              '--dt=%.5f' % 1e-3,

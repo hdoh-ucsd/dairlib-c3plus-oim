@@ -8,6 +8,8 @@
 
 #include "dairlib/lcmt_robot_input.hpp"
 #include "dairlib/lcmt_robot_output.hpp"
+#include "dairlib/lcmt_radio_out.hpp"
+#include "dairlib/lcmt_timestamped_saved_traj.hpp"
 #include "systems/framework/output_vector.h"
 #include "systems/framework/state_vector.h"
 #include "systems/framework/timestamped_vector.h"
@@ -198,7 +200,18 @@ class RobotInputReceiver : public drake::systems::LeafSystem<double> {
 class RobotCommandSender : public drake::systems::LeafSystem<double> {
  public:
   explicit RobotCommandSender(
-      const drake::multibody::MultibodyPlant<double>& plant);
+      const drake::multibody::MultibodyPlant<double>& plant,
+      bool track_source_plan = false);
+
+  // Optional provenance inputs. Existing callers leave these unconnected and
+  // produce source_plan_utime=0; neither input changes the actuator values.
+  const drake::systems::InputPort<double>& get_input_port_source_trajectory()
+      const {
+    return get_input_port(source_trajectory_port_);
+  }
+  const drake::systems::InputPort<double>& get_input_port_source_radio() const {
+    return get_input_port(source_radio_port_);
+  }
 
  private:
   void OutputCommand(const drake::systems::Context<double>& context,
@@ -206,6 +219,9 @@ class RobotCommandSender : public drake::systems::LeafSystem<double> {
 
   int num_actuators_;
   std::vector<std::string> ordered_actuator_names_;
+  bool track_source_plan_;
+  drake::systems::InputPortIndex source_trajectory_port_;
+  drake::systems::InputPortIndex source_radio_port_;
   std::map<std::string, int> actuator_index_map_;
 };
 
@@ -237,7 +253,8 @@ SubvectorPassThrough<double>* AddActuationRecieverAndStateSenderLcm(
     drake::systems::lcm::LcmInterfaceSystem* lcm, std::string actuator_channel,
     std::string state_channel, double publish_rate,
     drake::multibody::ModelInstanceIndex model_instance_index,
-    bool publish_efforts = true, double actuator_delay = 0);
+    bool publish_efforts = true, double actuator_delay = 0,
+    const drake::systems::OutputPort<double>** command_message_output = nullptr);
 
 }  // namespace systems
 }  // namespace dairlib

@@ -56,7 +56,8 @@ def main(argv=None):
     try:
         return subprocess.call(command, cwd=REPO)
     except FileNotFoundError:
-        parser.exit(1, "Bazel is missing. Set up the environment described in docker/README.md first.\n")
+        parser.exit(1, "Bazel is missing. Open the Docker environment with ./docker/shell.sh; "
+                    "see the root README.md Quick Start.\n")
 
 
 if __name__ == "__main__":

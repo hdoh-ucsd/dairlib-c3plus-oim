@@ -3,7 +3,7 @@
 ## Main function:
 "Residual analysis.py"
 
-e.g. : "bazel-bin/bindings/pydairlib/analysis/residual_analysis/residual_analysis log/hardware_data/03_15_22/lcmlog-11"
+e.g. : ".build/bin/bindings/pydairlib/analysis/residual_analysis/residual_analysis log/hardware_data/03_15_22/lcmlog-11"
 
 There choose flags to use wandb, which is an online software for quick make plots without processing data over again 
 

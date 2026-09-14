@@ -45,6 +45,7 @@ Usage:
 """
 import argparse
 import csv
+from copy import deepcopy
 import datetime
 import hashlib
 import json
@@ -326,8 +327,224 @@ def _differences(values, times, angular=()):
     return result
 
 
+def read_execution_steps(run_dir):
+    """Read producer-clock dispatch events, never infer them from snapshots."""
+    path = Path(run_dir) / "planner.log"
+    if not path.is_file():
+        return None
+    prefix = "[C3_EXECUTION_STEP] "
+    enabled, events = False, []
+    with path.open() as stream:
+        for line in stream:
+            if line.strip() == "[C3_EXECUTION_TIMING] monotonic_wall_time_at_execution_step":
+                enabled = True
+            elif line.startswith(prefix):
+                events.append(json.loads(line[len(prefix):]))
+    # Distinguish zero measured events from a legacy run without instrumentation.
+    return events if enabled or events else None
+
+
+def add_execution_timing(result, events):
+    """Add only execution timing; its event axis is independent of snapshots."""
+    if events is None:
+        return result
+    if not isinstance(events, list):
+        raise ValueError("Execution events must be a list")
+    times = []
+    for index, event in enumerate(events):
+        if (not isinstance(event, dict) or type(event.get("execution_step")) is not int
+                or event["execution_step"] != index):
+            raise ValueError("Execution steps must be consecutive source counters starting at zero")
+        value = event.get("execution_wall_time")
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not math.isfinite(value) or (index == 0 and value != 0)
+                or (times and value <= times[-1])):
+            raise ValueError("Execution wall timestamps must be finite, start at zero, and strictly increase")
+        times.append(value)
+    n_intervals = max(0, len(times) - 1)
+    elapsed = times[-1] - times[0] if times else 0.0
+    mean = elapsed / n_intervals if n_intervals else None
+    frequency = 1.0 / mean if mean is not None and mean > 0 else None
+    if frequency is not None and not math.isfinite(frequency):
+        frequency = None
+    result["dynamic"].update(execution_step=[event["execution_step"] for event in events],
+                             execution_wall_time=times)
+    result["execution_timing"] = {
+        "n_steps": len(times), "n_intervals": n_intervals,
+        "elapsed_wall_time_s": elapsed, "mean_step_wall_time_s": mean,
+        "frequency_hz": frequency, "source": "monotonic_wall_time_at_execution_step"}
+    return result
+
+
+def read_native_execution(run_dir):
+    """Read native physical boundaries; never align cached debug observations."""
+    path = Path(run_dir) / "sim.log"
+    if not path.is_file():
+        return None
+    data = {"headers": [], "boundaries": [], "terminals": []}
+    prefixes = {"[C3_EXECUTION_LOGGING] ": "headers",
+                "[C3_EXECUTION_BOUNDARY] ": "boundaries",
+                "[C3_EXECUTION_TERMINAL] ": "terminals"}
+    for line in path.read_text().splitlines():
+        for prefix, key in prefixes.items():
+            if line.startswith(prefix):
+                data[key].append(json.loads(line[len(prefix):]))
+    return data if any(data.values()) else None
+
+
+def read_planning_updates(run_dir):
+    path = Path(run_dir) / "planner.log"
+    if not path.is_file():
+        return None
+    prefix = "[C3_PLANNING_UPDATE] "
+    return [json.loads(line[len(prefix):]) for line in path.read_text().splitlines()
+            if line.startswith(prefix)]
+
+
+def add_execution_projection(result, cfg, native, updates):
+    """Project exact simulator policy boundaries, preserving every raw snapshot.
+
+    A policy ends at the next adoption or at the directly observed terminal
+    boundary. The terminal policy is censored by the existing run shutdown.
+    Missing or inconsistent telemetry fails closed, without synthetic states.
+    """
+    if native is None:
+        return result  # Historical files retain their original projection.
+    headers = native["headers"]
+    if not headers or any(h.get("alignment") != "physical_policy_boundaries_v1" for h in headers):
+        raise ValueError("Native execution alignment unavailable: " + str(headers))
+    if len(headers) != 1 or len(native["terminals"]) != 1:
+        raise ValueError("Execution requires one native header and one exact terminal boundary")
+    budget = headers[0].get("step_budget")
+    if budget is not None and (type(budget) is not int or budget <= 0):
+        raise ValueError("Execution budget must be a configured positive integer or null")
+    events = native["boundaries"]
+    n = len(events)
+    if not n:
+        raise ValueError("No applied policy: an execution-aligned initial state is unavailable")
+    terminal = native["terminals"][0]
+    if terminal.get("reason") not in {"shutdown", "step_budget"}:
+        raise ValueError("Unknown execution terminal boundary")
+    if budget is not None and (n > budget or terminal["reason"] == "step_budget" and n != budget):
+        raise ValueError("Native execution count disagrees with the configured budget")
+    if not isinstance(updates, list):
+        raise ValueError("Planning identity records required to verify applied policies")
+    plans = {}
+    for i, update in enumerate(updates):
+        if (type(update.get("update")) is not int or update["update"] != i
+                or type(update.get("utime")) is not int or update["utime"] <= 0
+                or update["utime"] in plans or update.get("mode") not in {"c3", "reposition"}):
+            raise ValueError("Invalid or ambiguous planning update identity")
+        plans[update["utime"]] = update
+    ids = [event.get("plan_utime") for event in events]
+    if (any(type(value) is not int or value not in plans for value in ids) or len(set(ids)) != n
+            or any(b <= a for a, b in zip(ids, ids[1:]))):
+        raise ValueError("An applied policy must resolve to exactly one recorded planning update")
+    if terminal.get("plan_utime") != ids[-1]:
+        raise ValueError("Terminal state must close the last actually applied policy")
+    channels = headers[0].get("object_channels", [])
+    matches = [i for i, channel in enumerate(channels) if cfg["object_channel_substring"] in channel]
+    if len(matches) != 1:
+        raise ValueError("Ambiguous manipulated object in native execution telemetry")
+    object_index = matches[0]
+    boundaries = [*events, terminal]
+    wall, sim, poses, full_poses, velocities, robot_q, robot_v = [], [], [], [], [], [], []
+    def finite_vector(value, size=None):
+        return (isinstance(value, list) and (size is None or len(value) == size)
+                and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+                        for v in value))
+    for i, boundary in enumerate(boundaries):
+        if type(boundary.get("boundary_step")) is not int or boundary["boundary_step"] != i:
+            raise ValueError("Native execution boundaries must be consecutive starting at zero")
+        w, t = boundary.get("wall_time"), boundary.get("sim_time")
+        if (not finite_vector([w, t]) or i == 0 and w != 0
+                or wall and (w <= wall[-1] or t <= sim[-1])):
+            raise ValueError("Execution wall and simulation boundary times must strictly increase")
+        objects = boundary.get("objects")
+        if not isinstance(objects, list) or len(objects) != len(channels):
+            raise ValueError("Native execution object dimensions disagree with configuration")
+        obj = objects[object_index]
+        q, v = obj.get("q"), obj.get("v")
+        rq, rv = boundary.get("robot_q"), boundary.get("robot_v")
+        if (not finite_vector(q, 7) or not finite_vector(v, 6)
+                or not finite_vector(rq) or not rq or not finite_vector(rv, len(rq))
+                or robot_q and len(rq) != len(robot_q[0])
+                or not math.isclose(sum(x*x for x in q[:4]), 1.0, abs_tol=1e-5)):
+            raise ValueError("Invalid exact native execution state")
+        wall.append(w); sim.append(t)
+        poses.append([q[4], q[5], quat_yaw(q[:4])])
+        full_poses.append(q); velocities.append(v)
+        robot_q.append(rq); robot_v.append(rv)
+    intervals = [b-a for a, b in zip(wall, wall[1:])]
+    if not finite_vector(intervals) or not all(dt > 0 for dt in intervals):
+        raise ValueError("Execution wall intervals must be finite and positive")
+    mean = sum(intervals) / n
+    frequency = 1.0 / mean
+    if not math.isfinite(frequency) or frequency <= 0:
+        raise ValueError("Execution frequency must be finite and positive")
+    snapshots = deepcopy(result["dynamic"])
+    result.setdefault("recording", {}).update(
+        semantics="Asynchronous retained C3_DEBUG_CURR/observation snapshots; not executed actions.",
+        n_snapshots=len(snapshots["time"]), n_recorded_intervals=len(snapshots["time"])-1,
+        snapshot_dynamic=snapshots, execution_native=deepcopy(native), planning_updates=deepcopy(updates))
+    result["planning"] = {
+        "semantics": "Completed ComputePlan updates and selected-policy dispatches; skipped policies remain planning-only.",
+        "n_updates": len(updates), "admm_iterations_per_solve": result["hyperparameters"].get("n_admm"),
+        "admm_semantics": "Inner ADMM iterations per candidate solve; multiple candidates and optional second solves per update.",
+        "update_sim_time": [update["utime"] * 1e-6 for update in updates],
+        "update_sim_time_source": "Robot feedback timestamp consumed by each planning update; not execution time.",
+        "solve_time_s": None}
+    result["execution"] = {
+        "alignment": "physical_policy_boundaries_v1",
+        "semantics": "Selected outer policies actually applied by the simulator, including C3 and reposition.",
+        "n_steps_executed": n, "step_budget": budget,
+        "sim_time": sim, "wall_time": wall, "step_wall_time": intervals,
+        "frequency_hz": frequency, "plan_utime": ids,
+        "mode": [plans[value]["mode"] for value in ids],
+        "terminal_reason": terminal["reason"],
+        "terminal_semantics": "Direct native terminal state; final held policy ends at the run boundary, not its planned horizon.",
+        "source": "monotonic_wall_time_at_physical_policy_boundary"}
+    result["dynamic"] = {
+        "time": sim, "object_pose": poses, "object_pose_3d": full_poses,
+        "object_spatial_velocity": velocities,
+        "robot_joint_positions": robot_q, "robot_joint_velocities": robot_v,
+        "compute_time": intervals}
+    result.pop("execution_timing", None)
+    result["hyperparameters"].update(steps=budget, control_dt=None,
+                                     control_dt_source="variable_physical_policy_duration")
+    schema = result["schema"]
+    schema.update(semantics_version=4,
+        indexing="For N applied outer policies, dynamic states and execution boundary times have N+1 entries. "
+                 "State 0 is recorded immediately before the first applied policy; state i+1 closes policy i. "
+                 "Raw asynchronous snapshots remain in recording.snapshot_dynamic.",
+        sampling="Exact native plant states at physical policy boundaries; no snapshot interpolation.",
+        compute_time="For C3+, dynamic.compute_time is the measured wall-clock duration of each genuine outer "
+                     "execution/control step and is used for execution frequency. It is not optimizer solve time. "
+                     "Internal planner solve timing, when available, lives under planning.",
+        state_arrays=[key for key in result["dynamic"] if key != "compute_time"],
+        interval_arrays=["compute_time"],
+        velocities="object_spatial_velocity is native world angular [wx,wy,wz] then translational [vx,vy,vz]; "
+                   "robot_joint_velocities are native plant joint velocities.",
+        qpos="The projected static.state_layout describes recording.snapshot_dynamic.qpos/qvel only.",
+        evaluation="Table-II scoring uses the first simultaneous strict goal crossing at an execution endpoint. "
+                   "The legacy evaluation section and its costs remain snapshot diagnostics, including settling.")
+    schema["missing"].pop("compute_time", None)
+    schema["legacy_fields"].update(
+        n_control_steps="Deprecated snapshot count; use recording.n_snapshots. Never executed controls.",
+        steps_run="Deprecated recorded interval count; use recording.n_recorded_intervals.",
+        **{"hyperparameters.steps": "For semantics_version>=4: configured execution-step budget; null means unlimited.",
+           "dynamic.evaluation_costs": "Moved to recording.snapshot_dynamic.evaluation_costs; snapshot diagnostics.",
+           "dynamic.evaluation_total": "Moved to recording.snapshot_dynamic.evaluation_total; snapshot diagnostics."})
+    result["provenance"].setdefault("metadata_semantics", {}).update(
+        steps="Configured execution-step budget from native runtime telemetry; null means unlimited.",
+        control_dt="Variable physical execution duration: scalar unavailable; use execution.sim_time boundaries.",
+        compute_time=schema["compute_time"])
+    return result
+
+
 def project_result(run_dir, scene, run_id, cfg, summary, steps, rows,
-                   pos_tol=0.05, ang_tol=0.1, evaluation_costs=None, include_semantics=True):
+                   pos_tol=0.05, ang_tol=0.1, evaluation_costs=None, include_semantics=True,
+                   execution_steps=None, execution_native=None, planning_updates=None):
     """Project recorded snapshots into the reference's state/interval layout.
 
     M observed states define M-1 observed intervals. There is no synthetic t=0
@@ -465,7 +682,13 @@ def project_result(run_dir, scene, run_id, cfg, summary, steps, rows,
                 "pusher_object_gap", "min_obstacle_clearance", "evaluation_total"):
         dynamic[key] = [_number(row.get(key)) for row in rows]
     result = {**summary, "steps_run": n, "schema": schema, **metadata, "dynamic": dynamic}
-    return add_result_semantics(result, run_dir) if include_semantics else result
+    add_execution_timing(result, read_execution_steps(run_dir) if execution_steps is None else execution_steps)
+    if include_semantics:
+        add_result_semantics(result, run_dir)
+        add_execution_projection(result, cfg,
+            read_native_execution(run_dir) if execution_native is None else execution_native,
+            read_planning_updates(run_dir) if planning_updates is None else planning_updates)
+    return result
 
 
 def add_result_semantics(result, run_dir=None):
@@ -616,7 +839,7 @@ def export_existing_result(args, cfg):
     summary = json.loads(result_path.read_text())
     if summary.get("run_id") != args.run_id or summary.get("scenario") != args.scene:
         raise ValueError("Saved result identity does not match the requested run")
-    if "recording" in summary:
+    if {"steps_raw", "state_trace", "metrics_csv"} <= (summary.get("recording") or {}).keys():
         # A compact bundle already contains the original dynamic arrays and native
         # settings. Rebuilding metadata from its deleted sidecars would lose them.
         recorded_cfg = summary["provenance"]["evaluation_scene_config"]
@@ -627,7 +850,8 @@ def export_existing_result(args, cfg):
         else:
             from run_artifacts import _validate
         _validate(summary, summary["recording"], recorded_cfg, directory)
-        result = add_result_semantics(summary, directory)
+        result = (summary if (summary.get("execution") or {}).get("alignment") == "physical_policy_boundaries_v1"
+                  else add_result_semantics(summary, directory))
         write_result_json(result_path, result)
         print("WROTE", result_path)
         return

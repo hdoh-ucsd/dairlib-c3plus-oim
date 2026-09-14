@@ -11,10 +11,10 @@ The OSC jumping controller tracks a target trajectory generated through
  
 The process for generating and processing the trajectory are as follows, the commands can also be run from `bot-procman-sheriff -l cassie_jumping.pmd`:
 
-0. start `bazel-bin/director/drake-director`
-1. run `bazel-bin/examples/Cassie/run_dircon_jumping --jumping_height=0.2
+0. start `.build/bin/director/drake-director`
+1. run `.build/bin/examples/Cassie/run_dircon_jumping --jumping_height=0.2
  --knot_points=8 --save_filename="<filename>"` or 5.trajectory-optimization dircon_jumping
-2. run `bazel-bin/examples/Cassie/visualize_trajectory --folder_path="<foldername> --trajectory_name="<filename> <otherflags>` 
+2. run `.build/bin/examples/Cassie/visualize_trajectory --folder_path="<foldername> --trajectory_name="<filename> <otherflags>`
 or 5.trajectory-optimization visualize_trajectory (this step is optional, it just allows you to view the saved trajectory at a later time)  
 3. run `convert_traj_for_controller --folder_path="<foldername> --trajectory_name="<filename>` or 
 5.trajectory-optimization convert_traj_for_controller
@@ -23,10 +23,10 @@ or 5.trajectory-optimization visualize_trajectory (this step is optional, it jus
 
 The commands to run the controller and simulator can be run from `bot-procman-sheriff -l cassie_jumping.pmd`:
 
-0. start `bazel-bin/director/drake-director --use_builtin_scripts=point_pair_contact`
-1. start `bazel-bin/examples/Cassie/visualizer --channel=CASSIE_STATE_SIMULATION`
-2. start `bazel-bin/examples/Cassie/run_osc_jumping_controller --traj_name="<filename>" --x_offset=0.095 --delay_time=1.0 --channel_u="CASSIE_INPUT"`
-3. start `bazel-bin/examples/Cassie/multibody_sim --time_stepping=true --end_time=5.0 --init_height=1.0`
+0. start `.build/bin/director/drake-director --use_builtin_scripts=point_pair_contact`
+1. start `.build/bin/examples/Cassie/visualizer --channel=CASSIE_STATE_SIMULATION`
+2. start `.build/bin/examples/Cassie/run_osc_jumping_controller --traj_name="<filename>" --x_offset=0.095 --delay_time=1.0 --channel_u="CASSIE_INPUT"`
+3. start `.build/bin/examples/Cassie/multibody_sim --time_stepping=true --end_time=5.0 --init_height=1.0`
 
 Flags for visualize_trajectory
 -
@@ -47,7 +47,7 @@ Use the `output_contact` branch of `cassie-mujoco-sim` and build it according to
 
 To run the simulator to work with the OSC jumping controller:
 
-0. start `bazel-bin/examples/Cassie/run_osc_jumping_controller --traj_name="<filename>" --x_offset=0.095 --delay_time=1.0 --channel_u="CASSIE_INPUT"`
-1. start `bazel-bin/examples/Cassie/dispatcher_robot_in --port 25000 --floating_base=true --max_joint_velocity=60 --control_channel_name_1="CASSIE_INPUT"`
+0. start `.build/bin/examples/Cassie/run_osc_jumping_controller --traj_name="<filename>" --x_offset=0.095 --delay_time=1.0 --channel_u="CASSIE_INPUT"`
+1. start `.build/bin/examples/Cassie/dispatcher_robot_in --port 25000 --floating_base=true --max_joint_velocity=60 --control_channel_name_1="CASSIE_INPUT"`
 or 1.simulated-robot dispatcher-robot-in
 2. start `/cassie-mujoco-sim/test/cassiesim -r -s` or 4.other-simulators cassie-mujoco 
