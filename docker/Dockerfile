@@ -78,7 +78,7 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 # --- Python tooling ----------------------------------------------------------
 # Mesh/sampling generation (examples/sampling_c3/sampling_generation) plus the
-# analysis and rendering tools under tools/experiments/.
+# experiment support in c3plus/ and public commands in tools/.
 COPY requirements.txt /tmp/requirements.txt
 # Keep the runtime separate from Drake's system build/lint dependencies.
 # Expose only apt's self-contained LCM binding. Importing all system packages

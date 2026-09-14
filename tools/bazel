@@ -11,5 +11,5 @@ readonly WORKSPACE_DIR
 if [ "${DAIRLIB_WITH_ROS}" == "ON" ] ; then
   exec -a "$0" "${BAZEL_REAL}" "$@"
 else
-  exec -a "$0" "${BAZEL_REAL}" "--bazelrc=${WORKSPACE_DIR}/noros.bazelrc" "$@"
+  exec -a "$0" "${BAZEL_REAL}" "--bazelrc=${WORKSPACE_DIR}/build_support/noros.bazelrc" "$@"
 fi
