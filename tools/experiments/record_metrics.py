@@ -83,7 +83,7 @@ def yaw_of(q):
 def progress_label(object_name, steps_path):
     if object_name in {f"{name}_base" for name in ("sugar_box", "power_drill", "hammer", "banana")}:
         return object_name.removesuffix("_base")
-    known = {"T_shape_video": "Tblock", "vertical_link": "Tblock", "c_glyph_base": "Cblock"}
+    known = {"T_shape_video": "T_block", "vertical_link": "T_block", "c_glyph_base": "Cblock"}
     if object_name in known:
         return known[object_name]
     # Both legacy scene objects share the G_shape_video channel. Only the
@@ -93,7 +93,7 @@ def progress_label(object_name, steps_path):
         try:
             saved = yaml.safe_load((Path(steps_path).parent / "config/simulation.yaml").read_text())
             model = Path(saved["object_model"]).name
-            return {"push_t_oimscale_m01.sdf": "Tblock", "push_c_glyph.sdf": "Cblock"}.get(model, object_name)
+            return {"push_t_oimscale_m01.sdf": "T_block", "push_c_glyph.sdf": "Cblock"}.get(model, object_name)
         except (OSError, KeyError, TypeError, yaml.YAMLError):
             pass
     return object_name
@@ -183,4 +183,6 @@ steps_f.flush(); trace_f.flush()
 print("FINAL " + json.dumps({
     'first_success_t': S['first_success_t'], 'control_steps': S['step'],
     'best_pos_err': S['best_pos'], 'best_ang_err': S['best_ang'],
+    'termination_reason': ('goal_reached' if args.exit_on_success and S['first_success_t'] is not None
+                           else 'wall_time_cap'),
     'pos_tol': args.pos_tol, 'ang_tol': args.ang_tol}), flush=True)

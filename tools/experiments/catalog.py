@@ -15,7 +15,8 @@ TOOL_DIR = Path(__file__).resolve().parent
 CONFIG_DIR = TOOL_DIR / "scene_configs"
 OBSTACLE_COSTS = ("exponential", "relu")
 MESH_OBJECTS = ("sugar_box", "power_drill", "hammer", "banana")
-OBJECTS = ("Tblock", "Cblock", *MESH_OBJECTS)
+RUN_OBJECTS = ("T_block", *MESH_OBJECTS)
+OBJECTS = ("T_block", "Cblock", *MESH_OBJECTS)
 MODELS = {
     "open_task": ("push_t_oimscale_m01.sdf", None),
     "single_obstacle": ("push_t_oimscale_m01.sdf", "single_obstacle_box_oimframe.sdf"),

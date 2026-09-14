@@ -29,21 +29,25 @@ class ObjectRunTests(unittest.TestCase):
         launch.assert_not_called()
         return json.loads(stream.getvalue())
 
-    def test_four_object_dry_run_preserves_identity_and_creates_nothing(self):
+    def test_five_object_dry_run_preserves_identity_and_creates_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "planned"
-            data = self.dry_run(out, "--objects", *S.MESH_OBJECTS, "--start", "2", "--goal", "2",
+            data = self.dry_run(out, "--objects", *S.RUN_OBJECTS, "--start", "2", "--goal", "2",
                                 "--goal-yaw-degrees", "90")
             self.assertFalse(out.exists())
             self.assertEqual(data["execution"], "serial")
-            self.assertEqual(data["run_count"], 4)
-            self.assertEqual([p["object_name"] for p in data["runs"]], list(S.MESH_OBJECTS))
-            self.assertEqual(len({p["run_id"] for p in data["runs"]}), 4)
-            self.assertEqual(len({p["configuration_digest"] for p in data["runs"]}), 4)
-            for name, plan in zip(S.MESH_OBJECTS, data["runs"]):
+            self.assertEqual(tuple(S.RUN_OBJECTS), ("T_block", "sugar_box", "power_drill", "hammer", "banana"))
+            self.assertEqual(data["run_count"], 5)
+            self.assertEqual([p["object_name"] for p in data["runs"]], list(S.RUN_OBJECTS))
+            self.assertEqual(len({p["run_id"] for p in data["runs"]}), 5)
+            self.assertEqual(len({p["configuration_digest"] for p in data["runs"]}), 5)
+            for name, plan in zip(S.RUN_OBJECTS, data["runs"]):
                 self.assertEqual(Path(plan["out"]), out / name)
                 self.assertIn(name, plan["run_id"])
-                self.assertIn(name, plan["demo"])
+                if name == "T_block":
+                    self.assertEqual(plan["demo"], S.demo_name("open_task", 2, 2))
+                else:
+                    self.assertIn(name, plan["demo"])
                 self.assertEqual(plan["simulation_model"], plan["object_profile"]["simulation_model"])
                 self.assertEqual(plan["controller_model"], plan["object_profile"]["controller_model"])
                 self.assertEqual(plan["goal_yaw_degrees"], 90)
@@ -59,17 +63,44 @@ class ObjectRunTests(unittest.TestCase):
             self.assertNotIn("object_name", default)
             self.assertFalse(out.exists())
 
+    def test_explicit_t_block_preserves_native_configuration_and_default_run_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "planned"
+            for start, goal, yaw in ((1, 1, None), (2, 2, 90), (5, 3, -90)):
+                with self.subTest(start=start, goal=goal, yaw=yaw):
+                    flags = ["--start", str(start), "--goal", str(goal)]
+                    if yaw is not None:
+                        flags += ["--goal-yaw-degrees", str(yaw)]
+                    default = self.dry_run(out, *flags)
+                    selected = self.dry_run(out, "--objects", "T_block", *flags)
+                    for key in ("demo", "controller_goal", "evaluation_goal", "start_pose", "configuration_digest"):
+                        self.assertEqual(selected[key], default[key], key)
+                    self.assertEqual(selected["run_id"], default["run_id"].replace("open_task_", "open_task_T_block_", 1))
+                    self.assertEqual(selected["object_name"], "T_block")
+                    self.assertEqual(Path(selected["out"]), out)
+                    self.assertEqual(selected["object_channel_substring"], "G_shape_video")
+                    self.assertTrue(selected["asset_sha256"])
+                    native = S.compose_demo_configs(default["demo"], goal_yaw_degrees=yaw)
+                    explicit = S.compose_demo_configs(default["demo"], goal_yaw_degrees=yaw, object_name="T_block")
+                    self.assertEqual(explicit, native)
+                    self.assertEqual(explicit["controller"]["object_model"],
+                                     "examples/sampling_c3/urdf/push_t_oimscale_m01_control.sdf")
+                    self.assertEqual(explicit["simulation"]["object_model"],
+                                     "examples/sampling_c3/urdf/push_t_oimscale_m01.sdf")
+                    self.assertIn("profiles/t_shape/", explicit["controller"]["sampling_params_file"])
+            self.assertFalse(out.exists())
+
     def test_multiselect_calls_serially_and_checks_all_destinations_first(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "runs"
-            flags = ["--scene", "open_task", "--objects", *S.MESH_OBJECTS, "--out", str(root)]
+            flags = ["--scene", "open_task", "--objects", *S.RUN_OBJECTS, "--out", str(root)]
             with patch.object(R, "run_one") as launch:
                 R.main(flags)
-            self.assertEqual(launch.call_count, 4)
-            for name, call in zip(S.MESH_OBJECTS, launch.call_args_list):
+            self.assertEqual(launch.call_count, 5)
+            for name, call in zip(S.RUN_OBJECTS, launch.call_args_list):
                 self.assertEqual(call.args[4], root / name)
                 self.assertEqual(call.kwargs["object_name"], name)
-            (root / S.MESH_OBJECTS[-1]).mkdir(parents=True)
+            (root / S.RUN_OBJECTS[-1]).mkdir(parents=True)
             with patch.object(R, "run_one") as launch, redirect_stderr(io.StringIO()), \
                     self.assertRaises(SystemExit):
                 R.main(flags)
@@ -80,6 +111,9 @@ class ObjectRunTests(unittest.TestCase):
             out = Path(tmp) / "unused"
             for flags in (["--scene", "shelf_gap", "--objects", "banana"],
                           ["--scene", "open_task", "--objects", "banana", "banana"],
+                          ["--scene", "open_task", "--objects", "Tblock"],
+                          ["--scene", "icra_sign", "--objects", "T_block"],
+                          ["--scene", "open_task", "--objects", "Cblock"],
                           ["--scene", "open_task", "--objects", "unknown"]):
                 with self.subTest(flags=flags), patch.object(R, "run_one") as launch, \
                         redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
@@ -87,15 +121,23 @@ class ObjectRunTests(unittest.TestCase):
                 launch.assert_not_called()
                 self.assertFalse(out.exists())
 
+    def test_catalog_rejects_old_t_name_and_incompatible_canonical_profiles(self):
+        self.assertIn("T_block", S.OBJECTS)
+        self.assertNotIn("Tblock", S.OBJECTS)
+        for scene, name in (("open_task", "Tblock"), ("icra_sign", "T_block"), ("open_task", "Cblock")):
+            with self.subTest(scene=scene, object=name), self.assertRaises(ValueError):
+                S.resolve_object_profile(scene, name)
+
     def test_object_packaging_uses_selected_channel_model_and_geometry(self):
-        for name in S.MESH_OBJECTS:
+        for name in S.RUN_OBJECTS:
             with self.subTest(object=name), tempfile.TemporaryDirectory() as tmp:
                 repo = Path(tmp)
                 demo = S.demo_name("open_task", 2, 2, object_name=name)
                 resolved = S.compose_demo_configs(demo, object_name=name)
                 profile = S.resolve_object_profile("open_task", name)
-                sources = [*S.load_demo_configs(demo, object_name=name), *S.model_assets(resolved),
-                           S.REPO / profile["physics_metadata_file"]]
+                sources = [*S.load_demo_configs(demo, object_name=name), *S.model_assets(resolved)]
+                if name in S.MESH_OBJECTS:
+                    sources.append(S.REPO / profile["physics_metadata_file"])
                 for source in sources:
                     target = repo / source.relative_to(S.REPO)
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -114,33 +156,59 @@ class ObjectRunTests(unittest.TestCase):
 
                 with patch.object(R, "REPO", repo), patch.object(R, "BINARIES", ()), \
                         patch.object(R, "logged_command", side_effect=logged), \
+                        patch.object(R, "capture_source_state", return_value={
+                            "format": "git-source-state/v1", "base_commit": "test-commit",
+                            "worktree_dirty": False, "scope": "test fixture",
+                            "tracked_patch": {"encoding": "utf-8", "content": "", "size_bytes": 0,
+                                              "sha256": hashlib.sha256(b"").hexdigest()},
+                            "git_status": {"encoding": "utf-8", "content": "", "size_bytes": 0,
+                                           "sha256": hashlib.sha256(b"").hexdigest()},
+                            "untracked_files": {}}), \
+                        patch.object(R, "compact_run") as compact, \
                         patch.object(R.subprocess, "check_output",
                                      side_effect=lambda cmd, **kw: "test" if kw.get("text") else b""), \
                         redirect_stdout(io.StringIO()):
                     status = R.run_one("open_task", "relu", 2, 2, out, object_name=name)
                 self.assertEqual(status["object_name"], name)
                 self.assertTrue(status["asset_sha256"])
-                self.assertEqual(phases["launcher.log"][3], profile["object_channel_substring"])
+                channel = profile["object_channel_substring"] if name in S.MESH_OBJECTS else "G_shape_video"
+                self.assertEqual(phases["launcher.log"][3], channel)
                 render = phases["render.log"]
-                simulation_model = out / "config/repository" / profile["simulation_model"]
+                simulation_model = ((out / "config/repository" if name in S.MESH_OBJECTS else repo)
+                                    / profile["simulation_model"])
                 self.assertEqual(render[render.index("--object-sdf") + 1], str(simulation_model))
                 self.assertEqual(status["render_object_model"], str(simulation_model))
                 self.assertTrue(simulation_model.is_file())
                 evaluation_path = out / "evaluation_scene_config.yaml"
                 cfg = yaml.safe_load(evaluation_path.read_text())
+                expected_evaluation = (profile if name in S.MESH_OBJECTS else
+                                       yaml.safe_load((R.CONFIG_DIR / "open_task.yaml").read_text()))
                 for field in ("footprint", "block_half_height", "tip_target_z", "object_channel_substring"):
-                    self.assertEqual(cfg[field], profile[field])
-                self.assertEqual(cfg["tip_floor_z_real"], profile["tip_floor_z_real"])
-                cost = phases["cost_fig.log"]
-                self.assertEqual(cost[cost.index("--scene-config") + 1], str(evaluation_path))
+                    self.assertEqual(cfg[field], expected_evaluation[field])
+                if "tip_floor_z_real" in expected_evaluation:
+                    self.assertEqual(cfg["tip_floor_z_real"], expected_evaluation["tip_floor_z_real"])
+                else:
+                    self.assertNotIn("tip_floor_z_real", cfg)
+                if name == "T_block":
+                    for key, value in expected_evaluation.items():
+                        if key != "goal":
+                            self.assertEqual(cfg[key], value, key)
+                    self.assertEqual(cfg["object_channel_substring"], "G_shape_video")
+                self.assertEqual(cfg["goal"], list(status["evaluation_goal"]))
+                self.assertNotIn("cost_fig.log", phases)
+                self.assertEqual(render[render.index("--result") + 1], str(out / f"{status['run_id']}_result.json"))
                 self.assertEqual(C.load_scene("open_task", evaluation_path)["footprint"],
-                                 [tuple(map(float, p)) for p in profile["footprint"]])
+                                 [tuple(map(float, p)) for p in expected_evaluation["footprint"]])
                 sim = yaml.safe_load((out / "config/simulation.yaml").read_text())
                 controller = yaml.safe_load((out / "config/controller.yaml").read_text())
-                self.assertEqual(sim["object_model"], str(simulation_model))
+                self.assertEqual(sim["object_model"], str(simulation_model) if name in S.MESH_OBJECTS
+                                 else profile["simulation_model"])
                 self.assertEqual(controller["object_model"],
-                                 str(out / "config/repository" / profile["controller_model"]))
-                self.assertTrue((out / "RUN_COMPLETE").is_file())
+                                 str(out / "config/repository" / profile["controller_model"])
+                                 if name in S.MESH_OBJECTS else profile["controller_model"])
+                compact.assert_called_once_with(out, status["run_id"], status=status,
+                                                require_legacy_complete=False)
+                self.assertFalse((out / "RUN_COMPLETE").exists())
 
     def test_cost_reconstruction_uses_saved_footprint(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -238,15 +306,18 @@ class ObjectRunTests(unittest.TestCase):
                      for k in (1, 2)]
             (out / "steps_raw.jsonl").write_text("".join(json.dumps(step) + "\n" for step in steps))
             (out / "recorder.log").write_text("FINAL {}\n")
+            (out / "runtime_status.json").write_text(json.dumps({
+                "run_id": "object_test", "scene": "open_task", "commit": "saved-launch-commit"}))
             fk = lambda q: (np.array([.37, -.4, -.014]), np.zeros(3), np.diag([1, -1, -1]))
             argv = ["postprocess_run.py", "--run-dir", str(out), "--scene", "open_task",
                     "--run-id", "object_test", "--scene-config", str(config)]
             with patch("sys.argv", argv), patch.object(P, "build_fk", return_value=fk), \
-                    patch.object(P.subprocess, "check_output", return_value=b"test"), \
+                    patch("subprocess.check_output", side_effect=AssertionError("Current checkout lookup forbidden")), \
                     redirect_stdout(io.StringIO()):
                 P.main()
             result = json.loads((out / "object_test_result.json").read_text())
             manifest = yaml.safe_load((out / "object_test_manifest.yaml").read_text())
+            self.assertEqual(manifest["git_commit"], "saved-launch-commit")
             for key, value in identity.items():
                 self.assertEqual(result[key], value)
                 self.assertEqual(manifest[key], value)
@@ -317,12 +388,16 @@ class ResultProjectionTests(unittest.TestCase):
             self.assertEqual(result[key], value)
         self.assertEqual(result["steps_run"], 4)
         self.assertEqual(result["n_control_steps"], 5)
+        self.assertEqual(result["n_snapshots"], 5)
+        self.assertEqual(result["n_recorded_intervals"], 4)
+        for key in ("n_control_steps", "steps_run", "success", "t_success", "first_success_t"):
+            self.assertIn(key, result["schema"]["legacy_fields"])
         dynamic = result["dynamic"]
         for key in ("time", "object_pose", "object_velocity", "robot_pos", "robot_vel",
                     "qpos", "qvel", "object_pose_3d", "tip_z_state", "tip_tilt_state",
                     "robot_joint_effort"):
             self.assertEqual(len(dynamic[key]), 5, key)
-        for key in ("robot_control", "compute_time", "contact_normal_force_z", "robot_contact_force",
+        for key in ("robot_control", "contact_normal_force_z", "robot_contact_force",
                     "tip_z", "tip_tilt"):
             self.assertEqual(len(dynamic[key]), 4, key)
         self.assertEqual(dynamic["time"], [row["sim_time"] for row in rows])
@@ -338,6 +413,208 @@ class ResultProjectionTests(unittest.TestCase):
             self.assertIn(key, result)
         for key in ("indexing", "frames", "velocities", "missing", "units", "controls", "qpos"):
             self.assertIn(key, result["schema"])
+
+    def semantic_result(self):
+        cfg, summary, steps, rows = self.fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.project(tmp, cfg, summary, steps, rows)
+        return P._json_values(result)
+
+    def test_control_dt_is_mean_observed_interval_without_resampling(self):
+        for times, expected in (([10., 10.1, 10.4, 10.8, 11.], .25),
+                                ([10., 10.2, 10.4, 10.6, 10.8], .2),
+                                ([10., 10., 10.4, 10.8, 11.], None),
+                                ([10., 10.1, 10.4, 10.3, 11.], None)):
+            with self.subTest(times=times):
+                result = self.semantic_result()
+                result["dynamic"]["time"] = times
+                original = deepcopy(result["dynamic"])
+                P.add_result_semantics(result)
+                self.assertEqual(result["dynamic"], original)
+                actual = result["hyperparameters"]["control_dt"]
+                self.assertEqual(result["hyperparameters"]["control_dt_source"], "mean_observed_state_interval")
+                if expected is None:
+                    self.assertIsNone(actual)
+                else:
+                    self.assertAlmostEqual(actual, expected)
+                    self.assertAlmostEqual(result["steps_run"] * actual, times[-1] - times[0])
+
+    def test_unavailable_timing_is_omitted_but_real_timing_is_preserved(self):
+        result = self.semantic_result()
+        result["dynamic"]["compute_time"] = [None] * result["steps_run"]
+        P.add_result_semantics(result)
+        self.assertNotIn("compute_time", result["dynamic"])
+        self.assertNotIn("compute_time", result["schema"]["interval_arrays"])
+        self.assertIn("compute_time", result["schema"]["missing"])
+        timing = [.014, None, .019, .021]
+        result["dynamic"]["compute_time"] = timing.copy()
+        P.add_result_semantics(result)
+        self.assertEqual(result["dynamic"]["compute_time"], timing)
+        self.assertIn("compute_time", result["schema"]["interval_arrays"])
+
+    def test_legacy_native_metadata_and_weights_relocated_without_losing_only_copy(self):
+        result = self.semantic_result()
+        weights = {"q_pos": 3., "q_theta": 1.2}
+        result["evaluation"].pop("weights")
+        result["hyperparameters"]["costs"] = weights
+        legacy = result["provenance"].pop("c3plus")
+        legacy.update(obstacle_cost="exponential", wall_cap_seconds=600,
+                      configurations={"config/options.yaml": {"N": 5, "admm_iter": 3}},
+                      sampler_environment={"SAMPLING_C3_SEED": "42"})
+        result["hyperparameters"].pop("obstacle_cost")
+        result["hyperparameters"]["c3plus"] = deepcopy(legacy)
+        P.add_result_semantics(result)
+        self.assertEqual(result["provenance"]["c3plus"], legacy)
+        self.assertEqual(result["evaluation"]["weights"], weights)
+        self.assertEqual(result["hyperparameters"]["obstacle_cost"], "exponential")
+        self.assertNotIn("c3plus", result["hyperparameters"])
+        self.assertNotIn("costs", result["hyperparameters"])
+        before = deepcopy(result)
+        P.add_result_semantics(result)
+        self.assertEqual(result, before)
+
+    def test_native_duplicate_removed_only_after_exact_snapshot_validation(self):
+        result = self.semantic_result()
+        configs = {"config/goal.yaml": {"position_success_threshold": .02,
+                                        "orientation_success_threshold": .1}}
+        result["provenance"]["c3plus"]["configurations"] = deepcopy(configs)
+        text = yaml.safe_dump(configs["config/goal.yaml"])
+        result["provenance"]["configuration"] = {"files": {"config/goal.yaml": {
+            "text": text, "data": deepcopy(configs["config/goal.yaml"]),
+            "size_bytes": len(text.encode()), "sha256": hashlib.sha256(text.encode()).hexdigest()}}}
+        before = deepcopy(result)
+        P.add_result_semantics(result)
+        self.assertNotIn("configurations", result["provenance"]["c3plus"])
+        self.assertEqual(result["provenance"]["configuration"], before["provenance"]["configuration"])
+        self.assertEqual(result["native_controller"]["success_thresholds"],
+                         {"position_m": .02, "orientation_rad": .1})
+        bad = deepcopy(before)
+        bad["provenance"]["c3plus"]["configurations"]["config/goal.yaml"]["position_success_threshold"] = .03
+        with self.assertRaisesRegex(ValueError, "disagrees"):
+            P.add_result_semantics(bad)
+        bad = deepcopy(before)
+        bad["provenance"]["configuration"]["files"]["config/goal.yaml"]["text"] += "# changed\n"
+        with self.assertRaisesRegex(ValueError, "hash mismatch"):
+            P.add_result_semantics(bad)
+
+    def test_common_success_uses_simultaneous_strict_thresholds(self):
+        cases = (
+            # Equality at either threshold fails; only index 3 succeeds.
+            ([.05, .04, .051, .049, .02], [.01, .1, .01, .099, .2], True, False, 10.4),
+            # Separate position and orientation successes must not be combined.
+            ([.04, .06, .04, .06, .04], [.2, .05, .2, .05, .2], False, False, None),
+            # Preserve recorded order even when the last timestamp goes backward.
+            ([.06, .06, .04, .04, .04], [.2, .2, .05, .05, .05], True, True, 10.4),
+        )
+        for position, orientation, ever, final, first_time in cases:
+            with self.subTest(position=position, orientation=orientation):
+                result = self.semantic_result()
+                result["dynamic"]["position_error_m"] = position
+                result["dynamic"]["orientation_error_rad"] = orientation
+                result["hyperparameters"].update(goal_pos_tol=.05, goal_theta_tol=.1)
+                result.update(success=True, t_success=10.4, first_success_t=10.5)
+                before = deepcopy(result)
+                self.assertIs(P.add_result_semantics(result), result)
+                evaluation = result["evaluation"]
+                self.assertEqual(evaluation["thresholds"], {"position_m": .05, "orientation_rad": .1})
+                self.assertIs(evaluation["ever_success"], ever)
+                self.assertIs(evaluation["final_success"], final)
+                self.assertEqual(evaluation["first_success_t"], first_time)
+                self.assertEqual(result["dynamic"], before["dynamic"])
+                for key in ("success", "t_success", "first_success_t", "n_control_steps", "steps_run",
+                            "best_pos_err", "best_ang_err", "final_position_error", "final_orientation_error"):
+                    self.assertEqual(result[key], before[key], key)
+                self.assertEqual(result["n_snapshots"], len(before["dynamic"]["time"]))
+                self.assertEqual(result["n_recorded_intervals"], len(before["dynamic"]["time"]) - 1)
+
+    def test_drill_common_success_does_not_invent_native_completion(self):
+        result = self.semantic_result()
+        result["dynamic"]["position_error_m"] = [.2, .06, .04, .029853535315141556, .02985378167664127]
+        result["dynamic"]["orientation_error_rad"] = [.2, .2, .09, .09, .08950720751676533]
+        configs = result["provenance"]["c3plus"].setdefault("configurations", {})
+        configs["config/goal.yaml"] = {"position_success_threshold": .02,
+                                       "orientation_success_threshold": .1,
+                                       "other_saved_native_setting": 987}
+        before = deepcopy(result)
+        P.add_result_semantics(result)
+        self.assertTrue(result["evaluation"]["ever_success"])
+        self.assertTrue(result["evaluation"]["final_success"])
+        self.assertGreater(min(result["dynamic"]["position_error_m"]), .02)
+        self.assertIsNone(result["native_controller"]["success"])
+        self.assertEqual(result["native_controller"]["success_thresholds"],
+                         {"position_m": .02, "orientation_rad": .1})
+        self.assertEqual(configs, before["provenance"]["c3plus"].get("configurations", {}))
+        self.assertEqual(result["dynamic"], before["dynamic"])
+        # A saved threshold change must be reflected, without a hardcoded 0.02.
+        configs["config/goal.yaml"].update(position_success_threshold=.0137,
+                                          orientation_success_threshold=.0678)
+        P.add_result_semantics(result)
+        self.assertEqual(result["native_controller"]["success_thresholds"],
+                         {"position_m": .0137, "orientation_rad": .0678})
+        self.assertEqual(result["evaluation"]["thresholds"], {"position_m": .05, "orientation_rad": .1})
+        self.assertIsNone(result["native_controller"]["success"])
+
+    def test_diagnostic_aliases_preserve_native_settings_and_unavailable_measurements(self):
+        result = self.semantic_result()
+        weights = {"q_pos": 3.0, "q_theta": 1.2, "w_obstacle": 4.5}
+        result["evaluation"]["weights"] = weights
+        configs = {"config/controller.yaml": {"native_only": True},
+                   "config/options.yaml": {"Q": [1, 2], "R": [3], "admm_iter": 7}}
+        result["provenance"]["c3plus"]["configurations"] = deepcopy(configs)
+        before = deepcopy(result)
+        P.add_result_semantics(result)
+        evaluation = result["evaluation"]
+        self.assertEqual(evaluation["weights"], weights)
+        self.assertEqual(evaluation["costs"]["components"], before["dynamic"]["evaluation_costs"])
+        self.assertEqual(evaluation["costs"]["total"], before["dynamic"]["evaluation_total"])
+        self.assertNotIn("costs", result["hyperparameters"])
+        self.assertEqual(result["provenance"]["c3plus"].setdefault("configurations", {}), configs)
+        self.assertEqual(result["dynamic"], before["dynamic"])
+        for key in ("robot_control", "contact_normal_force_z", "robot_contact_force"):
+            self.assertEqual(result["dynamic"][key], before["dynamic"][key])
+            self.assertIn(key, result["schema"]["missing"])
+        self.assertEqual(result["dynamic"]["robot_control"], [[None] * 5] * 4)
+        self.assertTrue(any(value is not None for row in result["dynamic"]["robot_joint_effort"] for value in row))
+        self.assertIsNone(result["static"]["object_limit_surface_d"])
+        self.assertIsNone(result["static"]["object_wrench_limit"])
+        self.assertFalse(any("plan" in key or "wrench" in key or "consensus" in key
+                             for key in result["dynamic"]))
+        result["evaluation"]["weights"] = None
+        result["provenance"]["c3plus"]["configurations"] = {}
+        P.add_result_semantics(result)
+        self.assertIsNone(result["evaluation"]["weights"])
+        self.assertIsNone(result["native_controller"]["success"])
+        self.assertEqual(result["native_controller"]["success_thresholds"],
+                         {"position_m": None, "orientation_rad": None})
+
+    def test_t_identity_comes_from_saved_catalogue_without_filename_inference(self):
+        result = self.semantic_result()
+        result.pop("object_name", None)
+        result["run"]["object"] = None
+        result["hyperparameters"]["object"] = None
+        result["static"]["object_name"] = None
+        saved_evaluation = result["provenance"].get("evaluation_scene_config", {})
+        saved_evaluation.pop("object_name", None)
+        saved_evaluation.update(object_body_name="vertical_link", object_channel_substring="G_shape_video")
+        result["runtime_status"] = {"scene": "open_task", "seed": 42, "seed_verified": True,
+                                    "sampler_settings": {"SAMPLING_C3_SEED": "42"}}
+        catalogue = {"scenes": {"open_task": {"object_profile": "Tblock"}},
+                     "object_profiles": {"Tblock": {"object_body_name": "vertical_link"}}}
+        text = yaml.safe_dump(catalogue)
+        result["provenance"]["configuration"] = {"files": {
+            "config/source_experiments.yaml": {"data": catalogue, "text": text,
+                "sha256": hashlib.sha256(text.encode()).hexdigest(), "size_bytes": len(text.encode())}}}
+        # The legacy run ID deliberately still mentions banana. The saved selection wins.
+        runtime = deepcopy(result["runtime_status"])
+        native = deepcopy(result["provenance"]["c3plus"].setdefault("configurations", {}))
+        P.add_result_semantics(result)
+        self.assertEqual(result["object_name"], "T_block")
+        self.assertEqual(result["run"]["object"], "T_block")
+        self.assertEqual(result["hyperparameters"]["object"], "T_block")
+        self.assertEqual(result["static"]["object_name"], "T_block")
+        self.assertEqual(result["runtime_status"], runtime)
+        self.assertEqual(result["provenance"]["c3plus"].setdefault("configurations", {}), native)
+        self.assertEqual(result["provenance"]["configuration"]["files"]["config/source_experiments.yaml"]["text"], text)
 
     def test_finite_differences_use_actual_dt_wrap_yaw_and_null_invalid_dt(self):
         cfg, summary, steps, rows = self.fixture()
@@ -364,7 +641,7 @@ class ResultProjectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             dynamic = self.project(tmp, cfg, summary, steps, rows)["dynamic"]
         self.assertEqual(dynamic["robot_control"], [[None] * 5 for _ in range(4)])
-        self.assertEqual(dynamic["compute_time"], [None] * 4)
+        self.assertNotIn("compute_time", dynamic)
         self.assertEqual(dynamic["contact_normal_force_z"], [None] * 4)
         self.assertEqual(dynamic["robot_contact_force"], [None] * 4)
         self.assertEqual(dynamic["robot_joint_effort"][0], steps[0]["robot_u"])
@@ -380,9 +657,10 @@ class ResultProjectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             result = self.project(tmp, cfg, summary, steps[:1], rows[:1])
         self.assertEqual(result["steps_run"], 0)
+        self.assertIsNone(result["hyperparameters"]["control_dt"])
         self.assertEqual(result["dynamic"]["time"], [10.0])
         self.assertEqual(result["dynamic"]["object_velocity"], [[None] * 3])
-        for key in ("robot_control", "compute_time", "contact_normal_force_z", "robot_contact_force",
+        for key in ("robot_control", "contact_normal_force_z", "robot_contact_force",
                     "tip_z", "tip_tilt"):
             self.assertEqual(result["dynamic"][key], [], key)
 
@@ -442,7 +720,7 @@ class ResultProjectionTests(unittest.TestCase):
                 writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
                 writer.writeheader()
                 writer.writerows(rows)
-            (out / f"{run_id}_eval_metrics.png").write_bytes(b"existing plot must be untouched")
+            (out / f"{run_id}_cost_diagnostics.png").write_bytes(b"existing plot must be untouched")
             (out / "video.mp4").write_bytes(b"existing video must be untouched")
             (out / "recorder.log").write_text('FINAL {"pos_tol": 99, "ang_tol": 99}\n')
             before = {path.relative_to(out): (path.read_bytes(), path.stat().st_mtime_ns)
@@ -506,13 +784,13 @@ class ResultProjectionTests(unittest.TestCase):
             self.assertEqual(hyper["goal_pos_tol"], .0123)
             self.assertEqual(hyper["goal_theta_tol"], .0456)
             self.assertIsNone(hyper["control_dt"])
-            self.assertEqual(hyper["c3plus"]["configurations"]["config/repository/profiles/options.yaml"],
+            self.assertEqual(result["provenance"]["c3plus"]["configurations"]["config/repository/profiles/options.yaml"],
                              native_options)
-            self.assertEqual(hyper["c3plus"]["configurations"]["config/repository/profiles/sampling.yaml"],
+            self.assertEqual(result["provenance"]["c3plus"]["configurations"]["config/repository/profiles/sampling.yaml"],
                              sampling)
-            self.assertEqual(hyper["c3plus"]["configurations"]["config/repository/profiles/reposition.yaml"],
+            self.assertEqual(result["provenance"]["c3plus"]["configurations"]["config/repository/profiles/reposition.yaml"],
                              {"saved_parameter": 123})
-            self.assertEqual(hyper["c3plus"]["sampler_environment"], {"SAMPLING_C3_SEED": "123"})
+            self.assertEqual(result["provenance"]["c3plus"]["sampler_environment"], {"SAMPLING_C3_SEED": "123"})
             self.assertEqual(result["run"]["seed"], 123)
             self.assertEqual(result["run"]["start_index"], "2")
             self.assertEqual(result["run"]["goal_index"], "3")
@@ -535,7 +813,7 @@ class ResultProjectionTests(unittest.TestCase):
             result = self.project(out, cfg, summary, steps, rows, pos_tol=None, ang_tol=None)
         hyper = result["hyperparameters"]
         for key in ("horizon", "n_admm", "rho", "rho_torque", "temperature", "samples",
-                    "iterations", "goal_pos_tol", "goal_theta_tol", "costs"):
+                    "iterations", "goal_pos_tol", "goal_theta_tol"):
             self.assertIsNone(hyper[key], key)
         self.assertIsNone(result["run"]["seed"])
         self.assertIsNone(result["static"]["sim_timestep"])

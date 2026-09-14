@@ -8,8 +8,10 @@ import sys
 
 if __package__:
     from .run_experiment import REPO, SCENES, plan_run, run_one, yaw_suffix
+    from .run_artifacts import completion, load_status
 else:
     from run_experiment import REPO, SCENES, plan_run, run_one, yaw_suffix
+    from run_artifacts import completion, load_status
 
 
 NAMED_CAMPAIGNS = {"run_launch": range(1, 6), "run_launch_simple_s2": (2,)}
@@ -50,11 +52,10 @@ def write_summary(planned, output_root):
         writer.writeheader()
         for plan in planned:
             out = Path(plan["out"])
-            status_path = out / "runtime_status.json"
             result_path = out / f"{plan['run_id']}_result.json"
-            status = json.loads(status_path.read_text()) if status_path.exists() else {}
+            status = load_status(out, plan["run_id"])
             result = json.loads(result_path.read_text()) if result_path.exists() else {}
-            complete = (out / "RUN_COMPLETE").exists()
+            complete = completion(out, plan["run_id"])
             state = "complete" if complete else "partial" if out.exists() else "pending"
             if (status.get("failures") or any(status.get(key) for key in phase_codes)
                     or status.get("seed_verified") is False or status.get("goal_yaw_verified") is False):
@@ -134,7 +135,7 @@ def main(argv=None):
                     print("Stopped between runs; current run fully packaged", flush=True)
                     return
                 out = Path(plan["out"])
-                if args.resume and (out / "RUN_COMPLETE").exists():
+                if args.resume and completion(out, plan["run_id"]):
                     driver.write(f"[SKIP_COMPLETE] {out}\n")
                     write_summary(planned, args.output_root)
                     continue

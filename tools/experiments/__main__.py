@@ -16,7 +16,8 @@ COMMANDS = {
     "run_launch": ("run_grid_campaign.py", "Full run: 180 trials at goal 2 with yaw 90/0/-90 degrees"),
     "run_launch_simple_s2": ("run_grid_campaign.py", "Start-2 run: 36 trials at goal 2 with yaw 90/0/-90 degrees"),
     "postprocess": ("postprocess_run.py", "Recompute metrics from an existing run"),
-    "render": ("render_run_3d.py", "Render an existing trace to MP4"),
+    "compact": ("run_artifacts.py", "Consolidate a completed run into JSON and MP4, then remove intermediates"),
+    "render": ("render_run_3d.py", "Render a saved result JSON or trace to MP4"),
     "visualize_mesh": ("visualize_mesh.py", "Save a PNG of an object in simulation coordinates"),
     "cost-figure": ("cost_fig.py", "Plot cost diagnostics from existing metrics"),
 }
