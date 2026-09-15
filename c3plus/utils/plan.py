@@ -6,7 +6,7 @@ from c3plus.configs import (OBSTACLE_COSTS, REPO, compose_demo_configs, demo_con
 from c3plus.configs.catalog import canonical_task, canonical_object, native_task, native_object, asset_sha256
 from c3plus.configs.poses import pose_ids, resolve_pose, pose_provenance
 
-DEFAULT_WALL_CAP_SECONDS = 300
+DEFAULT_SIMULATION_CAP_SECONDS = 300
 
 def yaw_suffix(degrees):
     """Give each supported absolute goal orientation a distinct run identity."""
@@ -16,7 +16,7 @@ def yaw_suffix(degrees):
         raise ValueError("Goal yaw must be -90, 0, or 90 degrees")
     return "_yaw_" + {-90: "m090", 0: "000", 90: "p090"}[degrees]
 
-def plan_run(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS, port=18001,
+def plan_run(scene, obstacle_cost, start, goal, out, cap=DEFAULT_SIMULATION_CAP_SECONDS, port=18001,
              goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None):
     """Validate inputs and describe a run without launching or writing files."""
     scene = canonical_task(scene)
@@ -62,7 +62,7 @@ def plan_run(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECOND
             "evaluation_goal": pose, "configuration_file": str(goal_file.relative_to(REPO)),
             "configuration_digest": demo_config_digest(demo, repo=REPO, goal_yaw_degrees=goal_yaw_degrees,
                                                         composed=resolved, **object_options),
-            "out": str(Path(out).resolve()), "wall_cap_seconds": cap, "port": port,
+            "out": str(Path(out).resolve()), "simulation_cap_seconds": cap, "port": port,
             "max_frames": max_frames}
     if steps is not None:
         plan["execution_step_budget"] = steps

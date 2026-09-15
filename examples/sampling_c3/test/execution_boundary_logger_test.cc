@@ -107,13 +107,15 @@ struct Run {
   std::map<int, Eigen::VectorXd> states;
   int64_t steps = 0;
   bool budget_caught = false;
+  bool goal_caught = false;
   double final_time = 0.0;
   Eigen::VectorXd final_state;
   std::vector<BoundaryRecord> records;
   int command_updates = 0;
 };
 
-Run Simulate(bool enabled, int budget = -1) {
+Run Simulate(bool enabled, int budget = -1,
+             std::optional<Eigen::Vector3d> goal = std::nullopt) {
   std::ostringstream captured;
   CaptureOutput output_capture(captured);
   drake::systems::DiagramBuilder<double> builder;
@@ -145,7 +147,7 @@ Run Simulate(bool enabled, int budget = -1) {
     logger = builder.AddSystem<dairlib::ExecutionBoundaryLogger>(
         *plant, robot, std::vector<drake::multibody::ModelInstanceIndex>{object},
         std::vector<std::string>{"OBJECT_TEST_STATE"}, 0.0, budget,
-        budget > 0 ? stop_file : "");
+        budget > 0 || goal ? stop_file : "", goal);
     builder.Connect(plant->get_state_output_port(), logger->state_input());
     builder.Connect(commands->get_output_port(), logger->command_input());
   }
@@ -163,6 +165,8 @@ Run Simulate(bool enabled, int budget = -1) {
     simulator.AdvanceTo(0.08);
   } catch (const dairlib::ExecutionStepBudgetReached&) {
     run.budget_caught = true;
+  } catch (const dairlib::ExecutionGoalReached&) {
+    run.goal_caught = true;
   }
   run.final_time = simulator.get_context().get_time();
   run.final_state = plant->GetPositionsAndVelocities(
@@ -170,6 +174,7 @@ Run Simulate(bool enabled, int budget = -1) {
   if (logger) {
     run.steps = logger->n_steps_executed();
     logger->LogTerminal(diagram->GetSubsystemContext(*logger, simulator.get_context()),
+                        run.goal_caught ? "goal_reached" :
                         run.budget_caught ? "step_budget" : "shutdown");
   }
   run.command_updates = commands->updates;
@@ -312,6 +317,26 @@ int main() {
             "budget terminal must describe the last applied policy");
     std::cout << "PASS budget_stops_before_third_policy_state_apply steps=2 sim_time="
               << budget.final_time << std::endl;
+    std::cout << "CASE immediate_goal_stop" << std::endl;
+    const auto reached = Simulate(true, -1, Eigen::Vector3d(0.01, 0, 0));
+    Require(reached.goal_caught && reached.steps == 1,
+            "goal did not stop during the first held policy");
+    Require(std::abs(reached.final_time - 0.02) < 1e-12,
+            "goal waited for another policy or settling interval");
+    Require((reached.final_state.array() == baseline.states.at(2).array()).all(),
+            "goal stop advanced past the reached state");
+    CheckBoundaryStates(reached, baseline);
+    Require(reached.records.back().reason == "goal_reached",
+            "successful terminal was not marked");
+    for (const Eigen::Vector3d& goal : {Eigen::Vector3d(0.05, 0, 0),
+                                     Eigen::Vector3d(0, 0, 0.1001)}) {
+      const auto missed = Simulate(true, -1, goal);
+      Require(!missed.goal_caught && missed.final_time == baseline.final_time,
+              "success must satisfy both strict goal tolerances");
+    }
+    Require(Simulate(true, -1, Eigen::Vector3d(0, 0, 2 * std::acos(-1.0))).goal_caught,
+            "goal yaw error was not wrapped");
+    std::cout << "PASS goal_stops_at_first_physical_step_and_preserves_reached_state" << std::endl;
     CheckCommandSenderCompatibility();
     std::cout << "PASS default_sender_ports_tags_and_efforts_unchanged" << std::endl;
     std::cout << "ALL_PHYSICAL_BOUNDARY_TESTS_PASSED" << std::endl;

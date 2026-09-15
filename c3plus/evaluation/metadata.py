@@ -8,6 +8,34 @@ from pathlib import Path
 import yaml
 
 
+REFERENCE_NULL_PLACEHOLDERS = {
+    "run": ("robot_opt", "object_opt", "interactive"),
+    "hyperparameters": (
+        "samples", "temperature", "robot_substeps", "object_samples", "plant",
+        "object_substeps", "rho", "rho_torque", "gamma", "consensus_object_weight",
+        "consensus", "consensus_source", "local_goal", "local_goal_lookahead",
+        "lagged_consensus", "iterations"),
+    "static": ("object_limit_surface_d", "object_wrench_limit"),
+}
+
+
+def omit_reference_placeholders(result):
+    """Omit only empty reference-algorithm settings from a C3+ projection.
+
+    Unknown native metadata, measured arrays, and original provenance retain
+    their nulls. A recorded non-null value is preserved even for these keys.
+    """
+    if (result.get("run") or {}).get("algorithm") != "c3plus":
+        return result
+    for section, keys in REFERENCE_NULL_PLACEHOLDERS.items():
+        values = result.get(section)
+        if isinstance(values, dict):
+            for key in keys:
+                if key in values and values[key] is None:
+                    del values[key]
+    return result
+
+
 def add_recorded_semantics(result, run_dir=None):
     """Add native thresholds, object identity and source provenance from saved data.
 
@@ -174,7 +202,7 @@ def add_recorded_semantics(result, run_dir=None):
         provenance["source_state"] = {"status": "unavailable",
             "worktree_dirty": runtime.get("worktree_dirty"),
             "reason": "No source state snapshot was recorded; the historical patch cannot be recovered from the current checkout."}
-    return result
+    return omit_reference_placeholders(result)
 
 
 def _read_mapping(path):
@@ -288,13 +316,7 @@ def build_metadata(run_dir, scene, run_id, cfg, summary, n_intervals, control_dt
         x, y, radius = disc
         projected_obstacles.append({"type": "circle", "center": [x, y], "radius": radius})
 
-    hyperparameters = dict.fromkeys((
-        "config", "steps", "samples", "horizon", "object", "temperature",
-        "robot_substeps", "object_samples", "plant", "object_substeps", "n_admm",
-        "rho", "rho_torque", "gamma", "consensus_object_weight", "consensus",
-        "consensus_source", "local_goal", "local_goal_lookahead", "lagged_consensus",
-        "iterations", "control_dt", "goal_pos_tol", "goal_theta_tol"))
-    hyperparameters.update(config="xarm6", steps=n_intervals, horizon=options.get("N"),
+    hyperparameters = dict(config="xarm6", steps=n_intervals, horizon=options.get("N"),
                            object=object_name, n_admm=options.get("admm_iter"),
                            control_dt=control_dt,
                            control_dt_source="mean_observed_state_interval",
@@ -308,12 +330,11 @@ def build_metadata(run_dir, scene, run_id, cfg, summary, n_intervals, control_dt
         "cost_fig_rc", "failures", "task", "native_scene", "object_name", "native_object_name",
         "canonical_start_pose", "canonical_goal_pose", "pose_catalogue") if key in runtime}
     run = {"world": "3d", "task": scene, "robot": "xarm6", "algorithm": "c3plus",
-           "robot_opt": None, "object_opt": None, "seed": runtime.get("seed"),
+           "seed": runtime.get("seed"),
            "start_index": str(runtime["start"]) if runtime.get("start") is not None else None,
            "goal_index": str(runtime["goal_index"]) if runtime.get("goal_index") is not None else None,
-           "backend": "drake", "interactive": None, "run_id": run_id, "object": object_name}
+           "backend": "drake", "run_id": run_id, "object": object_name}
     static = {"goal": cfg.get("goal"), "object_footprint_body": cfg.get("footprint"),
-              "object_limit_surface_d": None, "object_wrench_limit": None,
               "obstacles": projected_obstacles, "robot": "xarm6", "sim_timestep": simulation.get("dt"),
               "pusher_radius": cfg.get("pusher_radius"), "object_name": object_name,
               "simulation_model": runtime.get("simulation_model") or cfg.get("simulation_model")
@@ -327,7 +348,8 @@ def build_metadata(run_dir, scene, run_id, cfg, summary, n_intervals, control_dt
     static.update({key: cfg[key] for key in ("table", "block_half_height", "tip_target_z",
                                             "tip_floor_branch", "tip_floor_z_real") if key in cfg})
     provenance = {"c3plus": {"obstacle_cost": runtime.get("obstacle_cost"),
-                              "wall_cap_seconds": runtime.get("wall_cap_seconds"),
+                              **{key: runtime[key] for key in
+                                 ("simulation_cap_seconds", "wall_cap_seconds") if key in runtime},
                               "configurations": configurations,
                               "sampler_environment": runtime.get("sampler_settings")},
                   "metadata_sources": [{"path": path, "sha256": digest}
@@ -341,5 +363,6 @@ def build_metadata(run_dir, scene, run_id, cfg, summary, n_intervals, control_dt
                       "n_admm": "Saved inner C3 ADMM iterations (admm_iter); not object/robot consensus iterations.",
                       "costs": "Diagnostic weights supplied by the exporter, not the full native optimization objective.",
                       "null": "Unrecorded or without an equivalent in this workflow; no current defaults substituted."}}
-    return deepcopy({"run": run, "hyperparameters": hyperparameters, "static": static,
-                     "provenance": provenance})
+    return omit_reference_placeholders(deepcopy({
+        "run": run, "hyperparameters": hyperparameters, "static": static,
+        "provenance": provenance}))

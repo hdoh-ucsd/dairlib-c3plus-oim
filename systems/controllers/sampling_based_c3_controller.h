@@ -76,7 +76,8 @@ class SamplingC3Controller : public drake::systems::LeafSystem<double> {
       const std::vector<
           std::vector<drake::SortedPair<drake::geometry::GeometryId>>>&
           contact_geoms,
-      SamplingC3ControllerParams controller_params, bool verbose = false);
+      SamplingC3ControllerParams controller_params, bool verbose = false,
+      bool stop_on_topple = true);
 
   // Input ports
   const drake::systems::InputPort<double>& get_input_port_target() const {
@@ -401,6 +402,7 @@ class SamplingC3Controller : public drake::systems::LeafSystem<double> {
           .GetAsSolverOptions(drake::solvers::OsqpSolver::id());
 
   const bool verbose_;
+  const bool stop_on_topple_;
   int n_q_;
   int n_v_;
   int n_x_;

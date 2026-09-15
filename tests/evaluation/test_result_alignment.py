@@ -1,13 +1,36 @@
 from copy import deepcopy
+import json
 import math
+from pathlib import Path
 import tempfile
 import unittest
 import numpy as np
 
 
 from tests.fixtures.results import ProjectionFixtures
+from c3plus.evaluation import exporter as P
 
 class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
+    def test_native_goal_stop_marks_success_and_keeps_exact_terminal_pose(self):
+        cfg, summary, steps, rows = self.fixture()
+        native, updates = self.physical_fixture()
+        native['headers'][0].update(goal=cfg['goal'], goal_pos_tol=.05, goal_ang_tol=.1)
+        native['terminals'][0]['reason'] = 'goal_reached'
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.project(tmp, cfg, summary, steps, rows,
+                                  execution_native=native, planning_updates=updates)
+        self.assertTrue(result['success'])
+        self.assertEqual(result['t_success'], 7.35)
+        self.assertEqual(result['first_success_t'], 7.35)
+        self.assertEqual(result['execution']['terminal_reason'], 'goal_reached')
+        self.assertEqual(result['dynamic']['object_pose'][-1], cfg['goal'])
+        self.assertEqual(result['dynamic']['object_pose_3d'][-1],
+                         native['terminals'][0]['objects'][0]['q'])
+        bad = deepcopy(native)
+        bad['terminals'][0]['objects'][0]['q'][4] = 5
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaisesRegex(ValueError, 'goal stop'):
+            self.project(tmp, cfg, summary, steps, rows, execution_native=bad, planning_updates=updates)
+
     def test_execution_quaternion_drift_only_normalizes_derived_yaw(self):
         cfg, summary, steps, rows = self.fixture()
         for scale in (1.000059, .999941, -1.000059, -.999941):
@@ -101,9 +124,84 @@ class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
         self.assertEqual(after["dynamic"]["compute_time"], after["execution"]["step_wall_time"])
         self.assertAlmostEqual(after["execution"]["frequency_hz"], 25.0)
         self.assertEqual(after["hyperparameters"]["steps"], 2)
-        self.assertIsNone(after["hyperparameters"]["control_dt"])
+        self.assertAlmostEqual(after["hyperparameters"]["control_dt"], .125)
+        self.assertEqual(after["hyperparameters"]["control_dt_source"], "mean_physical_execution_interval")
         for key in ("success", "t_success", "steps_run", "evaluation", "native_controller"):
             self.assertEqual(after[key], before[key])
+
+
+    def test_execution_control_dt_uses_mean_simulation_interval_not_wall_time(self):
+        cfg, summary, steps, rows = self.fixture()
+        native, updates = self.physical_fixture()
+        # Deliberately different, nonuniform simulation and wall intervals.
+        native["boundaries"][0]["sim_time"] = 12.0
+        native["boundaries"][1]["sim_time"] = 12.4
+        native["terminals"][0]["sim_time"] = 14.0
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.project(tmp, cfg, summary, steps, rows,
+                                  execution_native=native, planning_updates=updates)
+        self.assertEqual(result["hyperparameters"]["control_dt"], 1.0)
+        self.assertEqual(result["execution"]["sim_time"], [12.0, 12.4, 14.0])
+        self.assertEqual(result["dynamic"]["time"], result["execution"]["sim_time"])
+        self.assertAlmostEqual(result["execution"]["frequency_hz"], 25.0)
+        self.assertEqual(result["dynamic"]["compute_time"], [.035, .08-.035])
+        self.assertIsNone(result["planning"]["solve_time_s"])
+
+
+    def test_one_applied_policy_control_dt_includes_terminal_interval(self):
+        cfg, summary, steps, rows = self.fixture()
+        native, updates = self.physical_fixture()
+        native["headers"][0]["step_budget"] = 1
+        native["boundaries"] = native["boundaries"][:1]
+        native["terminals"][0].update(boundary_step=1, plan_utime=updates[0]["utime"])
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.project(tmp, cfg, summary, steps, rows,
+                                  execution_native=native, planning_updates=updates)
+        self.assertEqual(result["execution"]["n_steps_executed"], 1)
+        self.assertEqual(result["dynamic"]["time"], [7.1, 7.35])
+        self.assertAlmostEqual(result["hyperparameters"]["control_dt"], .25)
+        self.assertAlmostEqual(result["execution"]["frequency_hz"], 12.5)
+
+
+    def test_zero_execution_helper_retains_unavailable_control_dt(self):
+        result = {"execution": {"alignment": "physical_policy_boundaries_v1",
+                                "n_steps_executed": 0, "sim_time": [7.1]},
+                  "dynamic": {"time": [7.1]}, "hyperparameters": {},
+                  "schema": {"semantics_version": 4}, "provenance": {}}
+        recorded = deepcopy(result["execution"])
+        P.add_execution_control_dt(result)
+        self.assertIsNone(result["hyperparameters"]["control_dt"])
+        self.assertEqual(result["hyperparameters"]["control_dt_source"], "mean_physical_execution_interval")
+        self.assertEqual(result["execution"], recorded)
+        self.assertEqual(result["dynamic"]["time"], [7.1])
+
+
+    def test_serialized_native_timing_supports_external_evaluator_scalar_contract(self):
+        cfg, summary, steps, rows = self.fixture()
+        native, updates = self.physical_fixture()
+        native["headers"][0]["step_budget"] = None
+        native["terminals"][0]["reason"] = "shutdown"
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.project(tmp, cfg, summary, steps, rows,
+                                  execution_native=native, planning_updates=updates)
+            path = Path(tmp) / "result.json"
+            P.write_result_json(path, result)
+            saved = json.loads(path.read_text())
+        hp, dynamic = saved["hyperparameters"], saved["dynamic"]
+        n = len(dynamic["object_pose"]) - 1
+        self.assertNotEqual(n, saved["steps_run"], "Legacy steps_run counts recorder intervals")
+        self.assertNotEqual(dynamic["time"][1]-dynamic["time"][0],
+                            dynamic["time"][2]-dynamic["time"][1])
+        # Exercise the downloaded OIM evaluator's scalar-period conversion
+        # without importing its external checkout or substituting snapshot N.
+        control_dt = float(hp["control_dt"])
+        self.assertTrue(math.isfinite(control_dt) and control_dt > 0)
+        self.assertAlmostEqual(n*control_dt, dynamic["time"][-1]-dynamic["time"][0])
+        self.assertIsNone(hp["steps"])
+        self.assertEqual(int(hp.get("steps") or n), n)
+        frequency = 1.0/(sum(dynamic["compute_time"])/len(dynamic["compute_time"]))
+        self.assertAlmostEqual(frequency, saved["execution"]["frequency_hz"])
+        self.assertNotAlmostEqual(frequency, 1.0/control_dt)
 
 
     def test_physical_execution_rejects_unproven_or_inconsistent_alignment(self):
@@ -132,6 +230,11 @@ class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
                                   execution_native=native, planning_updates=updates)
         self.assertIsNone(result["execution"]["step_budget"])
         self.assertIsNone(result["hyperparameters"]["steps"])
+        self.assertAlmostEqual(result["hyperparameters"]["control_dt"], .125)
+        self.assertIsNone(result["planning"]["solve_time_s"])
+        snapshots = result["recording"]["snapshot_dynamic"]
+        self.assertEqual(snapshots["object_velocity"][0], [None]*3)
+        self.assertEqual(snapshots["robot_control"], [[None]*5]*4)
 
 
     def test_state_and_interval_lengths_preserve_legacy_summary(self):
