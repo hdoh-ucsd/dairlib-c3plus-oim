@@ -22,7 +22,8 @@ class CampaignSpecTests(unittest.TestCase):
     def test_default_spec_in_the_checkout_parses(self):
         # The shipped campaign.yaml must stay loadable; it is the default input.
         spec = S.load_campaign_spec()
-        self.assertTrue(set(spec) <= {"scenes", "objects", "pairs", "obstacle_cost", "cap"})
+        self.assertTrue(set(spec) <= {"scenes", "objects", "pairs", "obstacle_cost",
+                                      "cap", "steps", "record", "video"})
 
     def test_only_declared_keys_are_returned(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -48,10 +49,28 @@ class CampaignSpecTests(unittest.TestCase):
                      {"pairs": [[0, 2]]},
                      {"obstacle_cost": "quadratic"},
                      {"cap": 0},
+                     {"steps": 0},
+                     {"steps": "many"},
+                     {"video": "no"},
+                     {"record": 1},
+                     {"record": False, "video": True},
                      {"seed": 7}):
             with self.subTest(data=data), tempfile.TemporaryDirectory() as tmp:
                 with self.assertRaises(ValueError):
                     S.load_campaign_spec(_spec(tmp, data))
+
+
+class CampaignSpecBudgetTests(unittest.TestCase):
+    def test_budget_and_artifact_keys_parse(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = S.load_campaign_spec(_spec(tmp, {"steps": 2671, "video": False, "record": True}))
+            self.assertEqual(spec, {"steps": 2671, "video": False, "record": True})
+
+    def test_no_recording_forces_no_rendering(self):
+        # There is no recorded trajectory left to replay.
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = S.load_campaign_spec(_spec(tmp, {"record": False}))
+            self.assertEqual(spec, {"record": False, "video": False})
 
 
 class CampaignSpecPrecedenceTests(unittest.TestCase):
@@ -85,6 +104,30 @@ class CampaignSpecPrecedenceTests(unittest.TestCase):
         output = self._run_count(["--cap", "77"], {"tasks": ["open_table"], "objects": ["T_shape"],
                                                    "pairs": [[2, 2]], "cap": 300})
         self.assertIn('"simulation_cap_seconds": 77', output)
+
+    def test_spec_supplies_the_step_budget_and_the_flag_overrides_it(self):
+        base = {"tasks": ["open_table"], "objects": ["T_shape"], "pairs": [[2, 2]]}
+        self.assertIn('"execution_step_budget": 2671',
+                      self._run_count([], {**base, "steps": 2671}))
+        self.assertIn('"execution_step_budget": 40',
+                      self._run_count(["--steps", "40"], {**base, "steps": 2671}))
+
+    def test_spec_can_switch_rendering_off(self):
+        base = {"tasks": ["open_table"], "objects": ["T_shape"], "pairs": [[2, 2]]}
+        # The decision is recorded in the plan, so a resume cannot mix artifact sets.
+        self.assertIn('"video": false', self._run_count([], {**base, "video": False}))
+        self.assertNotIn('"video": false', self._run_count([], base))
+        self.assertIn('"video": false', self._run_count(["--no-video"], base))
+        unrecorded = self._run_count([], {**base, "record": False})
+        self.assertIn('"record": false', unrecorded)
+        self.assertIn('"video": false', unrecorded)
+
+    def test_unrecorded_campaigns_refuse_resume_and_export(self):
+        # Neither has anything to work from: no result JSON is ever written.
+        for extra in (["--resume"], ["--oim-out", "oim"]):
+            with self.subTest(extra=extra), self.assertRaises(SystemExit):
+                self._run_count(["--no-record", *extra],
+                                {"tasks": ["open_table"], "objects": ["T_shape"], "pairs": [[2, 2]]})
 
     def test_spec_cannot_be_combined_with_suite_or_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:

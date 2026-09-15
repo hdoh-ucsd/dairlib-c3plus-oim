@@ -177,9 +177,10 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             completed = []
 
             def complete(scene, cost, start, goal, out, cap, port, goal_pose, **kwargs):
-                # Output-side choices such as oim_out never reach plan_run,
-                # which resolves configuration only.
-                yaw = {key: value for key, value in kwargs.items() if key != "oim_out"}
+                # Output-side choices -- what to record, render or export --
+                # never reach plan_run, which resolves configuration only.
+                yaw = {key: value for key, value in kwargs.items()
+                       if key not in ("oim_out", "record", "video")}
                 plan = R.plan_run(scene, cost, start, goal, out, cap, port, goal_pose, **yaw)
                 out.mkdir(parents=True, exist_ok=False)
                 result = {"run_id": plan["run_id"], "scenario": scene,

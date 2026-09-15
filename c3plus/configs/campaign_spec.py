@@ -1,7 +1,8 @@
 """Read a campaign selection from YAML instead of retyping CLI selectors.
 
-The spec says *what to run* -- tasks, objects and pose pairs. It does not
-define what a task or object is; that stays in
+The spec says *what to run* -- tasks, objects, pose pairs -- and how much of
+each trial to keep: its budget (`cap`, `steps`) and its artifacts (`record`,
+`video`). It does not define what a task or object is; that stays in
 `examples/sampling_c3/shared_parameters/experiments.yaml`.
 
 `campaign` loads `campaign.yaml` from the repository root when you pass no
@@ -20,7 +21,8 @@ from .paths import REPO
 
 DEFAULT_SPEC = REPO / "campaign.yaml"
 PAIR_PRESETS = ("all", "diagonal", "smoke")
-_KEYS = {"tasks", "scenes", "objects", "pairs", "obstacle_cost", "cap", "seed"}
+_KEYS = {"tasks", "scenes", "objects", "pairs", "obstacle_cost", "cap", "steps",
+         "record", "video", "seed"}
 
 
 def _sequence(value, name):
@@ -48,6 +50,12 @@ def _pairs(value):
     if not pairs:
         raise ValueError("campaign spec pairs must not be empty")
     return pairs
+
+
+def _flag(value, name):
+    if not isinstance(value, bool):
+        raise ValueError(f"campaign spec {name} must be true or false, got {value!r}")
+    return value
 
 
 def load_campaign_spec(path=None):
@@ -89,6 +97,22 @@ def load_campaign_spec(path=None):
         if isinstance(cap, bool) or not isinstance(cap, int) or cap < 1:
             raise ValueError(f"campaign spec cap must be a positive whole number of seconds, got {cap!r}")
         spec["cap"] = cap
+    if loaded.get("steps") is not None:
+        steps = loaded["steps"]
+        if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
+            raise ValueError(f"campaign spec steps must be a positive whole number, got {steps!r}")
+        spec["steps"] = steps
+    if loaded.get("video") is not None:
+        spec["video"] = _flag(loaded["video"], "video")
+    if loaded.get("record") is not None:
+        spec["record"] = _flag(loaded["record"], "record")
+        if not spec["record"]:
+            # Nothing is recorded, so there is no trajectory left to render.
+            # Say so here rather than letting the campaign discover it later.
+            if loaded.get("video") is True:
+                raise ValueError("campaign spec sets record: false with video: true; "
+                                 "an unrecorded run has nothing to render")
+            spec["video"] = False
     if loaded.get("seed") is not None and loaded["seed"] != 42:
         raise ValueError("This reproduction workflow uses seed 42 only")
     return spec
