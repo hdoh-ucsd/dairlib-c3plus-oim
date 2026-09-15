@@ -13,7 +13,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.jobs is not None and args.jobs < 1:
         parser.error("--jobs must be positive")
-    command = ["bazel", "build", *BUILD_TARGETS]
+    command = [str(REPO / "build_support/bazel"), "build", *BUILD_TARGETS]
     if args.jobs is not None:
         command.append(f"--jobs={args.jobs}")
     if args.dry_run:

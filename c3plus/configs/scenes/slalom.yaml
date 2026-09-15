@@ -1,22 +1,6 @@
-# slalom: T-push through six thin fin obstacles + robot base disc.
-# Footprint identical to open_task.yaml (push_t_oimscale_m01).
-# Fins are 0.07 m tall (top z = 0.041 world; table top = -0.029) -- taller
-# than the tip travel height, so obstacles are treated as full-height walls.
-# The schema has no obstacle-height keys; noted here for provenance.
+# Static task geometry. Selected object properties come from evaluation_config().
 goal: [0.381, -0.4, 3.1416]
-object_channel_substring: G_shape_video
-footprint:
-  - [-0.0445, 0.0198]
-  - [-0.0445, 0.0]
-  - [-0.0099, 0.0]
-  - [-0.0099, -0.0794]
-  - [0.0099, -0.0794]
-  - [0.0099, 0.0]
-  - [0.0445, 0.0]
-  - [0.0445, 0.0198]
 pusher_radius: 0.00555  # OIM stick tip sphere (end_effector_xarm6_stick.urdf)
-block_half_height: 0.0298
-tip_target_z: 0.0298
 obstacles:
   polygons:
     # Fin center (0.05, 0.22), half extents (0.10, 0.02).

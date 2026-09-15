@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Explicit project Bazel entrypoint; Bazelisk's automatic hook requires tools/.
+set -euo pipefail
+readonly WORKSPACE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+readonly BAZEL_COMMAND="${BAZEL_REAL:-bazel}"
+if ! command -v "${BAZEL_COMMAND}" >/dev/null 2>&1; then
+  printf '%s\n' 'Bazel is missing. Open the Docker environment with ./docker/shell.sh; see the root README.md Quick Start.' >&2
+  exit 127
+fi
+
+# A directly invoked Bazelisk must not look for another workspace wrapper.
+# Keep all caller cache/resource settings and startup arguments unchanged.
+export BAZELISK_SKIP_WRAPPER=true
+if [[ "${DAIRLIB_WITH_ROS:-}" == "ON" ]]; then
+  exec -a "$0" "${BAZEL_COMMAND}" "$@"
+else
+  exec -a "$0" "${BAZEL_COMMAND}" "--bazelrc=${WORKSPACE_DIR}/build_support/noros.bazelrc" "$@"
+fi

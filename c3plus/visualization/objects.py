@@ -11,8 +11,9 @@ from pathlib import Path
 import tempfile
 import xml.etree.ElementTree as ET
 
-from c3plus.configs.catalog import SCENES, demo_name
-from c3plus.configs.paths import EXPERIMENTS_FILE, REPO
+from c3plus.configs.catalog import (OBJECTS, SCENES, canonical_object, canonical_task,
+                                  demo_name, resolve_object_profile)
+from c3plus.configs.paths import REPO
 from c3plus.configs.resolver import compose_demo_configs, load_demo_configs
 from .ee_samples import sample_ee_candidates, sample_raw_mesh_ee_candidates
 
@@ -45,8 +46,8 @@ def preview_settings(args):
         if value is not None and not all(math.isfinite(v) for v in value):
             raise ValueError("Position and orientation must contain finite numbers")
 
-    demo = demo_name(args.scene, args.start, args.goal)
-    configs = compose_demo_configs(demo, goal_yaw_degrees=args.goal_yaw_degrees)
+    demo = demo_name(args.scene, args.start, args.goal, args.object)
+    configs = compose_demo_configs(demo, goal_yaw_degrees=args.goal_yaw_degrees, object_name=args.object)
     sources = load_demo_configs(demo)
     controller, simulation, goal = (configs[key] for key in ("controller", "simulation", "goal"))
     options = sources[REPO / controller["sampling_c3_options_file"]]
@@ -63,9 +64,9 @@ def preview_settings(args):
         raise FileNotFoundError(model)
     if args.geometry == "collision" and args.mesh:
         raise ValueError("Raw OBJ previews have no collision geometry; use --model")
-    profiles = sources[REPO / EXPERIMENTS_FILE]["object_profiles"]
     model_names = {(REPO / profile[key]).resolve(): name
-                   for name, profile in profiles.items()
+                   for name in OBJECTS
+                   for profile in [resolve_object_profile(args.scene, name)]
                    for key in ("simulation_model", "controller_model")}
     object_name = model_names.get(model, model.stem)
     ee_sampling = None
@@ -79,8 +80,8 @@ def preview_settings(args):
         params_file = REPO / controller["sampling_params_file"]
         params = sources[params_file]
         strategy = params["sampling_strategy"]
-        if strategy not in (4, 7):
-            raise ValueError("EE previews support the configured perimeter and mesh-normal samplers")
+        if strategy not in (4, 7, 8):
+            raise ValueError("EE previews support the configured perimeter, mesh-normal and mesh-section samplers")
         ee_model = REPO / "examples/sampling_c3/urdf/end_effector_simple_model_xarm6.urdf"
         # Drake accepts its extension prefix without an XML namespace declaration.
         ee_xml = ee_model.read_text()
@@ -89,17 +90,23 @@ def preview_settings(args):
         ee_radius = float(ET.fromstring(ee_xml).find(".//collision/geometry/sphere").attrib["radius"])
         base = controller["base_names"][0]
         mesh_file = REPO / "examples/sampling_c3/urdf" / base / f"{base}.obj"
+        if strategy == 8:
+            mesh_file = REPO / controller["sampling_mesh_files"][0]
         if strategy == 7 and not mesh_file.is_file():
             raise FileNotFoundError(mesh_file)
         ee_sampling = {
             "params_file": str(params_file),
             "options_file": str(REPO / controller["sampling_c3_options_file"]),
             "controller_model": str(REPO / controller["object_models"][0]),
-            "mesh_file": str(mesh_file) if strategy == 7 else None,
+            "mesh_file": str(mesh_file) if strategy in (7, 8) else None,
             "ee_model_file": str(ee_model), "ee_radius": ee_radius,
             "count": args.ee_samples,
             "seed": 42 if args.sample_seed is None else args.sample_seed,
         }
+        if strategy == 8:
+            ee_sampling.update(mode="mesh_section_perimeter", height=params["z_height"],
+                               clearance=params["sample_projection_clearance"],
+                               offset=params["buffer_distance"])
         if args.mesh is not None:
             ee_sampling = {
                 "mode": "mesh_section_perimeter", "mesh_file": str(model),
@@ -118,7 +125,7 @@ def preview_settings(args):
         raise ValueError("--output must end in .png")
     obstacle = scenario.get("obstacle_model")
     return {
-        "scene": args.scene, "demo": demo, "pose": args.pose,
+        "scene": args.scene, "task": args.scene, "demo": demo, "pose": args.pose,
         "object_name": object_name, "object_file": str(model), "raw_mesh": args.mesh is not None,
         "mesh_scale": scale,
         "position_m": args.position if args.position is not None else pose[4:7],
@@ -333,9 +340,11 @@ def render_image(settings):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--scene", choices=SCENES, default="open_task")
-    parser.add_argument("--start", type=int, choices=range(1, 6), default=1)
-    parser.add_argument("--goal", type=int, choices=range(1, 6), default=1)
+    parser.add_argument("--task", "--scene", dest="scene", type=canonical_task,
+                        choices=SCENES, default="open_table")
+    parser.add_argument("--object", type=canonical_object, choices=OBJECTS, default="T_shape")
+    parser.add_argument("--start", type=int, default=1, help="Start ID in the local task pose catalogue")
+    parser.add_argument("--goal", type=int, default=1, help="Goal ID in the local task pose catalogue")
     parser.add_argument("--pose", choices=("start", "goal"), default="start")
     parser.add_argument("--goal-yaw-degrees", type=int, choices=(90, 0, -90))
     source = parser.add_mutually_exclusive_group()

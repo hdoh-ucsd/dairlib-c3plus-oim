@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from c3plus.experiments import run as R
+from c3plus.utils import run as R
 
 from tests.fixtures.results import WorkflowFixtures
 
@@ -22,7 +22,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                     R.main()
                 plan = json.loads(stream.getvalue())
                 self.assertEqual(plan["obstacle_cost"], expected)
-                self.assertEqual(plan["run_id"], f"{expected}_open_task_s01g01_seed42")
+                self.assertEqual(plan["run_id"], f"{expected}_open_table_T_shape_s01g01_seed42")
                 self.assertFalse(out.exists())
                 run.assert_not_called()
 

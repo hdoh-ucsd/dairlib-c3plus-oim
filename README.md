@@ -2,12 +2,12 @@
 
 Sampling-based C3+ pushing with an xArm6 robot in six matched OIM scenes.
 This checkout contains the Drake simulator, controllers, scene assets, and
-[experiment CLI](tools/). Docker is the supported environment for
+[experiment CLI](c3plus/utils/__main__.py). Docker is the supported environment for
 building and running experiments; host Python, Conda, ROS, and a GPU are not required.
 
 [Quick Start](#quick-start) · [Docker Environment](#docker-environment) ·
 [Experiments](#experiments) · [Results](#results) ·
-[Troubleshooting](#troubleshooting) · [Architecture](docs/architecture.md)
+[Troubleshooting](#troubleshooting) · [Repository Structure](#repository-structure)
 
 ## Quick Start
 
@@ -43,7 +43,7 @@ steps 3–8 **inside this container**.
 **3. CONTAINER — build the native simulator and both controllers.**
 
 ```bash
-python3 -m tools build --jobs 4
+python3 -m c3plus.utils build --jobs 4
 ```
 
 This compiles `franka_sim`, `franka_osc_controller`, and
@@ -59,7 +59,7 @@ python3 -m pip check
 **5. CONTAINER — verify binaries, imports, scenes, objects, and runtime prerequisites.**
 
 ```bash
-python3 -m tools check --require-binaries --check-scenes
+python3 -m c3plus.utils check --suite full --require-binaries --check-scenes
 ```
 
 This prints a JSON report and exits nonzero if validation fails. Resolve failures
@@ -73,35 +73,38 @@ python3 -m unittest discover -s tests
 
 These tests do not launch experiments.
 
-**7. CONTAINER — inspect a trial without writing files or starting simulation.**
+**7. CONTAINER — validate and inspect the complete suite without launching it.**
 
 ```bash
-python3 -m tools run \
-  --scene open_task --objects T_block \
-  --start 2 --goal 2 \
-  --obstacle_cost exponential --seed 42 --cap 600 \
-  --out results/example_run --dry-run
+python3 -m c3plus.utils campaign \
+  --suite full --seed 42 \
+  --out results/full_campaign --dry-run
 ```
 
-Omitting `--goal-yaw-degrees` preserves the indexed goal's configured orientation.
-The dry run prints the resolved settings; it does not check an existing output
-folder for compatibility.
+This prints the deterministic manifest, pose/asset preflight, and completed,
+pending, invalid/partial, and total counts. Resolve every preflight failure
+before collecting data.
 
-**8. CONTAINER — run that trial.**
+**8. CONTAINER — launch or resume the complete suite.**
 
 ```bash
-python3 -m tools run \
-  --scene open_task --objects T_block \
-  --start 2 --goal 2 \
-  --obstacle_cost exponential --seed 42 --cap 600 \
-  --out results/example_run
+python3 -m c3plus.utils campaign \
+  --suite full --seed 42 --resume \
+  --out results/full_campaign
 ```
 
-`--cap` is the per-trial recorder wall-time budget in seconds; startup, success
-settling, and packaging can add time. For a cheap startup check, use
-`--cap 10 --max-frames 40 --out results/smoke/startup_check` instead. Use a fresh
-output folder for each run. A completed trial leaves one JSON and one MP4 in
-that folder, visible from the host checkout.
+This is the canonical dataset launcher. It runs serially and validates the
+whole selection before trial 1. Valid completed packages are skipped on resume;
+partial or corrupt trials are reported and never silently overwritten.
+`--cap` is the per-trial recorder wall-time budget, default 600 seconds; startup,
+success settling and packaging add time. Use the single-run example below for
+a short setup check instead of launching the full dataset.
+
+**Validation limit:** all 750 configurations and 300 start/goal endpoints pass
+static preflight, but some 10-second trials still hit the existing strict
+native-quaternion export guard. A long campaign can halt there and preserve the
+partial run for inspection. The full 600-second-per-trial campaign has not been
+runtime validated.
 
 ## Docker Environment
 
@@ -120,97 +123,249 @@ docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 docker exec -it CONTAINER_NAME bash
 ```
 
-See [reproduction and environment](docs/reproduction.md) for image overrides,
-resource limits, cache ownership and platform support. Bazel's ignored `.build/`
-shortcuts point into the cache; their targets may look unavailable on the host.
+Bazel's ignored `.build/` shortcuts point into the persistent cache; their
+targets may look unavailable on the host. The default cache volume is specific
+to the host UID/GID. Exiting the shell removes the container, while the checkout
+and cache remain. Keep a trial's processes in the same container for LCM.
+
+Use these environment variables on the **host** to customize the launcher:
+
+| Variable | Meaning |
+| --- | --- |
+| `DAIRLIB_IMAGE` | Compatible image tag or digest; the default tag follows the Docker recipe inputs |
+| `DAIRLIB_CPUS`, `DAIRLIB_MEM` | Container resource limits, e.g. `4` and `12g`; defaults are at most 24 CPUs and 75% of engine RAM, capped at 24 GiB |
+| `DAIRLIB_BAZEL_JOBS` | Build worker count; `build --jobs N` overrides it for one build |
+| `DAIRLIB_BAZEL_RAM_MB` | Bazel RAM budget in MiB |
+| `DAIRLIB_CACHE_VOLUME` | Override the default UID/GID-specific cache volume |
+| `MESHCAT_PORT` | Host port for Meshcat; default 7000 |
+
+For example: `DAIRLIB_CPUS=4 DAIRLIB_MEM=12g DAIRLIB_BAZEL_JOBS=2 ./docker/shell.sh`.
+Limits must fit the Docker engine's resources; Docker Desktop users may need to
+increase its VM allocation. Image overrides must match the host UID/GID for
+nonroot users. Use `./docker/shell.sh --build-only` to build without opening a
+shell, or `./docker/shell.sh --help` for all launcher options.
 
 ## Experiments
 
-All commands below run **inside the container, from the repository root**.
-Use `python3 -m tools COMMAND --help` for options, or the
-[experiment reference](docs/experiments.md) for full tables,
-mesh/EE previews, campaign behavior, and data definitions.
+All commands run **inside the container, from the repository root**. The full
+suite expands deterministically as task × object × start × goal:
 
-| Command / option | Purpose |
+| Selection | Values |
 | --- | --- |
-| `scenes` | List six scenes and their start/goal indices |
-| `run --scene NAME --objects NAME [...]` | Run one object or a serial batch of separate trials |
-| `--start`, `--goal` | Independent indices 1–5; orientations come from the catalogue unless overridden |
-| `--goal-yaw-degrees` | Explicit absolute goal yaw, e.g. 90, 0, or −90 degrees |
-| `--obstacle_cost exponential` | Preserved baseline preset; exponential ranking is currently suppressed by `lcs_contact` |
-| `--obstacle_cost relu` | Active footprint-aware ReLU ranking, `eps=0.01`, `w=200` |
-| `--steps B` | Optional applied-policy budget, including reposition; unlimited by default |
-| `visualize` | Save a mesh PNG; `--ee-samples` also overlays candidates and saves their JSON |
-| `campaign` | Plan/run a selected scene/start/goal grid or manifest |
-| `run_launch`, `run_launch_simple_s2` | Fixed G2, three yaws, both costs: 180 trials or 36 restricted to S2 |
+| Tasks | `icra_sign`, `open_table`, `shelf_gap`, `single_obstacle`, `slalom`, `ycb_clutter` |
+| Manipulated objects | `T_shape`, `hammer`, `sugar_box`, `power_drill`, `banana` |
+| Poses | Five start IDs and five goal IDs per task, from [examples/poses/](examples/poses/) |
+| Total | **6 tasks × 5 objects × 25 pairs = 750 runs** |
+| Seed | 42 for every trial |
+| Cost | `exponential` by default; `--obstacle_cost relu` selects the other existing preset |
 
-Both obstacle-cost presets use `lcs_contact`; their names do not change these
-existing semantics. Seed 42 is the only supported experiment seed.
+The local pose files match the [pinned OIM source](https://github.com/NikolaRaicevic2001/Object-Informed-Manipulation-MJX/tree/a31203d8e9a347ba7bf373954a4b7e4059d1e350/examples/poses)
+byte-for-byte. That source defines **task-specific** coordinates: every object
+within a task uses the same IDs and numeric poses, while some tasks differ.
+Those differences are preserved rather than replacing them with one task's
+coordinates. [Pose provenance](examples/poses/provenance.json) records the commit
+and hashes. Runtime reads only these local files and needs no OIM checkout or
+network access. Goal orientation comes from the selected pose unless explicitly
+overridden for a targeted debugging run.
 
-On `open_task`, run T_block and the four imported objects sequentially:
+`T_shape` maps to the existing native T-shaped profile; `open_table` maps to the
+native scene `open_task`. Native assets retain their names. C-block models remain
+for native compatibility/history but are not manipulated experiment options.
+Tasks select the environment; the object selection supplies its model, sampling
+geometry, footprint and support height. The launcher checks all selected
+combinations and rejects incompatible poses before running anything.
+
+For one experiment or a cheap startup check:
 
 ```bash
-python3 -m tools run \
-  --scene open_task --objects T_block sugar_box power_drill hammer banana \
+python3 -m c3plus.utils run \
+  --task open_table --object T_shape --start 2 --goal 2 \
+  --obstacle_cost exponential --seed 42 --cap 10 --max-frames 40 \
+  --out results/smoke/startup_check
+```
+
+Add `--dry-run` to inspect it, or use a longer cap and fresh output directory for
+a substantive trial. `run` has no resume flag. Use
+`python3 -m c3plus.utils COMMAND --help` for each command's complete options.
+
+### `run`: object selection and obstacle costs
+
+| Option | Meaning |
+| --- | --- |
+| `--task NAME` | Required task; `--scene` remains an alias |
+| `--object NAME` / `--objects NAME [...]` | One object (default `T_shape`) or a serial multi-object batch; mutually exclusive |
+| `--start`, `--goal` | Independent pose IDs 1–5, default 1 |
+| `--goal-yaw-degrees` | Optional absolute goal yaw: 90, 0 or −90 degrees; omit to preserve the source pose |
+| `--obstacle_cost` | `exponential` (default) or `relu` |
+| `--cap SECONDS` | Recorder wall-time budget per trial, default 600 |
+| `--steps B` | Applied-policy budget including reposition; unlimited when omitted |
+| `--out PATH` | Fresh trial directory, or parent directory for a multi-object batch |
+| `--max-frames`, `--port` | Maximum video frames (1200) and trial LCM port (18001) |
+
+Run all five objects on the open table:
+
+```bash
+python3 -m c3plus.utils run \
+  --task open_table --objects T_shape sugar_box power_drill hammer banana \
   --start 2 --goal 2 --obstacle_cost exponential --seed 42 --cap 600 \
-  --out results/object_generalization/multi_object
+  --out results/object_generalization/open_table
 ```
 
-Each object gets its own `<out>/<object>/` folder. Imported objects are supported
-only on `open_task`: obstacle-contact integration still uses the built-in
-footprints. T_block also supports `single_obstacle`, `shelf_gap`, `ycb_clutter`,
-and `slalom`. For `icra_sign`, omit `--objects` to use its configured Cblock.
-Previewing a mesh in another scene does not establish pushing support.
+All five objects are supported across the six tasks, subject to pose preflight.
+One selected object writes directly to `--out`; multiple objects write to
+`<out>/<object>/`. All destinations are checked before the batch starts, and a
+launch or packaging error stops it. Progress messages appear every ten recorder
+snapshots; their `step` counter is separate from physical execution steps.
+Recording can continue five wall seconds after first success to capture settling.
 
-Inspect the configured T_block and EE candidates:
+Both cost presets preserve `lcs_contact` handling: `exponential` ranking is
+currently suppressed in that mode; `relu` uses the existing footprint-aware
+ranking with `eps=0.01`, `w=200`. Full-suite selection uses one preset, so changing
+the preset does not double the 750 runs.
+
+### `campaign`: targeted grids and resume
+
+Use the Quick Start's `--suite full` command for the canonical dataset. For a
+smaller selection, omit `--suite full` and specify tasks, objects and pairs:
 
 ```bash
-python3 -m tools visualize \
-  --scene open_task --start 2 --view top --hide-robot --ee-samples \
-  --output results/previews/T_block_ee.png
+python3 -m c3plus.utils campaign \
+  --tasks open_table shelf_gap --objects T_shape hammer \
+  --pairs smoke --obstacle_cost exponential --seed 42 \
+  --out results/targeted_check --dry-run
 ```
 
-Plan the 180-trial fixed-goal campaign; remove `--dry-run` to execute:
+Targeted campaigns accept `--pairs smoke|diagonal|all`, `--obstacle_cost both`
+for a two-cost comparison, or `--manifest PATH` for a saved job list. The full
+suite accepts one cost preset and no manual task/object/pair selectors.
+`--output-root` remains an alias for `--out`. The older `run_launch` and
+`run_launch_simple_s2` commands select goal G2, three goal yaws and both costs;
+they are debugging presets, separate from the full five-object suite.
+
+Create `results/full_campaign/STOP_AFTER_CURRENT` to stop after the current trial
+is packaged. Remove the file and repeat the same `--resume` command to continue.
+Keep the manifest and selected configuration unchanged; use another output root
+for another selection.
+
+### `visualize`: mesh and EE previews
+
+Save a PNG of the configured object in simulation space, with candidate
+end-effector positions overlaid:
 
 ```bash
-python3 -m tools run_launch --output-root results/table2 --dry-run
+python3 -m c3plus.utils visualize \
+  --task open_table --object T_shape --start 2 \
+  --view top --hide-robot --ee-samples --frames \
+  --output results/previews/T_shape_ee.png
 ```
 
-Use `run_launch_simple_s2` for the 36-trial subset, with a separate output root.
-Campaigns select each scene's default object and do not accept `--objects`.
-See the [campaign reference](docs/experiments.md#campaign-run_launch-run_launch_simple_s2-repeat-trials)
-for the generic 300-run grid, exact defaults, and resume rules.
+The command exits after saving; no native build, browser or server is needed.
+`--ee-samples` defaults to 64 candidates and also saves
+`<PNG stem>.ee_samples.json`; use `--ee-samples 100 --sample-seed 42` to change
+the preview count. Repeating the command overwrites those preview files.
+
+Use `--view scene|object|top`, `--geometry visual|collision`, or
+`--pose goal --goal 2` to inspect another view or placement. `--model PATH`
+accepts SDF, URDF or MJCF, and `--mesh PATH` accepts raw OBJ visuals; they are
+mutually exclusive. Raw OBJ sampling requires `--position X Y Z`;
+`--mesh-scale 0.001` converts millimetres to metres, and `--sample-height Z`
+selects the sampling height in world metres. `--dry-run` prints paths and
+placement without writing.
+
+Preview samples use an independent seeded generator and do not establish native
+IK feasibility, runtime filtering or pushing success. Check
+[object profiles](examples/sampling_c3/shared_parameters/experiments.yaml) and
+[models](examples/sampling_c3/urdf/) for geometry and sampler settings.
 
 ## Results
 
-Generated data belongs under `results/`, which is ignored by Git. Each completed
-trial keeps one `*_result.json` and one MP4. The JSON embeds recordings, resolved
+Generated data belongs under `results/`, which is already ignored by Git. The
+`smoke/`, `table2/`, `object_generalization/`, and `archive/` output categories
+start empty; no experiment results are bundled. Each completed trial keeps one
+`*_result.json` and one MP4. The JSON embeds recordings, resolved
 configurations, diagnostics, hashes, and completion status. Intermediates are
 removed only after successful validation; failures preserve them for recovery.
-Campaign plans, driver logs, and summaries remain at the campaign root.
+The full campaign keeps `manifest.json`, its driver log and summary at the
+campaign root. Trials are stored under
+`<out>/<task>/<object>/<cost>_<task>_<object>_sXXgYY_seed42/`. Each trial directory
+contains `<run_id>_result.json` and `<run_id>.mp4`; the manifest records the
+shared pose-source identity and exact per-trial selection.
 
-The JSON keeps physical execution, planning updates, and recording snapshots
-separate. Simulation time and monotonic execution wall time remain distinct;
-execution timing is not optimizer solve timing. See the
-[result schema reference](docs/evaluation_schema.md) for the established
-alignment, success, frequency, and Table-II evaluation definitions. Historical
-results are not included in a fresh clone.
+The JSON separates physical execution, planning updates and recorder snapshots.
+One execution step begins when the simulator first applies commands from a
+selected policy; both C3 and reposition count. Unselected plans, OSC ticks and
+debug snapshots are not execution steps. For N applied policies, aligned
+trajectories contain N+1 observed boundaries, including the terminal state.
+
+| Recorded field | Meaning |
+| --- | --- |
+| `dynamic.time`, `execution.sim_time` | Simulation time at the execution boundaries |
+| `execution.wall_time` | Relative monotonic wall time at those boundaries |
+| `execution.step_wall_time`, `dynamic.compute_time` | Execution wall durations; the latter is a C3+ compatibility alias, not optimizer solve timing |
+| `hyperparameters.control_dt` | `null` because physical policy durations vary |
+| `execution.step_budget` | Explicit `--steps` budget, or `null` when unlimited |
+| `recording.snapshot_dynamic` | Original asynchronous snapshot arrays |
+
+Execution frequency is `N / (wall_time[-1] - wall_time[0])`, using valid positive
+intervals. Common snapshot success requires simultaneous position error below
+0.05 m and orientation error below 0.1 rad. `evaluation.ever_success` and
+`evaluation.final_success` describe retained snapshots; native thresholds are
+recorded separately and native completion remains unknown.
+
+Compatible external Table-II evaluation uses the first qualifying execution
+endpoint for success, steps and elapsed simulation time. Failures use the
+configured step budget when present and the full recorded simulation span.
+Frequency uses all recorded execution wall intervals. Historical files without
+proven physical alignment cannot supply execution-based steps, time or frequency.
+The implementation is in [c3plus/evaluation/](c3plus/evaluation/).
+
+Use `python3 -m c3plus.utils eval --help` for saved-run postprocessing and export options.
+This invokes the existing postprocessor; `postprocess` remains an alias.
+It does not launch a simulation or add a benchmark comparison table.
+
+| Saved-data command | Purpose |
+| --- | --- |
+| `eval --export-only --run-dir PATH --scene TASK --run-id RUN_ID` | Update the JSON from recorded data and settings, with validation before replacement |
+| `compact --run-dir PATH` | Validate the JSON/video package and remove redundant intermediates; safe to repeat |
+| `render --result PATH_TO_JSON --out PATH_TO_MP4` | Replay a modern recorded trajectory; matching repository assets are required |
+| `cost-figure --run-dir PATH --scene TASK --obstacle_cost exponential` | Legacy diagnostic plot; cannot directly read compacted semantics-version-4 results |
+
+These commands use the `python3 -m c3plus.utils` prefix and cannot recover
+execution telemetry that was never recorded. `oim.run_eval` is an external
+evaluator and is not installed by this Docker setup.
 
 ## Reproducibility
 
 Keep the result JSON and video together with the recorded commit, image identity,
 campaign plan and resource settings. Results retain configuration, asset and
 binary hashes, package versions, and available source-state provenance. Seed 42
-does not make asynchronous execution identical across machine loads. The
-[reproduction guide](docs/reproduction.md) explains image pinning, saved settings
-and the limits of exact reconstruction.
+does not make asynchronous execution identical across machine loads. Restore
+recorded source changes in a separate checkout and match the saved configuration
+and model assets before comparing results. A binary hash identifies a binary;
+it does not prove which source built it.
+
+The Ubuntu base digest, Drake, Bazel, libbot2 and Python versions are pinned;
+apt repositories are not snapshot-pinned and Python wheel hashes are not locked.
+The recipe hash cannot guarantee byte-identical rebuilds. Retain the built image
+or its registry digest when sharing an exact environment.
 
 ## Troubleshooting
 
 For a busy port, use **HOST:** `MESHCAT_PORT=7001 ./docker/shell.sh`. For missing
-binaries or native flags, rebuild with **CONTAINER:** `python3 -m tools build`.
-Use a fresh output directory for each run. Other environment and cache issues
-are covered in [troubleshooting](docs/reproduction.md#troubleshooting).
+binaries or native flags, rebuild with **CONTAINER:** `python3 -m c3plus.utils build`.
+Use a fresh output directory for each run; campaign `--resume` requires its
+matching manifest.
+
+| Symptom | Action |
+| --- | --- |
+| Docker unavailable or wrong platform | Start a local Linux amd64 engine; enable WSL2 integration on Windows. Check `docker info` on the host. |
+| Python imports fail in an old image | Rebuild with `./docker/shell.sh --build`, then repeat the container build and checks. |
+| Compiler killed or resource limit rejected | Check Docker's allocated RAM and reduce build jobs or adjust the resource settings above. |
+| Bazel cache permission denied | Rebuild/reopen the image; current startup handles a root cache mismatch. Nonroot users need their default UID/GID-specific volume or a correctly owned custom volume. |
+
+For an existing root shell in an older image, repair only the cache root with
+`chown --no-dereference 0:0 /home/dairlib/.cache/bazel`, then rebuild. Do not
+recursively change existing cache ownership.
 
 The existing exporter can reject small raw-quaternion norm drift with
 `Invalid exact native execution state`. A prior 10-second startup packaged
@@ -223,18 +378,27 @@ structural cleanup preserves that guard and the evaluation definitions.
 | Path | Purpose |
 | --- | --- |
 | [c3plus/](c3plus/) | Configuration, experiments, runtime, recording, evaluation and visualization implementations |
-| [tools/](tools/) | User-facing commands: `python3 -m tools COMMAND` |
+| [c3plus/utils/](c3plus/utils/) | CLI, trial plans and campaign orchestration: `python3 -m c3plus.utils COMMAND` |
 | [tests/](tests/) | Tests mirroring source responsibilities and integration checks |
-| [docs/](docs/architecture.md) | Architecture, experiments, evaluation schema and reproduction |
 | [docker/](docker/) | Toolchain recipe, dependency pins and environment launcher |
+| [examples/poses/](examples/poses/) | Exact local comparison poses and pinned source provenance |
 | [examples/sampling_c3/](examples/sampling_c3/README.md) | Native controllers, simulator, shared configuration, models and method citation |
 | [build_support/](build_support/) | Gurobi dependency rules and build overrides |
-| [tools/bazel](tools/bazel) | Bazelisk wrapper using the ROS-free build override |
+| [build_support/bazel](build_support/bazel) | Explicit native build wrapper using the ROS-free build override |
 | `.build/` | Ignored Bazel shortcuts; actual build data stays in the cache |
 | `results/` | Ignored generated JSON/video, previews and campaign evidence |
 
+The CLI dispatcher, trial plans, run orchestration, campaigns and saved manifests
+live in `c3plus/utils/`. Commands dispatch directly to the existing implementation
+modules; no separate adapter directory is required.
+
 Bazel's root module/package markers and hidden configuration files remain in
 place for automatic discovery. `build_support/noros.bazelrc` holds the ROS-free
-override. Native compatibility demos and other dairlib components remain separate
-from the normal benchmark workflow. See [architecture](docs/architecture.md) for
-the package boundaries.
+override; the Python build command invokes `build_support/bazel`. Use that wrapper
+for direct native Bazel commands as well. Native compatibility demos and other
+dairlib components remain separate
+from the normal benchmark workflow. Within `c3plus/`, `configs/` owns task/object
+resolution, `runtime/` owns native process lifecycle, `recording/` captures
+telemetry, `evaluation/` validates and packages saved data, and `visualization/`
+owns previews and replay. Setup, usage and result-format documentation live in
+this README.

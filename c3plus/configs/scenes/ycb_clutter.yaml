@@ -1,21 +1,6 @@
-# ycb_clutter: T-push through YCB clutter (cube, sugar box AABBs; spam and
-# mustard 8-vertex hulls) + robot base disc. Planner geometry follows
-# upstream scenes.py at d6d80a6 (hulls scaled by 0.94/0.93 in world frame).
-# Footprint identical to open_task.yaml (push_t_oimscale_m01).
+# Static task geometry. Selected object properties come from evaluation_config().
 goal: [0.381, -0.4, 3.1416]
-object_channel_substring: G_shape_video
-footprint:
-  - [-0.0445, 0.0198]
-  - [-0.0445, 0.0]
-  - [-0.0099, 0.0]
-  - [-0.0099, -0.0794]
-  - [0.0099, -0.0794]
-  - [0.0099, 0.0]
-  - [0.0445, 0.0]
-  - [0.0445, 0.0198]
 pusher_radius: 0.00555  # OIM stick tip sphere (end_effector_xarm6_stick.urdf)
-block_half_height: 0.0298
-tip_target_z: 0.0298
 obstacles:
   polygons:
     # obs_box cube: center (0.35, 0.0), half extents (0.05, 0.05).

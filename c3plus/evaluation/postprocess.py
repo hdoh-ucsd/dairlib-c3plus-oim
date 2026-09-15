@@ -439,3 +439,7 @@ def main(argv=None):
     print("WROTE", man_path)
     if not (mono and ok_err and ok_json):
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

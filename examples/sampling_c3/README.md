@@ -23,12 +23,9 @@ matched demo names remain identifiers without individual directories. Three
 omitting `--controller_params` retains the legacy `--demo_name` file lookup.
 
 The copied Procman launch files targeted retired demos and have been removed.
-Use `python3 -m tools` for maintained experiment launches. Optional
+Use `python3 -m c3plus.utils` for maintained experiment launches. Optional
 native visualization, hardware bridge code, and binary-LCM logging/analysis
 utilities remain separate from this workflow.
-
-The [historical object ablation report](../../docs/history/object_ablation.md) records earlier
-experiments; its original demo and result paths are historical references.
 
 ## Method and citation
 

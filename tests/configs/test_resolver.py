@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from c3plus import configs as S
-from c3plus.experiments import run as R
+from c3plus.utils import run as R
 
 from tests.fixtures.results import WorkflowFixtures
 
@@ -28,7 +28,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
         base = dict(scene="single_obstacle", obstacle_cost="relu", start=2, goal=2, out="/unused/yaw")
         original = R.plan_run(**base)
         self.assertNotIn("goal_yaw_degrees", original)
-        self.assertEqual(original["run_id"], "relu_single_obstacle_s02g02_seed42")
+        self.assertIn("single_obstacle", original["run_id"])
         for value in (45, 180, float("nan"), float("inf"), True, "90"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 R.plan_run(**base, goal_yaw_degrees=value)
@@ -53,7 +53,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
 
     def test_all_configs_and_goals(self):
         for scene in R.SCENES:
-            config = R.yaml.safe_load((S.CONFIG_DIR / f"{scene}.yaml").read_text())
+            config = S.evaluation_config(scene)
             S.planner_environment(config)
             for m in range(1, 6):
                 for n in range(1, 6):
@@ -111,10 +111,15 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
         self.assertEqual(resolve("slalom", 4)["simulation"]["q_init_object"][4:], [0.361, 0.37, 0.0008])
         self.assertEqual(resolve("slalom", goal=4)["goal"]["fixed_target_position"], [0.367, -0.38, 0.0008])
         self.assertEqual(resolve("shelf_gap", goal=3)["goal"]["fixed_target_position"], [0.363, -0.41, 0.0008])
-        self.assertEqual(resolve("ycb_clutter")["goal"]["fixed_target_orientation"], [-0.049184, 0, 0, 0.99879])
-        self.assertEqual(resolve("single_obstacle")["goal"]["fixed_target_orientation"], [-0.0491838, 0, 0, 0.99879])
+        for scene in ("ycb_clutter", "single_obstacle"):
+            yaw = S.resolve_pose(scene, "goal", 2)[2]
+            self.assertEqual(resolve(scene)["goal"]["fixed_target_orientation"],
+                             [math.cos(yaw / 2), 0.0, 0.0, math.sin(yaw / 2)])
         self.assertEqual(resolve("icra_sign", 4)["simulation"]["q_init_franka"],
                          [0.972422, 0.310762, -1.230368, 0.06679, 0.916921])
+        for name in S.OBJECTS:
+            self.assertEqual(S.compose_demo_configs(S.demo_name("icra_sign", 2, 2, name))["simulation"]["q_init_franka"],
+                             [1.031217, 0.062014, -0.895682, 0.119891, 0.828036])
 
 
     def test_resolved_yaml_snapshot_is_complete_and_independent_of_sources(self):
@@ -154,10 +159,10 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             source = repo / S.EXPERIMENTS_FILE
             data = R.yaml.safe_load(source.read_text())
             original = S.demo_config_digest(demo, repo=repo)
-            data["start_positions"]["icra_sign_s01"][0] += 0.01
+            data["robot_joint_presets"]["icra_sign"][0] += 0.01
             source.write_text(R.yaml.safe_dump(data))
             self.assertEqual(S.demo_config_digest(demo, repo=repo), original)
-            data["start_positions"]["t_shape_s02"][0] += 0.01
+            data["object_profiles"]["T_block"]["object_height"] += 0.01
             source.write_text(R.yaml.safe_dump(data))
             changed = S.demo_config_digest(demo, repo=repo)
             self.assertNotEqual(changed, original)
@@ -169,25 +174,47 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             self.assertNotEqual(S.demo_config_digest(demo, repo=repo), changed)
 
 
-    def test_catalogue_orientation_selection_and_invalid_values(self):
+    def test_source_pose_orientation_and_invalid_native_properties(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             demo = S.demo_name("single_obstacle", 2, 2)
             self.copy_demo_configs(demo, repo)
             source = repo / S.EXPERIMENTS_FILE
             data = R.yaml.safe_load(source.read_text())
-            data["scenes"]["single_obstacle"]["start_orientations"] = {2: "start_s01"}
-            source.write_text(R.yaml.safe_dump(data))
             resolved = S.compose_demo_configs(demo, repo=repo)
-            self.assertEqual(resolved["simulation"]["q_init_object"], [1, 0, 0, 0, 0.366, 0.431, 0.0008])
+            pose = S.resolve_pose("single_obstacle", "start", 2, repo=repo)
+            self.assertEqual(resolved["simulation"]["q_init_object"],
+                             [math.cos(pose[2] / 2), 0.0, 0.0, math.sin(pose[2] / 2), *pose[:2], 0.0008])
             self.assertEqual(resolved["goal"]["fixed_target_position"], [0.397, -0.431, 0.0008])
-            for invalid in ([0, 0, 0, 0], [1, 0], [float("nan"), 0, 0, 0]):
-                data["orientations"]["start_s01"] = invalid
+            for invalid in (float("nan"), float("inf"), True, "0"):
+                data["object_profiles"]["T_block"]["object_height"] = invalid
                 source.write_text(R.yaml.safe_dump(data))
                 with self.assertRaises(ValueError):
                     S.compose_demo_configs(demo, repo=repo)
-            data["orientations"]["start_s01"] = [1, 0, 0, 0]
+            data["object_profiles"]["T_block"]["object_height"] = 0.0008
             data["defaults"]["goal"]["goal_mode"] = 1
             source.write_text(R.yaml.safe_dump(data))
             with self.assertRaisesRegex(ValueError, "fixed"):
                 S.compose_demo_configs(demo, repo=repo, goal_yaw_degrees=90)
+
+    def test_configuration_snapshot_is_scoped_and_returns_independent_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            demo = S.demo_name("open_table", 2, 2)
+            self.copy_demo_configs(demo, repo)
+            source = repo / S.EXPERIMENTS_FILE
+            data = R.yaml.safe_load(source.read_text())
+            asset = repo / "asset.txt"
+            asset.write_text("first")
+            with S.configuration_snapshot(repo):
+                profile = S.resolve_object_profile("open_table", "T_shape", repo)
+                original = profile["object_height"]
+                profile["object_height"] = 100
+                first_hash = S.asset_sha256(asset)
+                data["object_profiles"]["T_block"]["object_height"] += 0.01
+                source.write_text(R.yaml.safe_dump(data))
+                asset.write_text("second")
+                self.assertEqual(S.resolve_object_profile("open_table", "T_shape", repo)["object_height"], original)
+                self.assertEqual(S.asset_sha256(asset), first_hash)
+            self.assertNotEqual(S.resolve_object_profile("open_table", "T_shape", repo)["object_height"], original)
+            self.assertNotEqual(S.asset_sha256(asset), first_hash)

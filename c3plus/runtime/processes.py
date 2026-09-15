@@ -6,6 +6,7 @@ import shlex
 import signal
 import subprocess
 import time
+import json
 
 from c3plus.configs.paths import REPO
 
@@ -48,7 +49,7 @@ def logged_command(command, log, env):
 def check_binary(name, repo=REPO):
     """Inspect linkage and flags without constructing native simulation systems."""
     path = Path(repo) / ".build/bin/examples/sampling_c3" / name
-    rebuild = "Rebuild inside Docker with python3 -m tools build."
+    rebuild = "Rebuild inside Docker with python3 -m c3plus.utils build."
     if not path.is_file() or not os.access(path, os.X_OK):
         raise RuntimeError(f"Missing executable {path}. {rebuild}")
     linked = subprocess.run(["ldd", str(path)], capture_output=True, text=True, timeout=20)
@@ -69,6 +70,22 @@ def check_binary(name, repo=REPO):
     if missing:
         raise RuntimeError(f"{name} lacks required flags: {', '.join('--' + flag for flag in missing)}. {rebuild}")
     return "executable, shared libraries, and current experiment flags verified"
+
+
+def check_experiment_capabilities(repo=REPO):
+    """Reject a pre-matrix planner without constructing any native systems."""
+    binary = Path(repo) / ".build/bin/examples/sampling_c3/franka_sampling_c3_controller"
+    response = subprocess.run([str(binary), "--print_experiment_capabilities"],
+                              capture_output=True, text=True, timeout=20)
+    try:
+        capabilities = json.loads(response.stdout)
+    except (ValueError, TypeError):
+        capabilities = {}
+    required = {"object_scene_support_version": 1, "mesh_objects_with_obstacles": True,
+                "custom_object_footprint": True}
+    if response.returncode or any(capabilities.get(key) != value for key, value in required.items()):
+        raise RuntimeError("Native planner lacks full task/object support. Rebuild inside Docker with python3 -m c3plus.utils build.")
+    return capabilities
 
 
 def start_session(command, **kwargs):

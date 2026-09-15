@@ -4,15 +4,60 @@ from copy import deepcopy
 import io
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from c3plus.evaluation import exporter as P, package as A
+from c3plus.configs.paths import REPO
 
 from tests.fixtures.results import ArtifactFixtures, RUN_ID
 
 class RunArtifactTests(ArtifactFixtures, unittest.TestCase):
+    def test_offline_entrypoints_parse_help_and_reject_missing_required_arguments(self):
+        for entrypoint in (("c3plus.evaluation.postprocess",), ("c3plus.utils", "eval"), ("c3plus.utils", "postprocess")):
+            with self.subTest(entrypoint=entrypoint):
+                command = [sys.executable, "-m", *entrypoint]
+                help_result = subprocess.run([*command, "--help"], cwd=REPO, capture_output=True,
+                                             text=True, timeout=15)
+                self.assertEqual(help_result.returncode, 0, help_result.stderr)
+                for option in ("--run-dir", "--scene", "--run-id", "--scene-config", "--export-only"):
+                    self.assertIn(option, help_result.stdout)
+                invalid = subprocess.run(command, cwd=REPO, capture_output=True, text=True, timeout=15)
+                self.assertEqual(invalid.returncode, 2, invalid.stdout + invalid.stderr)
+                self.assertIn("required", invalid.stderr)
+
+    def test_eval_and_postprocess_entrypoints_export_identical_saved_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "saved run with spaces"
+            self.make_run(root)
+            payload = self.compact(root)
+            for key in ("evaluation", "native_controller", "n_snapshots", "n_recorded_intervals"):
+                payload.pop(key, None)
+            payload["schema"].pop("legacy_fields", None)
+            result_file = root / f"{RUN_ID}_result.json"
+            P.write_result_json(result_file, payload)
+            original = result_file.read_bytes()
+            retained = {path.name: (path.read_bytes(), path.stat().st_mtime_ns)
+                        for path in root.iterdir() if path != result_file}
+            exports = []
+            for entrypoint in (("c3plus.evaluation.postprocess",), ("c3plus.utils", "postprocess"), ("c3plus.utils", "eval")):
+                with self.subTest(entrypoint=entrypoint):
+                    result_file.write_bytes(original)
+                    result = subprocess.run(
+                        [sys.executable, "-m", *entrypoint, "--run-dir", str(root), "--scene", "open_task",
+                         "--run-id", RUN_ID, "--export-only"], cwd=REPO, capture_output=True,
+                        text=True, timeout=15)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn("WROTE", result.stdout)
+                    exports.append(result_file.read_bytes())
+                    self.assertIn("evaluation", json.loads(exports[-1]))
+                    self.assertEqual({path.name: (path.read_bytes(), path.stat().st_mtime_ns)
+                                      for path in root.iterdir() if path != result_file}, retained)
+            self.assertEqual(exports, [exports[0]] * 3)
+
     def test_compacted_export_only_adds_semantics_without_changing_recordings_or_video(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "run"

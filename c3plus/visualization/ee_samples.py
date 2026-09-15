@@ -13,7 +13,8 @@ def sample_ee_candidates(settings, count, seed):
     Object geometry and workspace checks are reproduced; runtime history,
     predicted states, mode switching, reachability and cost selection are not.
     """
-    if settings["raw_mesh"]:
+    if (settings["raw_mesh"] or
+            settings.get("ee_sampling", {}).get("mode") == "mesh_section_perimeter"):
         return sample_raw_mesh_ee_candidates(settings, count, seed)
     import numpy as np
     import yaml

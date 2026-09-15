@@ -9,7 +9,7 @@ import tempfile
 
 from c3plus.recording.execution import read_execution_steps, read_native_execution
 from c3plus.recording.planning import read_planning_updates
-from c3plus.utils.serialization import _json_values
+from .serialization import _json_values
 from .metadata import add_recorded_semantics, build_metadata
 from .schema import (BLOCKS, SNAPSHOT_STATE_ARRAYS, SNAPSHOT_INTERVAL_ARRAYS,
                      SNAPSHOT_SEMANTICS_VERSION, EXECUTION_SEMANTICS_VERSION,

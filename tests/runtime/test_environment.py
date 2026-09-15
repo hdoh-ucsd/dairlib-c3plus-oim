@@ -129,7 +129,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
         self.assertNotIn("vhacdx", imported)
         self.assertEqual(scenes.call_count, 10)
         for name in S.MESH_OBJECTS:
-            self.assertIn("object open_task/" + name, checks)
+            self.assertIn("object open_table/" + name, checks)
 
 
     def test_environment_legacy_drake_extensions_use_native_model_parser(self):
@@ -143,5 +143,5 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
         with patch.dict(sys.modules, {"pydrake.multibody.parsing": parser_module,
                                       "pydrake.multibody.plant": plant_module}), \
                 patch.object(Resolver, "model_assets", side_effect=AssertionError("strict mesh XML parser")):
-            self.assertIn("Cblock", E.check_scene_assets("icra_sign"))
-        self.assertIn(S.REPO / "examples/sampling_c3/urdf/push_c_glyph.sdf", parsed)
+            self.assertIn("T_shape", E.check_scene_assets("icra_sign"))
+        self.assertIn(S.REPO / "examples/sampling_c3/urdf/push_t_oimscale_m01.sdf", parsed)
