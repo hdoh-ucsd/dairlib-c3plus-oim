@@ -87,7 +87,7 @@ class FullCampaignTests(unittest.TestCase):
         for plan in manifest['runs']:
             task, obj = plan['scene'], plan['object_name']
             self.assertEqual(plan['seed'], 42)
-            self.assertEqual(plan['wall_cap_seconds'], 300)
+            self.assertEqual(plan['simulation_cap_seconds'], 300)
             self.assertEqual(plan['canonical_start_pose'], self.poses[task]['starts'][str(plan['start'])])
             self.assertEqual(plan['canonical_goal_pose'], self.poses[task]['goals'][str(plan['goal_index'])])
             self.assertEqual(plan['start_pose'][4:6], plan['canonical_start_pose'][:2])
@@ -106,7 +106,7 @@ class FullCampaignTests(unittest.TestCase):
         with patch.object(C.subprocess, 'check_output', side_effect=git_output):
             manifest = C.build_manifest(options)
         self.assertEqual(manifest['run_count'], 750)
-        self.assertEqual({plan['wall_cap_seconds'] for plan in manifest['runs']}, {600})
+        self.assertEqual({plan['simulation_cap_seconds'] for plan in manifest['runs']}, {600})
         self.assertFalse(self.root.exists())
 
     def test_manifest_is_deterministic_for_unchanged_inputs(self):

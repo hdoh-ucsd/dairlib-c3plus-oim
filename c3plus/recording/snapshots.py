@@ -45,6 +45,8 @@ class SnapshotRecorder:
         self.steps_f = steps_f
         self.trace_f = trace_f
         self.recording_started = recording_started
+        self.simulation_time_start = None
+        self.simulation_time = None
         self.label = progress_label(args.object_name, args.out_steps)
         self.state = {'robot': None, 'objects': {}, 'step': 0, 'first_success_t': None,
              'last_trace': -1.0, 'best_pos': 1e9, 'best_ang': 1e9, 'sim_t': 0.0}
@@ -53,6 +55,13 @@ class SnapshotRecorder:
         try:
             if channel == 'FRANKA_STATE_SIMULATION':
                 self.state['robot'] = decode_robot_output(data)
+                # Use the simulator clock, independently of planner/debug events.
+                t = self.state['robot'][0] / 1e6
+                if math.isfinite(t) and t >= 0:
+                    if self.simulation_time_start is None:
+                        self.simulation_time_start = t
+                    if self.simulation_time is None or t > self.simulation_time:
+                        self.simulation_time = t
             elif channel.startswith('OBJECT_') and channel.endswith('_STATE_SIMULATION'):
                 utime, name, pos = decode_object_state(data)
                 self.state['objects'][channel] = (utime, name, pos)
@@ -67,6 +76,12 @@ class SnapshotRecorder:
                 self.on_step()
         except Exception:
             pass
+
+    @property
+    def elapsed_simulation_time(self):
+        if self.simulation_time_start is None:
+            return None
+        return self.simulation_time - self.simulation_time_start
 
     def on_manip(self, utime, posv):
         q = posv[:4]; x, y = posv[4], posv[5]
@@ -108,3 +123,26 @@ class SnapshotRecorder:
                       f"wall={time.monotonic() - self.recording_started:.1f}s pos_err={pos_err:.3f}m "
                       f"yaw_err={math.degrees(ang_err):.1f}deg within_goal={'yes' if within_goal else 'no'}",
                       flush=True)
+
+    def on_native_goal(self, snapshot):
+        """Retain the exact reached state even before the first debug message.
+
+        control_step remains a snapshot index, not an executed-policy counter.
+        Native terminal effort is unavailable and is left unrecorded.
+        """
+        self.state['step'] += 1
+        record = dict(snapshot, control_step=self.state['step'])
+        self.steps_f.write(json.dumps(record) + '\n')
+        pose = next(value for channel, value in snapshot['objects'].items()
+                    if self.args.object_name in channel)
+        norm = math.hypot(*pose[:4])
+        yaw = yaw_of([value / norm for value in pose[:4]])
+        pos_err = math.hypot(pose[4]-self.args.goal[0], pose[5]-self.args.goal[1])
+        ang_err = abs(math.remainder(yaw-self.args.goal[2], 2*math.pi))
+        self.state['best_pos'] = min(self.state['best_pos'], pos_err)
+        self.state['best_ang'] = min(self.state['best_ang'], ang_err)
+        self.trace_f.write(json.dumps(dict(
+            t=snapshot['sim_time'], q=snapshot['robot_q'], obj=pose,
+            pos_err=pos_err, ang_err=ang_err, source='native_goal_terminal')) + '\n')
+        self.steps_f.flush()
+        self.trace_f.flush()

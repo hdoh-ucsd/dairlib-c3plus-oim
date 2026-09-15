@@ -1,6 +1,8 @@
 #include <math.h>
 #include <algorithm>
 #include <csignal>
+#include <optional>
+#include <sstream>
 #include <vector>
 
 #include <drake/geometry/geometry_roles.h>
@@ -75,7 +77,10 @@ DEFINE_bool(execution_logging, false,
 DEFINE_int64(execution_step_budget, -1,
              "Optional maximum adopted execution policies; -1 is unlimited.");
 DEFINE_string(execution_stop_file, "",
-              "Optional completion marker for an explicit execution budget.");
+              "Optional completion marker for execution budget or goal stopping.");
+DEFINE_string(execution_goal, "",
+              "Optional x,y,yaw goal; stop at the first physical step with planar "
+              "error < 0.05 m and wrapped yaw error < 0.1 rad.");
 
 namespace {
 
@@ -117,6 +122,19 @@ int DoMain(int argc, char* argv[]) {
   }
   if (!FLAGS_execution_logging && FLAGS_execution_step_budget > 0) {
     throw std::runtime_error("execution_step_budget requires execution_logging");
+  }
+  std::optional<Eigen::Vector3d> execution_goal;
+  if (!FLAGS_execution_goal.empty()) {
+    Eigen::Vector3d goal;
+    char separator1, separator2;
+    std::istringstream input(FLAGS_execution_goal);
+    if (!FLAGS_execution_logging ||
+        !(input >> goal[0] >> separator1 >> goal[1] >> separator2 >> goal[2]) ||
+        separator1 != ',' || separator2 != ',' || !(input >> std::ws).eof() ||
+        !goal.allFinite()) {
+      throw std::runtime_error("execution_goal requires execution_logging and finite x,y,yaw");
+    }
+    execution_goal = goal;
   }
 
   // Load parameters.
@@ -274,7 +292,7 @@ int DoMain(int argc, char* argv[]) {
                                  lcm_channel_params.object_state_channels.begin() +
                                      num_objects),
         sim_params.actuator_delay, FLAGS_execution_step_budget,
-        FLAGS_execution_stop_file);
+        FLAGS_execution_stop_file, execution_goal);
     builder.Connect(plant.get_state_output_port(), execution_logger->state_input());
     builder.Connect(*command_message_output, execution_logger->command_input());
   }
@@ -325,6 +343,10 @@ int DoMain(int argc, char* argv[]) {
   simulator.Initialize();
   try {
     simulator.AdvanceTo(std::numeric_limits<double>::infinity());
+  } catch (const ExecutionGoalReached&) {
+    execution_logger->LogTerminal(
+        diagram->GetSubsystemContext(*execution_logger, simulator.get_context()),
+        "goal_reached");
   } catch (const ExecutionStepBudgetReached&) {
     execution_logger->LogTerminal(
         diagram->GetSubsystemContext(*execution_logger, simulator.get_context()),
