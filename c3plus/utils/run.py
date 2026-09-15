@@ -18,6 +18,7 @@ from c3plus.utils.plan import DEFAULT_SIMULATION_CAP_SECONDS, plan_run
 from c3plus.runtime.processes import classify_failure, logged_command, check_experiment_capabilities
 from c3plus.runtime.provenance import capture_source_state, runtime_versions
 from c3plus.evaluation.package import compact_run
+from c3plus.evaluation.oim_export import export_result
 from c3plus.recording.execution import read_native_execution
 from c3plus.recording.planning import read_planning_updates
 
@@ -43,10 +44,9 @@ def verify_goal_yaw(log, plan):
             return True
     return False
 
-<<<<<<< HEAD
-def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS, port=18001,
+def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_SIMULATION_CAP_SECONDS, port=18001,
             goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None,
-            record=True, video=True):
+            record=True, video=True, oim_out=None):
     """Run and package one trial.
 
     ``video=False`` keeps every recording and metric but skips the MP4 replay,
@@ -56,10 +56,8 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS
     """
     if not record:
         video = False
-=======
-def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_SIMULATION_CAP_SECONDS, port=18001,
-            goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None):
->>>>>>> 00412ca6deb3e7d05707f4b2126d7cb34ef3b8b0
+    if oim_out is not None:
+        oim_out = Path(oim_out).resolve()
     plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
                     goal_yaw_degrees, object_name, steps)
     scene, object_name = plan["scene"], plan["object_name"]
@@ -140,14 +138,9 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_SIMULATION_CAP_S
             status["goal_yaw_verified"] = verify_goal_yaw(out / "planner.log", plan)
         status_path = out / "runtime_status.json"
         status_path.write_text(json.dumps(status, indent=2) + "\n")
-<<<<<<< HEAD
         recordings = ("steps_raw.jsonl", "state_trace.jsonl") if record else ()
-        if rc or not status["seed_verified"] or not status.get("goal_yaw_verified", True) or any(not (out / name).is_file() or not (out / name).stat().st_size
-                    for name in recordings):
-=======
         if rc or status["seed_verified"] is False or not status.get("goal_yaw_verified", True) or any(not (out / name).is_file() or not (out / name).stat().st_size
-                    for name in ("steps_raw.jsonl", "state_trace.jsonl")):
->>>>>>> 00412ca6deb3e7d05707f4b2126d7cb34ef3b8b0
+                    for name in recordings):
             raise RuntimeError(f"Invalid/no-data run; preserved logs in {out}")
         if not record:
             # Nothing was recorded, so there is no result to postprocess,
@@ -188,6 +181,9 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_SIMULATION_CAP_S
         print(f"[PACKAGE] {run_id} consolidate and clean", flush=True)
         compact_run(out, run_id, status=status, require_legacy_complete=False,
                     video_required=video)
+        if oim_out is not None:
+            written = export_result(out / f"{run_id}_result.json", oim_out)
+            print(f"[PACKAGE] {run_id} oim export -> {written}", flush=True)
         print(f"[COMPLETE] {run_id} failures={status['failures']} folder={out}", flush=True)
         return status
 
@@ -213,6 +209,9 @@ def main(argv=None):
     parser.add_argument("--max-frames", type=int, default=1200)
     parser.add_argument("--no-video", dest="video", action="store_false",
                         help="Skip MP4 rendering; keep all recordings, metrics and the result JSON")
+    parser.add_argument("--oim-out", type=Path,
+                        help="Also write an OIM-contract run file for oim.run_eval into this "
+                             "directory; ignored with --no-record")
     parser.add_argument("--no-record", dest="record", action="store_false",
                         help="Skip the recorder entirely: logs only, no telemetry, "
                              "no result JSON and nothing for eval; implies --no-video")
@@ -227,7 +226,7 @@ def main(argv=None):
             options["steps"] = args.steps
         # Recording choices affect execution and packaging only; plan_run
         # resolves the configuration and does not accept them.
-        execution_options = dict(record=args.record, video=args.video)
+        execution_options = dict(record=args.record, video=args.video, oim_out=args.oim_out)
         jobs = [(name, args.out / name if len(selected) > 1 else args.out) for name in selected]
         plans = [plan_run(args.scene, args.obstacle_cost, args.start, args.goal,
                           out, args.cap, args.port, **options,
