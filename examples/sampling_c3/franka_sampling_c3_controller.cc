@@ -605,7 +605,8 @@ int DoMain(int argc, char* argv[]) {
   // Sampling C3 controller.
   auto controller = builder.AddSystem<systems::SamplingC3Controller>(
       plant_lcs, &plant_lcs_context, *plant_lcs_autodiff,
-      plant_lcs_context_ad.get(), contact_pairs, controller_params);
+      plant_lcs_context_ad.get(), contact_pairs, controller_params,
+      false /* verbose */, !FLAGS_is_simulation /* stop_on_topple */);
 
   // Systems for publishing the current and best planned trajectories.
   auto actor_trajectory_sender_curr_plan = builder.AddSystem(

@@ -1,11 +1,14 @@
 #pragma once
 
 #include <chrono>
+#include <cmath>
+#include <cstdio>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <locale>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -26,6 +29,11 @@ class ExecutionStepBudgetReached final : public std::exception {
   }
 };
 
+class ExecutionGoalReached final : public std::exception {
+ public:
+  const char* what() const noexcept override { return "execution goal reached"; }
+};
+
 // Observes the same pre-update Context as the discrete plant. In particular,
 // this does not use asynchronous object-state messages or change plant inputs.
 // Register this system after the plant and other diagram systems so a failed
@@ -38,11 +46,15 @@ class ExecutionBoundaryLogger final
       drake::multibody::ModelInstanceIndex robot,
       std::vector<drake::multibody::ModelInstanceIndex> objects,
       std::vector<std::string> object_channels, double actuator_delay,
-      int64_t step_budget, std::string stop_file)
+      int64_t step_budget, std::string stop_file,
+      std::optional<Eigen::Vector3d> goal = std::nullopt)
       : plant_(plant), robot_(robot), objects_(std::move(objects)),
         object_channels_(std::move(object_channels)),
         actuator_delay_(actuator_delay), step_budget_(step_budget),
-        stop_file_(std::move(stop_file)) {
+        stop_file_(std::move(stop_file)), goal_(std::move(goal)) {
+    if (goal_ && (!goal_->allFinite() || objects_.size() != 1)) {
+      throw std::runtime_error("execution_goal requires one object and finite x,y,yaw");
+    }
     this->set_name("execution_boundary_logger");
     state_port_ = this->DeclareVectorInputPort(
                          "physical_state", plant.num_multibody_states())
@@ -60,9 +72,9 @@ class ExecutionBoundaryLogger final
       // Drake applies their pending state changes only after they all succeed.
       this->DeclarePeriodicUnrestrictedUpdateEvent(
           plant.time_step(), 0.0, &ExecutionBoundaryLogger::Observe);
-    } else if (step_budget_ > 0) {
+    } else if (step_budget_ > 0 || goal_) {
       throw std::runtime_error(
-          "execution_step_budget requires exact physical execution alignment");
+          "execution stopping requires exact physical execution alignment");
     }
   }
 
@@ -75,7 +87,7 @@ class ExecutionBoundaryLogger final
   int64_t n_steps_executed() const { return n_steps_; }
 
   // Called from Simulator's monitor after an existing completed step, or from
-  // the budget catch with the unchanged pre-update Context. No extra physics
+  // a goal/budget catch with the unchanged pre-update Context. No extra physics
   // step, terminal hold, or settling interval is introduced.
   void LogTerminal(const drake::systems::Context<double>& context,
                    const std::string& reason, int signal_number = 0) const {
@@ -91,13 +103,37 @@ class ExecutionBoundaryLogger final
     if (!WriteState("C3_EXECUTION_TERMINAL", context, n_steps_, last_plan_,
                     wall_time, reason, signal_number)) return;
     terminal_written_ = true;
-    if (reason == "step_budget" && !stop_file_.empty()) {
-      std::ofstream marker(stop_file_);
+    if ((reason == "step_budget" || reason == "goal_reached") && !stop_file_.empty()) {
+      const std::string temporary = stop_file_ + ".tmp";
+      std::ofstream marker(temporary);
       if (!marker) throw std::runtime_error("cannot write execution stop file");
-      marker << "{\"termination_reason\":\"step_budget\","
-             << "\"n_steps_executed\":" << n_steps_ << "}\n";
+      marker << std::setprecision(17) << "{\"termination_reason\":" << std::quoted(reason)
+             << ",\"sim_time\":" << context.get_time()
+             << ",\"n_steps_executed\":" << n_steps_;
+      if (reason == "goal_reached") {
+        const auto& state = state_input().Eval(context);
+        const Eigen::VectorXd q = state.head(plant_.num_positions());
+        const Eigen::VectorXd v = state.tail(plant_.num_velocities());
+        marker << ",\"snapshot\":{\"source\":\"native_goal_terminal\",\"sim_time\":"
+               << context.get_time() << ",\"robot_q\":";
+        WriteVector(marker, plant_.GetPositionsFromArray(robot_, q));
+        marker << ",\"robot_v\":";
+        WriteVector(marker, plant_.GetVelocitiesFromArray(robot_, v));
+        marker << ",\"objects\":{";
+        for (size_t i = 0; i < objects_.size(); ++i) {
+          if (i) marker << ',';
+          marker << std::quoted(object_channels_[i]) << ':';
+          WriteVector(marker, plant_.GetPositionsFromArray(objects_[i], q));
+        }
+        marker << "}}";
+      }
+      marker << "}\n";
       marker.flush();
       if (!marker) throw std::runtime_error("cannot flush execution stop file");
+      marker.close();
+      if (std::rename(temporary.c_str(), stop_file_.c_str()) != 0) {
+        throw std::runtime_error("cannot publish execution stop file");
+      }
     }
   }
 
@@ -123,6 +159,10 @@ class ExecutionBoundaryLogger final
       record << std::quoted(object_channels_[i]);
     }
     record << ']';
+    if (goal_) {
+      record << ",\"goal\":[" << (*goal_)[0] << ',' << (*goal_)[1] << ',' << (*goal_)[2]
+             << "],\"goal_pos_tol\":0.05,\"goal_ang_tol\":0.1";
+    }
     if (!reason.empty()) record << ",\"reason\":" << std::quoted(reason);
     record << '}';
     std::cout << record.str() << std::endl;
@@ -131,8 +171,8 @@ class ExecutionBoundaryLogger final
   void Invalidate(const std::string& reason) const {
     available_ = false;
     WriteHeader(reason);
-    if (step_budget_ > 0) {
-      throw std::runtime_error("cannot enforce execution step budget: " + reason);
+    if (step_budget_ > 0 || goal_) {
+      throw std::runtime_error("cannot enforce execution stopping: " + reason);
     }
   }
 
@@ -186,6 +226,28 @@ class ExecutionBoundaryLogger final
       drake::systems::State<double>*) const {
     const auto now = Clock::now();
     if (!available_) return drake::systems::EventStatus::DidNothing();
+    // Check every physical simulation step, including while the current policy
+    // is held. Stop before applying another update and retain this exact state.
+    // The first applied interval must exist for an N+1 execution trajectory.
+    if (goal_ && n_steps_ > 0 && context.get_time() > last_sim_time_) {
+      const auto& state = state_input().Eval(context);
+      const Eigen::VectorXd q = plant_.GetPositionsFromArray(
+          objects_[0], state.head(plant_.num_positions()));
+      if (q.size() == 7 && q.allFinite()) {
+        Eigen::Quaterniond rotation(q[0], q[1], q[2], q[3]);
+        if (rotation.norm() > 0) {
+          rotation.normalize();
+          const auto R = rotation.toRotationMatrix();
+          const double yaw = std::atan2(R(1, 0), R(0, 0));
+          const double angle_error = std::abs(std::atan2(
+              std::sin(yaw - (*goal_)[2]), std::cos(yaw - (*goal_)[2])));
+          if (std::hypot(q[4] - (*goal_)[0], q[5] - (*goal_)[1]) < 0.05 &&
+              angle_error < 0.1) {
+            throw ExecutionGoalReached();
+          }
+        }
+      }
+    }
     const auto& command = command_input().Eval<dairlib::lcmt_robot_input>(context);
     const int64_t source = command.source_plan_utime;
     if (source == last_plan_) return drake::systems::EventStatus::DidNothing();
@@ -220,6 +282,7 @@ class ExecutionBoundaryLogger final
   double actuator_delay_;
   int64_t step_budget_;
   std::string stop_file_;
+  std::optional<Eigen::Vector3d> goal_;
   drake::systems::InputPortIndex state_port_;
   drake::systems::InputPortIndex command_port_;
   mutable bool available_ = false;

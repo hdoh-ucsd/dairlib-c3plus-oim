@@ -76,6 +76,39 @@ def add_execution_timing(result, events):
     return result
 
 
+def add_execution_control_dt(result):
+    """Describe the observed simulation-time mean of applied policy durations.
+
+    This is a summary of variable execution intervals, including reposition and
+    the final held policy. It is neither a controller setting nor wall timing.
+    """
+    execution = result.get("execution") or {}
+    if execution.get("alignment") != "physical_policy_boundaries_v1":
+        return result
+    n = execution.get("n_steps_executed")
+    times = execution.get("sim_time")
+    if (type(n) is not int or n < 0 or not isinstance(times, list) or len(times) != n + 1
+            or any(isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(t)
+                   for t in times)
+            or any(b <= a for a, b in zip(times, times[1:]))):
+        raise ValueError("control_dt requires finite, increasing physical execution boundary times")
+    mean = (times[-1] - times[0]) / n if n else None
+    if mean is not None and (not math.isfinite(mean) or mean <= 0):
+        raise ValueError("control_dt must be finite and positive when execution intervals exist")
+    result["hyperparameters"].update(control_dt=mean,
+                                     control_dt_source="mean_physical_execution_interval")
+    schema = result.setdefault("schema", {})
+    schema.setdefault("units", {})["control_dt"] = "s (simulation)"
+    description = (
+        "Mean simulation-time duration of actually applied C3 and reposition policies: "
+        "(execution.sim_time[-1]-execution.sim_time[0])/execution.n_steps_executed. "
+        "Includes the recorded terminal interval; null when no execution intervals exist. "
+        "Actual durations vary. Not a fixed planner/physics timestep or wall-clock frequency input.")
+    schema["control_dt"] = description
+    result.setdefault("provenance", {}).setdefault("metadata_semantics", {})["control_dt"] = description
+    return result
+
+
 def add_execution_projection(result, cfg, native, updates):
     """Project exact simulator policy boundaries, preserving every raw snapshot.
 
@@ -98,7 +131,7 @@ def add_execution_projection(result, cfg, native, updates):
     if not n:
         raise ValueError("No applied policy: an execution-aligned initial state is unavailable")
     terminal = native["terminals"][0]
-    if terminal.get("reason") not in {"shutdown", "step_budget"}:
+    if terminal.get("reason") not in {"shutdown", "step_budget", "goal_reached"}:
         raise ValueError("Unknown execution terminal boundary")
     if budget is not None and (n > budget or terminal["reason"] == "step_budget" and n != budget):
         raise ValueError("Native execution count disagrees with the configured budget")
@@ -153,13 +186,25 @@ def add_execution_projection(result, cfg, native, updates):
         # every raw coordinate below; normalize only a copy for derived yaw.
         # Preserve the exact projection of states accepted by older exports,
         # so their saved packages still pass deterministic revalidation.
-        if not math.isclose(sum(x*x for x in quaternion), 1.0, abs_tol=1e-5):
+        if (terminal["reason"] == "goal_reached"
+                or not math.isclose(sum(x*x for x in quaternion), 1.0, abs_tol=1e-5)):
             quaternion = [component / norm for component in quaternion]
         wall.append(w); sim.append(t)
         poses.append([q[4], q[5], quat_yaw(quaternion)])
         full_poses.append(q); velocities.append(v)
         robot_q.append(rq); robot_v.append(rv)
     intervals = [b-a for a, b in zip(wall, wall[1:])]
+    if terminal["reason"] == "goal_reached":
+        header = headers[0]
+        goal = cfg["goal"]
+        pos_tol = result["hyperparameters"]["goal_pos_tol"]
+        ang_tol = result["hyperparameters"]["goal_theta_tol"]
+        if (header.get("goal") != goal or header.get("goal_pos_tol") != pos_tol
+                or header.get("goal_ang_tol") != ang_tol
+                or not math.hypot(poses[-1][0]-goal[0], poses[-1][1]-goal[1]) < pos_tol
+                or not abs(wrap(poses[-1][2]-goal[2])) < ang_tol):
+            raise ValueError("Native goal stop disagrees with the recorded goal or terminal pose")
+        result.update(success=True, t_success=sim[-1], first_success_t=sim[-1])
     if not finite_vector(intervals) or not all(dt > 0 for dt in intervals):
         raise ValueError("Execution wall intervals must be finite and positive")
     mean = sum(intervals) / n
@@ -168,7 +213,7 @@ def add_execution_projection(result, cfg, native, updates):
         raise ValueError("Execution frequency must be finite and positive")
     snapshots = deepcopy(result["dynamic"])
     result.setdefault("recording", {}).update(
-        semantics="Asynchronous retained C3_DEBUG_CURR/observation snapshots; not executed actions.",
+        semantics="Retained C3_DEBUG_CURR/observation snapshots and an exact terminal snapshot on native goal stop; not executed actions.",
         n_snapshots=len(snapshots["time"]), n_recorded_intervals=len(snapshots["time"])-1,
         snapshot_dynamic=snapshots, execution_native=deepcopy(native), planning_updates=deepcopy(updates))
     result["planning"] = {
@@ -194,9 +239,13 @@ def add_execution_projection(result, cfg, native, updates):
         "robot_joint_positions": robot_q, "robot_joint_velocities": robot_v,
         "compute_time": intervals}
     result.pop("execution_timing", None)
-    result["hyperparameters"].update(steps=budget, control_dt=None,
-                                     control_dt_source="variable_physical_policy_duration")
+    result["hyperparameters"]["steps"] = budget
     schema = result["schema"]
+    if terminal["reason"] == "goal_reached":
+        for field in ("success", "t_success", "first_success_t"):
+            schema.setdefault("legacy_fields", {})[field] = (
+                "Native immediate goal-stop result at execution.sim_time[-1]; "
+                "the exact reached pose is dynamic.object_pose[-1].")
     schema.update(semantics_version=EXECUTION_SEMANTICS_VERSION,
         indexing="For N applied outer policies, dynamic states and execution boundary times have N+1 entries. "
                  "State 0 is recorded immediately before the first applied policy; state i+1 closes policy i. "
@@ -226,9 +275,8 @@ def add_execution_projection(result, cfg, native, updates):
            "dynamic.evaluation_total": "Moved to recording.snapshot_dynamic.evaluation_total; snapshot diagnostics."})
     result["provenance"].setdefault("metadata_semantics", {}).update(
         steps="Configured execution-step budget from native runtime telemetry; null means unlimited.",
-        control_dt="Variable physical execution duration: scalar unavailable; use execution.sim_time boundaries.",
         compute_time=schema["compute_time"])
-    return result
+    return add_execution_control_dt(result)
 
 
 def project_result(run_dir, scene, run_id, cfg, summary, steps, rows,

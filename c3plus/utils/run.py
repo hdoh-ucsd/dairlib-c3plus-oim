@@ -14,10 +14,19 @@ from c3plus.configs import (BINARIES, MODELS, OBSTACLE_COSTS,
                            REPO, RUN_OBJECTS, SCENES, environment, planner_environment,
                            write_demo_configs)
 from c3plus.configs.catalog import canonical_task, canonical_object, evaluation_config
-from c3plus.utils.plan import DEFAULT_WALL_CAP_SECONDS, plan_run
+from c3plus.utils.plan import DEFAULT_SIMULATION_CAP_SECONDS, plan_run
 from c3plus.runtime.processes import classify_failure, logged_command, check_experiment_capabilities
 from c3plus.runtime.provenance import capture_source_state, runtime_versions
 from c3plus.evaluation.package import compact_run
+from c3plus.recording.execution import read_native_execution
+from c3plus.recording.planning import read_planning_updates
+
+
+def goal_reached_without_sampling(native, updates):
+    """A goal already reached during reposition can stop before sampler initialization."""
+    terminals = (native or {}).get('terminals', [])
+    return (len(terminals) == 1 and terminals[0].get('reason') == 'goal_reached'
+            and bool(updates) and all(update.get('mode') == 'reposition' for update in updates))
 
 def verify_goal_yaw(log, plan):
     """Check the effective native target, rather than just the launch arguments."""
@@ -34,6 +43,7 @@ def verify_goal_yaw(log, plan):
             return True
     return False
 
+<<<<<<< HEAD
 def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS, port=18001,
             goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None,
             record=True, video=True):
@@ -46,6 +56,10 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS
     """
     if not record:
         video = False
+=======
+def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_SIMULATION_CAP_SECONDS, port=18001,
+            goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None):
+>>>>>>> 00412ca6deb3e7d05707f4b2126d7cb34ef3b8b0
     plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
                     goal_yaw_degrees, object_name, steps)
     scene, object_name = plan["scene"], plan["object_name"]
@@ -119,13 +133,21 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS
         status.update(wrapper_rc=rc, simulation_wall_seconds=time.monotonic()-started,
                       failures=classify_failure(out))
         status["seed_verified"] = "[SAMPLER-SEED] deterministic seed=42" in (out / "planner.log").read_text(errors="replace")
+        if not status["seed_verified"] and goal_reached_without_sampling(
+                read_native_execution(out), read_planning_updates(out)):
+            status.update(seed_verified=None, seed_verification_not_applicable="goal_reached_before_sampling")
         if goal_yaw_degrees is not None:
             status["goal_yaw_verified"] = verify_goal_yaw(out / "planner.log", plan)
         status_path = out / "runtime_status.json"
         status_path.write_text(json.dumps(status, indent=2) + "\n")
+<<<<<<< HEAD
         recordings = ("steps_raw.jsonl", "state_trace.jsonl") if record else ()
         if rc or not status["seed_verified"] or not status.get("goal_yaw_verified", True) or any(not (out / name).is_file() or not (out / name).stat().st_size
                     for name in recordings):
+=======
+        if rc or status["seed_verified"] is False or not status.get("goal_yaw_verified", True) or any(not (out / name).is_file() or not (out / name).stat().st_size
+                    for name in ("steps_raw.jsonl", "state_trace.jsonl")):
+>>>>>>> 00412ca6deb3e7d05707f4b2126d7cb34ef3b8b0
             raise RuntimeError(f"Invalid/no-data run; preserved logs in {out}")
         if not record:
             # Nothing was recorded, so there is no result to postprocess,
@@ -183,8 +205,8 @@ def main(argv=None):
     parser.add_argument("--goal-yaw-degrees", type=int, choices=[90, 0, -90],
                         help="Absolute world yaw; preserve the indexed goal position")
     parser.add_argument("--seed", type=int, choices=[42], default=42)
-    parser.add_argument("--cap", type=int, default=DEFAULT_WALL_CAP_SECONDS,
-                        help=f"Recorder wall-time cap (default {DEFAULT_WALL_CAP_SECONDS} seconds)")
+    parser.add_argument("--cap", type=int, default=DEFAULT_SIMULATION_CAP_SECONDS,
+                        help=f"Elapsed simulation-time cap (default {DEFAULT_SIMULATION_CAP_SECONDS} seconds)")
     parser.add_argument("--steps", type=int, help="Maximum actually applied outer policies, including reposition; default unlimited")
     parser.add_argument("--port", type=int, default=18001)
     parser.add_argument("--out", type=Path, required=True, help="New directory; existing dirs are refused")

@@ -142,6 +142,56 @@ class RunArtifactTests(ArtifactFixtures, unittest.TestCase):
                 Postprocess.export_existing_result(SimpleNamespace(run_dir=str(root), scene="open_task", run_id=RUN_ID), None)
             self.assertEqual(json.loads(path.read_text()), compacted)
 
+            # Old v4 packages deliberately recorded a null variable period.
+            # Native validation must keep them readable without rewriting them.
+            legacy = deepcopy(compacted)
+            legacy["hyperparameters"].update(control_dt=None,
+                control_dt_source="variable_physical_policy_duration")
+            legacy["schema"].pop("control_dt", None)
+            legacy["schema"]["units"].pop("control_dt", None)
+            legacy["provenance"]["metadata_semantics"]["control_dt"] = (
+                "Variable physical execution duration: scalar unavailable; use execution.sim_time boundaries.")
+            P.write_result_json(path, legacy)
+            saved_bytes = path.read_bytes()
+            before = deepcopy(legacy)
+            Validation._validate(legacy, legacy["recording"], cfg, root)
+            self.assertEqual(legacy, before)
+            self.assertEqual(path.read_bytes(), saved_bytes)
+
+            for value, source in ((.0001, "mean_physical_execution_interval"),
+                                  (.125, "variable_physical_policy_duration"),
+                                  (None, "mean_physical_execution_interval"),
+                                  (None, "unrecorded_source")):
+                bad = deepcopy(legacy)
+                bad["hyperparameters"].update(control_dt=value, control_dt_source=source)
+                with self.subTest(control_dt=value, source=source), self.assertRaises(ValueError):
+                    Validation._validate(bad, bad["recording"], cfg, root)
+            for mutation in ("missing control_dt", "future semantics", "modified native state"):
+                bad = deepcopy(legacy)
+                if mutation == "missing control_dt":
+                    del bad["hyperparameters"]["control_dt"]
+                elif mutation == "future semantics":
+                    bad["schema"]["semantics_version"] = 5
+                else:
+                    bad["recording"]["execution_native"]["boundaries"][0]["objects"][0]["q"][4] += .1
+                with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                    Validation._validate(bad, bad["recording"], cfg, root)
+
+            # The explicit export operation upgrades only metadata, after the
+            # original native records and old metadata have passed validation.
+            with redirect_stdout(io.StringIO()):
+                Postprocess.export_existing_result(SimpleNamespace(run_dir=str(root), scene="open_task", run_id=RUN_ID), None)
+            upgraded = json.loads(path.read_text())
+            self.assertAlmostEqual(upgraded["hyperparameters"]["control_dt"], .125)
+            self.assertEqual(upgraded["hyperparameters"]["control_dt_source"], "mean_physical_execution_interval")
+            self.assertIsNone(upgraded["hyperparameters"]["steps"])
+            for field in ("dynamic", "execution", "planning", "recording", "evaluation", "native_controller"):
+                self.assertEqual(upgraded[field], legacy[field], field)
+            Validation._validate(upgraded, upgraded["recording"], cfg, root)
+            with redirect_stdout(io.StringIO()):
+                Postprocess.export_existing_result(SimpleNamespace(run_dir=str(root), scene="open_task", run_id=RUN_ID), None)
+            self.assertEqual(json.loads(path.read_text()), upgraded)
+
 
     def test_invalid_inputs_never_delete_or_replace_original_artifacts(self):
         def invalid_json(root):

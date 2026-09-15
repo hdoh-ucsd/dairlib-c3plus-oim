@@ -4,7 +4,6 @@ import json
 import math
 from pathlib import Path
 import re
-import runpy
 import struct
 import subprocess
 import sys
@@ -14,9 +13,126 @@ import unittest
 from unittest.mock import patch
 
 from c3plus.configs.paths import REPO
+from c3plus.recording import recorder as Recorder
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_native_terminal_is_saved_without_debug_messages(self):
+        from c3plus.recording.snapshots import SnapshotRecorder
+        args = types.SimpleNamespace(object_name='hammer_base', out_steps='/tmp/missing/steps.jsonl',
+                                     goal=[.4, -.2, 0])
+        steps, trace = io.StringIO(), io.StringIO()
+        recorder = SnapshotRecorder(args, steps, trace, 0)
+        snapshot = dict(source='native_goal_terminal', sim_time=.2,
+                        robot_q=[1, 2, 3, 4, 5], robot_v=[0]*5,
+                        objects={'OBJECT_hammer_base_STATE_SIMULATION': [1, 0, 0, 0, .39, -.2, .03]})
+        recorder.on_native_goal(snapshot)
+        recorded = json.loads(steps.getvalue())
+        self.assertEqual(recorded, dict(snapshot, control_step=1))
+        self.assertNotIn('robot_u', recorded)
+        frame = json.loads(trace.getvalue())
+        self.assertEqual(frame['t'], .2)
+        self.assertEqual(frame['obj'], next(iter(snapshot['objects'].values())))
+        self.assertAlmostEqual(frame['pos_err'], .01)
+        self.assertEqual(frame['ang_err'], 0)
+
+    def clock_run(self, ticks, *flags):
+        """Deliver simulator states without any C3 debug/plan messages."""
+        clock = [100.0]
+        consumed = []
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            stop = directory / 'stop.json'
+
+            class FakeLcm:
+                def __init__(self, url):
+                    self.pending = iter(ticks)
+
+                def SubscribeAllChannels(self, callback):
+                    self.callback = callback
+
+                def HandleSubscriptions(self, timeout_millis):
+                    tick = next(self.pending)  # Exhaustion exposes a missed stop.
+                    consumed.append(tick)
+                    clock[0], sim, success, stopped = tick
+                    if sim is not None:
+                        self.callback('FRANKA_STATE_SIMULATION', (sim, [], [], []))
+                    if success:
+                        self.callback('OBJECT_hammer_base_STATE_SIMULATION',
+                                      (sim, 'hammer_base', [1, 0, 0, 0, 0, 0, 0]))
+                    if stopped:
+                        stop.write_text(json.dumps(stopped if isinstance(stopped, dict) else
+                                                   {'termination_reason': 'step_budget'}))
+
+            module = types.ModuleType('pydrake.lcm')
+            module.DrakeLcm = FakeLcm
+            output = io.StringIO()
+            with patch.dict(sys.modules, {'pydrake.lcm': module}), \
+                    patch('c3plus.recording.snapshots.decode_robot_output', side_effect=lambda x: x), \
+                    patch('c3plus.recording.snapshots.decode_object_state', side_effect=lambda x: x), \
+                    patch('time.monotonic', side_effect=lambda: clock[0]), \
+                    patch('time.time', side_effect=AssertionError('Wall clock used for simulation cap')), \
+                    redirect_stdout(output):
+                Recorder.main(['--goal', '0', '0', '0', '--object-name', 'hammer_base',
+                               '--out-steps', str(directory / 'steps.jsonl'),
+                               '--out-trace', str(directory / 'trace.jsonl'),
+                               '--url', 'memq://test', '--duration', '2',
+                               '--stop-file', str(stop), *flags])
+        final, = [json.loads(line[6:]) for line in output.getvalue().splitlines()
+                  if line.startswith('FINAL ')]
+        return final, len(consumed)
+
+    def test_simulation_cap_excludes_startup_pause_and_stale_timestamps(self):
+        ticks = [(10000, None, False, False), (20000, 40_000_000, False, False),
+                 (30000, 40_000_000, False, False), (40000, 39_000_000, False, False),
+                 (50000, 41_000_000, False, False), (60000, 42_000_000, False, False)]
+        result, n = self.clock_run(ticks)
+        self.assertEqual(n, 6)
+        self.assertEqual(result['termination_reason'], 'simulation_time_cap')
+        self.assertEqual(result['simulation_time_start'], 40)
+        self.assertEqual(result['elapsed_simulation_time'], 2)
+        self.assertEqual(result['control_steps'], 0)
+
+    def test_fast_simulation_reaches_cap_before_wall_deadline(self):
+        result, n = self.clock_run([(100, 0, False, False), (100.1, 2_000_000, False, False)])
+        self.assertEqual(n, 2)
+        self.assertEqual(result['termination_reason'], 'simulation_time_cap')
+
+    def test_simulation_cap_applies_during_success_settling(self):
+        result, n = self.clock_run([(100, 0, True, False), (101, 2_000_000, False, False)],
+                                   '--exit-on-success', '--settle', '5')
+        self.assertEqual(n, 2)
+        self.assertEqual(result['termination_reason'], 'simulation_time_cap')
+        self.assertEqual(result['first_success_t'], 0)
+
+    def test_success_settling_still_uses_wall_seconds(self):
+        result, n = self.clock_run([(100, 0, True, False), (104, 500_000, False, False),
+                                   (105, 1_000_000, False, False)], '--exit-on-success', '--settle', '5')
+        self.assertEqual(n, 3)
+        self.assertEqual(result['termination_reason'], 'goal_reached')
+        self.assertEqual(result['elapsed_simulation_time'], 1)
+
+    def test_success_exits_immediately_without_default_settling(self):
+        result, n = self.clock_run([(100, 0, True, False)], '--exit-on-success')
+        self.assertEqual(n, 1)
+        self.assertTrue(result['success'])
+        self.assertEqual(result['termination_reason'], 'goal_reached')
+
+    def test_native_goal_marker_marks_success_without_async_goal_observation(self):
+        marker = {'termination_reason': 'goal_reached', 'sim_time': 1.01}
+        result, n = self.clock_run([(101, 1_000_000, False, marker)])
+        self.assertEqual(n, 1)
+        self.assertTrue(result['success'])
+        self.assertEqual(result['termination_reason'], 'goal_reached')
+        self.assertEqual(result['first_success_t'], 1.01)
+        self.assertEqual(result['simulation_time_end'], 1.01)
+
+    def test_step_budget_can_stop_before_first_simulator_state(self):
+        result, n = self.clock_run([(101, None, False, True)])
+        self.assertEqual(n, 1)
+        self.assertEqual(result['termination_reason'], 'execution_step_budget')
+        self.assertIsNone(result['elapsed_simulation_time'])
+
     def test_import_does_not_parse_arguments_open_outputs_or_load_drake(self):
         code = """
 import sys
@@ -97,12 +213,12 @@ assert "numpy" not in sys.modules
             steps_file, trace_file = Path(tmp) / "steps.jsonl", Path(tmp) / "trace.jsonl"
             argv = [str(recorder), "--goal", *map(str, goal), "--object-name", "sugar_box_base",
                     "--out-steps", str(steps_file), "--out-trace", str(trace_file),
-                    "--url", "memq://fake", "--duration", "10"]
+                    "--url", "memq://fake", "--duration", "0.57"]
             output = io.StringIO()
             with patch.dict(sys.modules, {"pydrake": pydrake, "pydrake.lcm": lcm}), \
                     patch.object(sys, "argv", argv), patch("time.time", side_effect=lambda: clock.wall), \
                     patch("time.monotonic", side_effect=lambda: clock.monotonic), redirect_stdout(output):
-                runpy.run_module("c3plus.recording.recorder", run_name="__main__")
+                Recorder.main(argv[1:])
             rows = [json.loads(line) for line in steps_file.read_text().splitlines()]
             self.assertEqual(len(rows), 30)
             self.assertEqual([row["control_step"] for row in rows], list(range(1, 31)))

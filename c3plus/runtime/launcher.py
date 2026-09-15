@@ -38,6 +38,19 @@ def _supports(binary, flag):
     return bool(re.search(r"(?:^|\s)-" + re.escape(flag) + r"(?:\s|=)", result.stdout))
 
 
+def wait_for_recording(recorder, simulator, stop_file=None):
+    """Do not wait for simulation time after the simulator has exited."""
+    while True:
+        try:
+            return recorder.wait(timeout=0.5)
+        except subprocess.TimeoutExpired:
+            rc = simulator.poll()
+            if rc is not None and not (stop_file is not None and Path(stop_file).is_file()):
+                print(f"Simulator exited before recording completed (exit code {rc})",
+                      file=sys.stderr, flush=True)
+                return rc or 1
+
+
 def launch(demo, object_name, goal, cap, port, out, controller_params=None,
            goal_yaw_degrees=None, steps=None, record=True):
     """Run one native trial.
@@ -70,6 +83,9 @@ def launch(demo, object_name, goal, cap, port, out, controller_params=None,
             if name != "franka_sampling_c3_controller" and not supports("execution_logging"):
                 raise ValueError(f"{name} lacks physical execution logging. "
                                  "Rebuild all native targets with python3 -m c3plus.utils build.")
+            if name == "franka_sim" and not supports("execution_goal"):
+                raise ValueError("franka_sim lacks immediate goal stopping. "
+                                 "Rebuild with python3 -m c3plus.utils build.")
         controller_args = [f"--controller_params={controller_params}"]
     if goal_yaw_degrees is not None:
         if not re.fullmatch(r"([+-]?90|[+-]?0)([.]0+)?", str(goal_yaw_degrees)):
@@ -84,14 +100,14 @@ def launch(demo, object_name, goal, cap, port, out, controller_params=None,
     temporary.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, TMPDIR=str(temporary))
     env["SAMPLING_C3_OBSTACLE_MODE"] = env.get("SAMPLING_C3_OBSTACLE_MODE") or "lcs_contact"
-    simulation_args = ["--execution_logging=true"]
-    recorder_args = []
+    stop_file = str(temporary / "execution_stop.json")
+    simulation_args = ["--execution_logging=true", f"--execution_stop_file={stop_file}",
+                       "--execution_goal=" + ",".join(map(str, goal))]
+    recorder_args = ["--stop-file", stop_file]
     if steps is not None:
         if not re.fullmatch(r"[1-9][0-9]*", str(steps)):
             raise ValueError("--steps must be positive")
-        stop_file = str(temporary / "execution_stop.json")
-        simulation_args += [f"--execution_step_budget={steps}", f"--execution_stop_file={stop_file}"]
-        recorder_args += ["--stop-file", stop_file]
+        simulation_args += [f"--execution_step_budget={steps}"]
     url = multicast_url(port)
     processes = dict.fromkeys(("sim", "osc", "planner", "recorder"))
     previous = {}
@@ -115,6 +131,7 @@ def launch(demo, object_name, goal, cap, port, out, controller_params=None,
                 "--robot_model=xarm6", "--execution_logging=true", f"--lcm_url={url}", *controller_args])
             native("planner", "franka_sampling_c3_controller", ["--is_simulation=true", f"--demo_name={demo}",
                 "--robot_model=xarm6", f"--lcm_url={url}", *controller_args, *planner_goal_args])
+<<<<<<< HEAD
             if record:
                 # Retain shell pipefail/tee semantics in this single recorder pipeline.
                 processes["recorder"] = start_session(["bash", "-c",
@@ -131,6 +148,20 @@ def launch(demo, object_name, goal, cap, port, out, controller_params=None,
                 rc = processes["recorder"].wait()
             else:
                 rc = _wait_without_recorder(processes, float(cap))
+=======
+            # Retain shell pipefail/tee semantics in this single recorder pipeline.
+            processes["recorder"] = start_session(["bash", "-c",
+                'set -o pipefail; recorder_log=$1; shift; "$@" 2>&1 | tee "$recorder_log"',
+                "recorder", str(out / "recorder.log"), env.get("PYTHON") or "python3",
+                "-m", "c3plus.recording.recorder", "--goal", *map(str, goal),
+                "--object-name", object_name, "--out-steps", str(out / "steps_raw.jsonl"),
+                "--out-trace", str(out / "state_trace.jsonl"), "--url", url,
+                "--duration", str(cap), *recorder_args], cwd=REPO, env=env)
+            time.sleep(3)
+            native("sim", "franka_sim", [f"--demo_name={demo}", "--robot_model=xarm6", "--matched_mu",
+                f"--lcm_url={url}", *controller_args, *simulation_args])
+            rc = wait_for_recording(processes["recorder"], processes["sim"], stop_file)
+>>>>>>> 00412ca6deb3e7d05707f4b2126d7cb34ef3b8b0
             print(f"RUN DONE {demo} -> {out}", flush=True)
             return rc if rc >= 0 else 128 - rc
     finally:
@@ -157,7 +188,7 @@ def main(argv=None):
     parser.add_argument("demo")
     parser.add_argument("object_name")
     parser.add_argument("goal", nargs=3)
-    parser.add_argument("cap")
+    parser.add_argument("cap", help="elapsed simulation-time cap in seconds")
     parser.add_argument("port")
     parser.add_argument("out")
     parser.add_argument("--controller-params")

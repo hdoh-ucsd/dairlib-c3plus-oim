@@ -11,15 +11,37 @@ import tempfile
 import threading
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from c3plus import configs as S
 from c3plus.runtime import processes as Processes
+from c3plus.runtime.launcher import wait_for_recording
 from c3plus.utils import run as R
 
 from tests.fixtures.results import WorkflowFixtures, launch_subprocess
 
 class WorkflowTests(WorkflowFixtures, unittest.TestCase):
+    def test_simulator_failure_stops_waiting_for_simulation_cap(self):
+        for rc in (0, 1, -signal.SIGABRT):
+            with self.subTest(rc=rc):
+                recorder = Mock()
+                recorder.wait.side_effect = subprocess.TimeoutExpired('recorder', .5)
+                simulator = Mock()
+                simulator.poll.return_value = rc
+                with patch('sys.stderr', io.StringIO()):
+                    self.assertEqual(wait_for_recording(recorder, simulator), rc or 1)
+                recorder.wait.assert_called_once()
+
+    def test_simulator_budget_exit_allows_recorder_to_finish(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stop = Path(tmp) / 'stop.json'
+            stop.touch()
+            recorder = Mock()
+            recorder.wait.side_effect = [subprocess.TimeoutExpired('recorder', .5), 0]
+            simulator = Mock()
+            simulator.poll.return_value = 0
+            self.assertEqual(wait_for_recording(recorder, simulator, stop), 0)
+
     def test_logged_command_records_literal_arguments_before_execution(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp) / "checkout with spaces"
@@ -145,7 +167,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                 for name in S.BINARIES:
                     binary = binary_dir / name
                     flag = "old_flags" if name == stale else "controller_params"
-                    binary.write_text(f"#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\necho ' -{flag} (path) -execution_logging (bool)'\nexit 1\n")
+                    binary.write_text(f"#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\necho ' -{flag} (path) -execution_logging (bool) -execution_goal (string)'\nexit 1\n")
                     binary.chmod(0o755)
                 out = repo / stale
                 result = launch_subprocess(["bash", str(launcher), "unused", "object", "0", "0", "0",
@@ -166,7 +188,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             binaries.mkdir(parents=True)
             for name in S.BINARIES:
                 binary = binaries / name
-                binary.write_text("#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\necho ' -controller_params (path) -goal_yaw_degrees (degrees) -execution_logging (bool)'\nexit 1\n")
+                binary.write_text("#!/bin/sh\n[ \"$1\" = --helpshort ] || exit 99\necho ' -controller_params (path) -goal_yaw_degrees (degrees) -execution_logging (bool) -execution_goal (string)'\nexit 1\n")
                 binary.chmod(0o755)
             stubs = repo / "stubs"
             stubs.mkdir()

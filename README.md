@@ -152,42 +152,43 @@ or shell loops are needed.
 The launcher runs serially in task → object → start → goal order and validates
 the whole selection before trial 1.
 
-The default cap is **300 wall-clock seconds per trial** for both `run` and
+The default cap is **300 simulation seconds per trial** for both `run` and
 `campaign`; omit `--cap` to use it, or supply `--cap "max_time"` to override it.
 An explicit per-run cap in a custom campaign manifest is retained unless
 overridden by `--cap`.
 
-At this cap, the estimated recording budgets are:
+At this cap, the total simulated-time budgets are:
 
-| Selection | Trials | If every trial reaches the 300-second cap |
+| Selection | Trials | Simulation time if every trial reaches the cap |
 | --- | --- | --- |
 | All `open_table` objects and start/goal pairs | 125 | **10 hours 25 minutes** |
 | Full suite, one obstacle cost | 750 | **62 hours 30 minutes** (2 days 14 hours 30 minutes) |
 
-Allow approximately **3 days** for the full suite as a planning estimate:
-`750 × (300 + 30–60) / 3600 = 68.75–75 hours`, assuming an additional
-30–60 seconds per trial for work outside the cap. That overhead is an allowance,
-not a measured full-suite average. Early success can shorten the campaign;
-slower postprocessing or rendering can lengthen it. This estimate assumes
-continuous serial execution, excludes the initial Docker/native build, and is
-not a measured completion time or a strict upper bound. The previous 600-second
-cap allocated 125 hours before overhead.
+Real elapsed time depends on simulation speed. For the full suite, estimate
+`62.5 / simulation_speed + overhead_hours`, where `simulation_speed` is simulated
+seconds per wall-clock second. At 1× speed, allowing 30–60 wall seconds per trial
+for startup and packaging gives **68.75–75 hours**; at 0.5× speed it gives
+**131.25–137.5 hours**. These are conditional estimates, not measured full-suite
+times or upper bounds. Early success can shorten the campaign. Initial builds
+are excluded. A 600-second simulation cap doubles the simulated budget to 125 hours.
 
 | Placeholder | Value |
 | --- | --- |
 | `task` | One task from the table above |
 | `object` | One object from the table above; `T_block` is also accepted for `T_shape` |
 | `start`, `goal` | Independent pose IDs from 1 to 5 |
-| `max_time` | Positive whole seconds of recorder wall time **per trial/object**; default `300`; historical tested caps are listed below |
+| `max_time` | Positive whole seconds of elapsed simulation time **per trial/object**; default `300` |
 | `output_directory` | Destination for the trial, batch, campaign, or evaluation output |
 | `input_directory` | Existing run, batch, or campaign directory containing recorded results |
 | `file_path` | File path, including the extension required by the command |
 
-`--cap` includes waiting for simulation data: the recorder starts before a
-three-second launcher delay and simulator initialization. A two-second cap can
-expire with no recorded samples. Use `--dry-run` for a quick configuration check;
-use a longer cap for an actual trial. Success settling can add five seconds, and
-postprocessing and video rendering take additional time outside the cap.
+`--cap` starts with the first `FRANKA_STATE_SIMULATION` timestamp and stops
+recording when the received simulation clock has advanced by that many seconds.
+Startup and waiting for the first state do not count. A paused simulation pauses
+the cap; it is not a wall-clock timeout. A simulator exit is reported as a failure
+instead of waiting indefinitely. Delivery and shutdown can add a small simulation
+overshoot. Reaching the goal stops the simulation immediately, without a settling
+delay. Postprocessing and rendering add real time.
 
 To **preview the plan**, append `--dry-run` to the same command. This validates
 poses and assets and prints the full manifest plus completed, pending,
@@ -197,7 +198,9 @@ output directory. Full-suite manifests compare the Git commit and tracked-edit
 hash, including README edits.
 `--resume` also works for a fresh campaign. Valid completed JSON/video packages
 are skipped; partial or corrupt trials are reported and preserved. A different
-selection, cap, configuration, or checkout state requires a new output directory. `--resume`
+selection, cap, configuration, or checkout state requires a new output directory.
+Old campaigns with wall-time caps also require a new output directory; their
+budgets are not silently reinterpreted. `--resume`
 does not retry partial runs or overwrite their recordings.
 
 Create `output_directory/STOP_AFTER_CURRENT` to stop after the current trial
@@ -262,7 +265,7 @@ for each invocation; `run` has no resume flag. Use
 | `--start`, `--goal` | Independent pose IDs 1–5, default 1 |
 | `--goal-yaw-degrees` | Optional absolute goal yaw: 90, 0 or −90 degrees; omit to preserve the source pose |
 | `--obstacle_cost` | `exponential` (default) or `relu` |
-| `--cap "max_time"` | Recorder wall-time budget per trial, default 300; includes waiting for initial data |
+| `--cap "max_time"` | Elapsed simulation-time budget per trial, default 300; starts at the first simulator state |
 | `--steps "step_budget"` | Applied-policy budget including reposition; unlimited when omitted |
 | `--out "output_directory"` | Fresh trial directory, or parent directory for a multi-object batch |
 | `--max-frames`, `--port` | Maximum video frames (1200) and trial LCM port (18001) |
@@ -283,13 +286,22 @@ by spaces. One selected object writes directly to `--out`; multiple objects
 write to `output_directory/object/`. All destinations are checked before the
 batch starts, and a launch or packaging error stops it. Progress messages appear
 every ten recorder snapshots; their `step` counter is separate from physical execution steps.
-Recording can continue five wall seconds after first success to capture settling.
+After control begins, the simulator checks the actual object pose on every
+physics step, including steps holding the same control command. It stops at the
+first state with position error below **0.05 m** and wrapped yaw error below
+**0.1 rad** simultaneously, marks the result as successful, and packages the run.
 
-The batch pattern above produced complete JSON/MP4 packages for all five objects
+In simulation, the controller keeps planning when contact tips an object; roll
+or pitch above 0.5 radians no longer triggers the topple shutdown. Normal time
+and step limits, success stopping, and workspace checks still apply. Rebuild the
+native targets after updating this behavior. Hardware retains its topple stop.
+
+Before the cap changed to simulation time, the batch pattern above produced
+complete JSON/MP4 packages for all five objects
 on each task with **start 2, goal 2, seed 42, exponential cost, and no goal-yaw
 override**, using these caps:
 
-| `task` | Tested `max_time` (seconds per object) |
+| `task` | Historical wall-time cap (seconds per object) |
 | --- | --- |
 | `open_table` | `600` |
 | `icra_sign` | `100` |
@@ -298,16 +310,16 @@ override**, using these caps:
 | `slalom` | `10` |
 | `ycb_clutter` | `10` |
 
-These checks verify recording and packaging. Goal-reaching success is reported
-per trial in the JSON. Startup duration depends on the machine, so short caps
-may leave little time for control.
+These historical checks verify recording and packaging. Their wall-time caps
+are not equivalent to the current simulation-time `--cap`. Goal-reaching success
+is reported per trial in the JSON.
 
 For the recorded `open_table` S2→G2, seed-42 batch, successful trials reached
 their goals after approximately 104, 124, and 182 seconds of execution wall time.
 The slowest successful launch completed in approximately 192 seconds before
-postprocessing. The new 300-second default leaves margin above those observed
-times; it has not been validated across all 25 pose pairs or all six tasks.
-The caps in the table above remain the values actually used in those past tests.
+postprocessing. These are historical wall times, not simulation-time budget
+recommendations. The 300-simulation-second default has not been validated across
+all 25 pose pairs or all six tasks.
 
 Both cost presets preserve `lcs_contact` handling: `exponential` ranking is
 currently suppressed in that mode; `relu` uses the existing footprint-aware
@@ -395,17 +407,34 @@ unchanged; zero or nonfinite quaternions still fail validation.
 | Recorded field | Meaning |
 | --- | --- |
 | `dynamic.time`, `execution.sim_time` | Simulation time at the execution boundaries |
+| `runtime_status.simulation_cap_seconds`, `provenance.c3plus.simulation_cap_seconds` | Requested elapsed simulation-time budget; older runs retain their recorded `wall_cap_seconds` |
 | `execution.wall_time` | Relative monotonic wall time at those boundaries |
 | `execution.step_wall_time`, `dynamic.compute_time` | Execution wall durations; the latter is a C3+ compatibility alias, not optimizer solve timing |
-| `hyperparameters.control_dt` | `null` because physical policy durations vary |
+| `hyperparameters.control_dt` | Mean simulation-time duration of actually applied policies: `(execution.sim_time[-1] - execution.sim_time[0]) / execution.n_steps_executed` |
 | `execution.step_budget` | Explicit `--steps` budget, or `null` when unlimited |
 | `recording.snapshot_dynamic` | Original asynchronous snapshot arrays |
 
+`control_dt_source` is `mean_physical_execution_interval`. This mean includes
+C3, reposition, and the terminal policy interval; actual durations vary. It is
+not a fixed planner/physics timestep, and execution frequency continues to use
+wall-clock intervals only. A mean cannot be supplied without recorded intervals.
+Older execution-aligned JSONs with `control_dt: null` remain readable;
+`postprocess --export-only` fills this field from their validated saved boundaries.
+
+C3+ exports omit empty reference-only metadata such as MPPI temperature and
+consensus settings, optimizer selectors, and planar limit-surface parameters.
+Only those designated null fields are removed; recorded values are retained.
+Nulls that mean unlimited steps, unavailable measurements or unknown success
+remain, along with all original array positions and saved provenance.
+
 Execution frequency is `N / (wall_time[-1] - wall_time[0])`, using valid positive
-intervals. Common snapshot success requires simultaneous position error below
-0.05 m and orientation error below 0.1 rad. `evaluation.ever_success` and
-`evaluation.final_success` describe retained snapshots; native thresholds are
-recorded separately and native completion remains unknown.
+intervals. A native goal stop records `execution.terminal_reason: "goal_reached"`,
+`success: true`, and the exact reached simulation time in `t_success` and
+`first_success_t`. The reached pose is retained as the final native state in
+`dynamic.object_pose`. A snapshot and video frame of that exact terminal state
+are also saved, including when success occurs before the first debug snapshot.
+`evaluation.ever_success` and `evaluation.final_success` describe the retained
+snapshots, including this terminal snapshot for new goal-stopped runs.
 
 The aggregate evaluator uses the first qualifying execution
 endpoint for success, steps and elapsed simulation time. Failures use the
@@ -467,6 +496,16 @@ Use `eval --help` or `postprocess --help` for their respective options.
 These commands use the `python3 -m c3plus.utils` prefix and cannot recover
 execution telemetry that was never recorded. `oim.run_eval` is an external
 evaluator and is not installed by this Docker setup.
+
+The external evaluator requires a numeric `hyperparameters.control_dt`.
+New execution-aligned exports supply it; older copies with `null` must be
+refreshed with `postprocess --export-only` before sharing them. Use a directory
+containing only individual run JSONs for `oim.run_eval --runs-dir`: its loader
+also attempts to evaluate summary, manifest and configuration JSONs if present.
+Its time calculation uses `len(dynamic.object_pose) - 1`, so the recorded mean
+interval yields the complete simulated execution span. Its final-state success
+and trajectory-mean error definitions differ from this repository's first-success
+endpoint metrics; JSON compatibility does not make those scoring rules identical.
 
 ## Reproducibility
 

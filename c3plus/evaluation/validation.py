@@ -53,14 +53,26 @@ def _validate(result, recording, cfg, directory):
         if native is None:
             raise ValueError("Missing original native execution boundary records")
         add_execution_projection(semantics, cfg, native, recording.get("planning_updates"))
+        if semantics["execution"]["terminal_reason"] == "goal_reached":
+            for key in ("success", "t_success", "first_success_t"):
+                if result.get(key) != semantics[key]:
+                    raise ValueError(f"Result {key} disagrees with native goal completion")
         for key in ("dynamic", "execution", "planning"):
             if result[key] != _json_values(semantics[key]):
                 raise ValueError(f"Result {key} disagrees with native physical execution records")
         if hyperparameters.get("steps") != semantics["hyperparameters"]["steps"]:
             raise ValueError("Result execution step budget disagrees with native configuration")
-    if result["schema"].get("semantics_version", 0) >= 3:
+    # Earlier execution-aligned v4 exports explicitly left the variable
+    # physical interval unavailable. Keep those saved records valid after
+    # verifying all native data above; only explicit export upgrades the field.
+    legacy_execution_dt = (
+        aligned and result["schema"].get("semantics_version") == 4
+        and "control_dt" in hyperparameters and hyperparameters["control_dt"] is None
+        and hyperparameters.get("control_dt_source") == "variable_physical_policy_duration")
+    if result["schema"].get("semantics_version", 0) >= 3 and not legacy_execution_dt:
         for key in ("control_dt", "control_dt_source"):
-            if hyperparameters.get(key) != semantics["hyperparameters"].get(key):
+            if (key == "control_dt" and isinstance(hyperparameters.get(key), bool)
+                    or hyperparameters.get(key) != semantics["hyperparameters"].get(key)):
                 raise ValueError(f"Result hyperparameters.{key} disagrees with the recorded timestamps")
     for key in ("evaluation", "native_controller", "n_snapshots", "n_recorded_intervals"):
         if key in result and result[key] != semantics[key]:

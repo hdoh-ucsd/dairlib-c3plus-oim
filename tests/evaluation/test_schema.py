@@ -120,8 +120,8 @@ class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
             self.assertIn(key, result["schema"]["missing"])
         self.assertEqual(result["dynamic"]["robot_control"], [[None] * 5] * 4)
         self.assertTrue(any(value is not None for row in result["dynamic"]["robot_joint_effort"] for value in row))
-        self.assertIsNone(result["static"]["object_limit_surface_d"])
-        self.assertIsNone(result["static"]["object_wrench_limit"])
+        self.assertNotIn("object_limit_surface_d", result["static"])
+        self.assertNotIn("object_wrench_limit", result["static"])
         self.assertFalse(any("plan" in key or "wrench" in key or "consensus" in key
                              for key in result["dynamic"]))
         result["evaluation"]["weights"] = None
