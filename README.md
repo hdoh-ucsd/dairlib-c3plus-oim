@@ -65,7 +65,9 @@ DAIRLIB_CPUS=4 DAIRLIB_MEM=12g DAIRLIB_BAZEL_JOBS=2 ./docker/shell.sh
 python3 -m c3plus.utils campaign --suite full --seed 42 --cap 300 --resume --out results/full
 ```
 
-Add `--oim-out results/full/oim` to also emit OIM-contract files as trials finish.
+Add `--oim-out results/full/oim` to also emit OIM-contract files as trials
+finish, and `--no-video` to skip MP4 rendering, which keeps every metric and
+cuts roughly 10–20% off a long sweep.
 
 | Selection | Values |
 | --- | --- |
@@ -115,7 +117,10 @@ tasks: [open_table, shelf_gap]
 objects: [T_shape, hammer]
 pairs: diagonal          # all | diagonal | smoke, or [[2, 2], [1, 3]]
 obstacle_cost: exponential
-cap: 300
+cap: 300                 # elapsed simulation seconds per trial
+# steps: 2671            # applied-policy budget; omit for unlimited
+video: true              # false skips MP4 rendering, keeping every metric
+record: true             # false keeps logs only; no metrics, implies video: false
 ```
 
 ```bash
@@ -135,6 +140,18 @@ python3 -m c3plus.utils campaign \
 
 `--spec "file.yaml"` selects a different spec file, `--obstacle_cost both` runs
 a two-cost comparison, and `--manifest "file.json"` supplies an exact job list.
+
+| Campaign option | Meaning |
+| --- | --- |
+| `--cap` | Elapsed **simulation** seconds per trial (default 300) |
+| `--steps` | Per-trial applied-policy budget; unlimited when omitted |
+| `--no-video` | Skip MP4 rendering for every trial; keep all metrics |
+| `--no-record` | Logs only: no result JSON, no metrics; refuses `--resume` and `--oim-out` |
+| `--resume` | Skip validated complete runs; refuse partial output |
+| `--oim-out DIR` | Write OIM-contract files as trials finish |
+
+`cap`, `steps`, `video` and `record` also live in [campaign.yaml](campaign.yaml);
+the matching flag overrides the file.
 
 Use `python3 -m c3plus.utils COMMAND --help` for any command's full options.
 
@@ -171,9 +188,10 @@ to OIM's spellings and validates every file before writing.
 
 Two things to get right for a comparable sweep:
 
-- **Pass `--steps N`.** `hyperparameters.steps` is the cap that censors a failed
-  trial, so it must be one constant across the sweep. Without it the field is
-  omitted and failures censor at their own length, which rewards giving up early.
+- **Match the baselines' budget with `--cap`, not a step count.** C3+'s
+  `control_dt` varies per trial, so `hyperparameters.steps` is derived from the
+  cap as `cap / control_dt`, which censors every failed trial at the same
+  *simulated* duration. `--steps N` overrides that with a hard step budget.
 - **Score C3+ in its own `run_eval` invocation.** A shared invocation credits
   every failure with the slowest execution time across all loaded runs.
 

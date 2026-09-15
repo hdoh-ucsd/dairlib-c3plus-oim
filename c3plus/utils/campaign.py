@@ -104,13 +104,23 @@ def build_manifest(args):
                         args.cap if args.cap is not None else
                         job.get("simulation_cap_seconds", job.get("cap", DEFAULT_SIMULATION_CAP_SECONDS)),
                         args.port_base + index, job.get("goal_pose"),
-                        goal_yaw_degrees=job.get("goal_yaw_degrees"), object_name=obj)
+                        goal_yaw_degrees=job.get("goal_yaw_degrees"), object_name=obj,
+                        steps=getattr(args, "steps", None)
+                        if getattr(args, "steps", None) is not None
+                        else job.get("execution_step_budget"))
         if args.suite == "full":
             plan["out"] = str(args.output_root / task / obj / plan["run_id"])
         planned.append(plan)
     if len({plan["run_id"] for plan in planned}) != len(planned):
         raise ValueError("Campaign contains duplicate run identities")
     data = {"seed": args.seed, "run_count": len(planned), "runs": planned}
+    # Resuming into a campaign recorded differently would mix artifact sets, so
+    # the decision belongs in the plan that --out is checked against. Omitted
+    # when it is the default, to keep existing campaign plans comparable.
+    if not getattr(args, "record", True):
+        data["record"] = False
+    if not getattr(args, "video", True):
+        data["video"] = False
     if args.suite == "full":
         starts = list(pose_ids("start"))
         goals = list(pose_ids("goal"))
@@ -141,10 +151,15 @@ def validate_completed_run(plan):
     if directory.is_symlink() or not completion(directory, plan["run_id"]):
         raise ValueError("missing or invalid final JSON/video package")
     result = _json((directory / f"{plan['run_id']}_result.json").read_text())
-    if {p.name for p in directory.iterdir()} != {f"{plan['run_id']}_result.json", f"{plan['run_id']}.mp4"}:
+    skipped_video = (result.get("package") or {}).get("video_skipped") is True
+    expected = {f"{plan['run_id']}_result.json"}
+    if not skipped_video:
+        expected.add(f"{plan['run_id']}.mp4")
+    if {p.name for p in directory.iterdir()} != expected:
         raise ValueError("unexpected artifacts remain in the final run directory")
     runtime = result.get("runtime_status") or {}
-    if any(runtime.get(key) != 0 for key in ("wrapper_rc", "postprocess_rc", "render_rc")):
+    phases = ("wrapper_rc", "postprocess_rc") if skipped_video else ("wrapper_rc", "postprocess_rc", "render_rc")
+    if any(runtime.get(key) != 0 for key in phases):
         raise ValueError("saved launch/postprocess/render did not finish successfully")
     from c3plus.utils.run import goal_reached_without_sampling
     recording = result.get("recording") or {}
@@ -209,6 +224,14 @@ def main(argv=None):
     parser.add_argument("--cap", type=int,
                         help=f"Per-run simulation-time cap (default {DEFAULT_SIMULATION_CAP_SECONDS} seconds; "
                              "preserves manifest caps unless explicitly overridden)")
+    parser.add_argument("--steps", type=int,
+                        help="Per-run applied-policy budget; unlimited when omitted")
+    parser.add_argument("--no-video", dest="video", action="store_false", default=None,
+                        help="Skip MP4 rendering for every trial; keep all recordings, "
+                             "metrics and result JSON")
+    parser.add_argument("--no-record", dest="record", action="store_false", default=None,
+                        help="Skip the recorder entirely: logs only, no telemetry, no result "
+                             "JSON and nothing for eval or --oim-out; implies --no-video")
     parser.add_argument("--port-base", type=int, default=19000)
     parser.add_argument("--out", "--output-root", dest="output_root", type=Path, required=not name,
                         default=REPO / "results" / name if name else None)
@@ -247,7 +270,9 @@ def main(argv=None):
         except (ValueError, OSError) as exc:
             parser.error(f"{spec_path}: {exc}")
         for key, value in spec.items():
-            if key != "cap" or args.cap is None:
+            # Selection keys are only read when the command line chose nothing,
+            # but cap/steps/record/video have their own flags that still win.
+            if key not in ("cap", "steps", "record", "video") or getattr(args, key) is None:
                 setattr(args, key, value)
         args.spec_used = str(spec_path)
         print(f"[CAMPAIGN] selection from {spec_path}", flush=True)
@@ -256,6 +281,20 @@ def main(argv=None):
     args.scenes = args.scenes or ["single_obstacle", "icra_sign"]
     args.obstacle_cost = args.obstacle_cost or ("exponential" if args.suite else "both")
     args.pairs = args.pairs or "smoke"
+    args.record = True if args.record is None else args.record
+    # Rendering needs a recorded trajectory, so --no-record implies --no-video.
+    args.video = (True if args.video is None else args.video) and args.record
+    if not args.record:
+        # An unrecorded campaign writes no result JSON, so there is nothing to
+        # resume from, nothing to export and nothing to evaluate. Say so now
+        # rather than after hours of simulation.
+        if args.resume:
+            parser.error("--no-record writes no result JSON, so there is nothing to resume; "
+                         "drop --resume or keep recording")
+        if args.oim_out:
+            parser.error("--no-record writes no result JSON, so --oim-out has nothing to export")
+        print("[CAMPAIGN] recording disabled: logs only, no metrics and nothing to evaluate",
+              flush=True)
     args.output_root = args.output_root.absolute()
     try:
         if args.output_root.is_symlink():
@@ -315,7 +354,8 @@ def main(argv=None):
                     status = run_one(plan["scene"], plan["obstacle_cost"], plan["start"], plan["goal_index"],
                                      out, plan["simulation_cap_seconds"], plan["port"], plan["evaluation_goal"],
                                      goal_yaw_degrees=plan.get("goal_yaw_degrees"), object_name=plan["object_name"],
-                                     oim_out=args.oim_out)
+                                     steps=plan.get("execution_step_budget"),
+                                     record=args.record, video=args.video, oim_out=args.oim_out)
                 finally:
                     write_summary(data["runs"], args.output_root)
                 driver.write(f"[COMPLETE] {out} failures={status['failures']}\n")
