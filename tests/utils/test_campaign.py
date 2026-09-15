@@ -39,7 +39,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             plan = R.plan_run(job["scene"], job["obstacle_cost"], job["start"], job["goal"],
                               "/unused/test", goal_pose=job["goal_pose"])
             self.assertEqual(plan["evaluation_goal"], tuple(job["goal_pose"]))
-            self.assertEqual(plan["wall_cap_seconds"], 300)
+            self.assertEqual(plan["simulation_cap_seconds"], 300)
 
 
     def test_custom_manifest_caps_are_preserved_and_explicit_cli_cap_wins(self):
@@ -55,11 +55,29 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                 stream = io.StringIO()
                 with self.subTest(flags=flags), redirect_stdout(stream), patch.object(G, "run_one") as run:
                     G.main(["--manifest", str(manifest), "--out", str(root / "out"), "--dry-run", *flags])
-                self.assertEqual([job["wall_cap_seconds"] for job in json.loads(stream.getvalue())["runs"]], expected)
+                self.assertEqual([job["simulation_cap_seconds"] for job in json.loads(stream.getvalue())["runs"]], expected)
                 self.assertEqual(manifest.read_text(), original)
                 self.assertFalse((root / "out").exists())
                 run.assert_not_called()
 
+
+    def test_wall_cap_manifest_requires_explicit_simulation_budget(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root / 'legacy.json'
+            job = {'scene': 'open_table', 'obstacle_cost': 'exponential',
+                   'start': 1, 'goal': 2, 'wall_cap_seconds': 600}
+            manifest.write_text(json.dumps({'seed': 42, 'runs': [job]}))
+            args = ['--manifest', str(manifest), '--out', str(root / 'out'), '--dry-run']
+            with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                G.main(args)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                G.main([*args, '--cap', '17'])
+            plan, = json.loads(output.getvalue())['runs']
+            self.assertEqual(plan['simulation_cap_seconds'], 17)
+            self.assertNotIn('wall_cap_seconds', plan)
+            self.assertFalse((root / 'out').exists())
 
     def test_manifest_rejects_explicit_grid_selection(self):
         manifest = S.REPO / "c3plus/utils/manifests/campaign_seed42.json"
@@ -93,7 +111,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             self.assertEqual({job["obstacle_cost"] for job in plan["runs"]}, {"exponential", "relu"})
             for job in plan["runs"]:
                 self.assertEqual(Path(job["out"]).relative_to(out).parts[0], job["obstacle_cost"])
-                self.assertEqual(job["wall_cap_seconds"], 300)
+                self.assertEqual(job["simulation_cap_seconds"], 300)
             self.assertFalse(out.exists())
             run.assert_not_called()
 
@@ -128,7 +146,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                         self.assertAlmostEqual(run["controller_goal"][2], math.radians(run["goal_yaw_degrees"]))
                         self.assertEqual(run["evaluation_goal"], run["controller_goal"])
                         self.assertEqual(run["seed"], 42)
-                        self.assertEqual(run["wall_cap_seconds"], 300)
+                        self.assertEqual(run["simulation_cap_seconds"], 300)
                         self.assertTrue(Path(run["out"]).is_relative_to(out))
                     for first, second in zip(runs[::2], runs[1::2]):
                         self.assertEqual(first["controller_goal"], second["controller_goal"])

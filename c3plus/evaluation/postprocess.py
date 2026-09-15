@@ -12,7 +12,9 @@ import numpy as np
 import yaml
 
 from c3plus.configs.paths import REPO
-from .exporter import wrap, quat_yaw, project_result, add_result_semantics, write_result_json
+from .exporter import (wrap, quat_yaw, project_result, add_result_semantics,
+                       add_execution_control_dt, write_result_json)
+from .metadata import omit_reference_placeholders
 from .schema import BLOCKS
 from .validation import _validate
 
@@ -292,7 +294,8 @@ def export_existing_result(args, cfg):
         if cfg is not None and cfg != recorded_cfg:
             raise ValueError("Scene configuration differs from the saved compacted run")
         _validate(summary, summary["recording"], recorded_cfg, directory)
-        result = (summary if (summary.get("execution") or {}).get("alignment") == "physical_policy_boundaries_v1"
+        result = (omit_reference_placeholders(add_execution_control_dt(summary))
+                  if (summary.get("execution") or {}).get("alignment") == "physical_policy_boundaries_v1"
                   else add_result_semantics(summary, directory))
         write_result_json(result_path, result)
         print("WROTE", result_path)

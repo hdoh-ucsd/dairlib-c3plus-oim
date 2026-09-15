@@ -19,7 +19,7 @@ from tests.fixtures.results import WorkflowFixtures
 class WorkflowTests(WorkflowFixtures, unittest.TestCase):
     def test_environment_checks_current_native_flags_without_running_systems(self):
         required = {
-            "franka_sim": ["controller_params", "execution_logging", "execution_step_budget", "execution_stop_file"],
+            "franka_sim": ["controller_params", "execution_logging", "execution_step_budget", "execution_stop_file", "execution_goal"],
             "franka_osc_controller": ["controller_params", "execution_logging"],
             "franka_sampling_c3_controller": ["controller_params", "goal_yaw_degrees"],
         }

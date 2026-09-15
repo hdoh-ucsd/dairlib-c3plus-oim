@@ -11,6 +11,15 @@ from c3plus.utils import run as R
 from tests.fixtures.results import WorkflowFixtures
 
 class WorkflowTests(WorkflowFixtures, unittest.TestCase):
+    def test_seed_check_exception_requires_native_goal_and_only_reposition(self):
+        goal = {'terminals': [{'reason': 'goal_reached'}]}
+        self.assertTrue(R.goal_reached_without_sampling(goal, [{'mode': 'reposition'}]))
+        for native, updates in ((None, [{'mode': 'reposition'}]),
+                                ({'terminals': [{'reason': 'shutdown'}]}, [{'mode': 'reposition'}]),
+                                (goal, []), (goal, [{'mode': 'c3'}]),
+                                (goal, [{'mode': 'reposition'}, {'mode': 'c3'}])):
+            self.assertFalse(R.goal_reached_without_sampling(native, updates))
+
     def test_run_dry_run_never_launches(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "run"
@@ -22,19 +31,19 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                     R.main()
                 plan = json.loads(stream.getvalue())
                 self.assertEqual(plan["obstacle_cost"], expected)
-                self.assertEqual(plan["wall_cap_seconds"], 300)
+                self.assertEqual(plan["simulation_cap_seconds"], 300)
                 self.assertEqual(plan["run_id"], f"{expected}_open_table_T_shape_s01g01_seed42")
                 self.assertFalse(out.exists())
                 run.assert_not_called()
 
 
-    def test_explicit_wall_cap_overrides_run_default(self):
+    def test_explicit_simulation_cap_overrides_run_default(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "run"
             stream = io.StringIO()
             with patch.object(R, "run_one") as run, redirect_stdout(stream):
                 R.main(["--task", "open_table", "--out", str(out), "--cap", "600", "--dry-run"])
-            self.assertEqual(json.loads(stream.getvalue())["wall_cap_seconds"], 600)
+            self.assertEqual(json.loads(stream.getvalue())["simulation_cap_seconds"], 600)
             self.assertFalse(out.exists())
             run.assert_not_called()
 

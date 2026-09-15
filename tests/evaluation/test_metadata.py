@@ -12,10 +12,73 @@ import yaml
 from c3plus import configs as S
 from c3plus.runtime import provenance as Provenance
 from c3plus.evaluation import exporter as P, package as A
+from c3plus.evaluation import metadata as Metadata
 
 from tests.fixtures.results import ProjectionFixtures, ArtifactFixtures, RUN_ID
 
 class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
+    def test_reference_null_cleanup_preserves_unknowns_and_original_evidence(self):
+        result = {
+            "run": {"algorithm": "c3plus", "robot_opt": None, "object_opt": None,
+                    "interactive": None, "seed": None},
+            "hyperparameters": {"steps": None, "control_dt": None, "horizon": None,
+                "n_admm": None, "goal_pos_tol": None, "goal_theta_tol": None,
+                **dict.fromkeys(("samples", "temperature", "robot_substeps", "object_samples",
+                    "plant", "object_substeps", "rho", "rho_torque", "gamma",
+                    "consensus_object_weight", "consensus", "consensus_source", "local_goal",
+                    "local_goal_lookahead", "lagged_consensus", "iterations"))},
+            "static": {"object_limit_surface_d": None, "object_wrench_limit": None,
+                       "sim_timestep": None, "object_physics": None},
+            "dynamic": {"robot_control": [[None, None]], "object_velocity": [[None, 0.0]]},
+            "execution": {"step_budget": None},
+            "planning": {"solve_time_s": None},
+            "evaluation": {"first_success_t": None, "ever_success": False},
+            "native_controller": {"success": None},
+            "recording": {"steps_raw": [{"robot_opt": None}]},
+            "provenance": {"configuration": {"files": {"config/options.yaml": {
+                "text": "rho: null\n", "data": {"rho": None}}}}},
+        }
+        expected = deepcopy(result)
+        expected["run"] = {"algorithm": "c3plus", "seed": None}
+        expected["hyperparameters"] = {"steps": None, "control_dt": None, "horizon": None,
+            "n_admm": None, "goal_pos_tol": None, "goal_theta_tol": None}
+        expected["static"] = {"sim_timestep": None, "object_physics": None}
+        self.assertIs(Metadata.omit_reference_placeholders(result), result)
+        self.assertEqual(result, expected)
+        Metadata.omit_reference_placeholders(result)
+        self.assertEqual(result, expected)
+
+    def test_reference_cleanup_preserves_nonnull_values_and_other_algorithms(self):
+        for value in (False, 0, "", 1.5, "recorded", [], [None], {}):
+            with self.subTest(value=value):
+                result = {section: dict.fromkeys(keys, value)
+                          for section, keys in Metadata.REFERENCE_NULL_PLACEHOLDERS.items()}
+                result["run"]["algorithm"] = "c3plus"
+                before = deepcopy(result)
+                Metadata.omit_reference_placeholders(result)
+                self.assertEqual(result, before)
+        for algorithm in ("mppi", None):
+            with self.subTest(algorithm=algorithm):
+                result = {section: dict.fromkeys(keys)
+                          for section, keys in Metadata.REFERENCE_NULL_PLACEHOLDERS.items()}
+                if algorithm is not None:
+                    result["run"]["algorithm"] = algorithm
+                before = deepcopy(result)
+                Metadata.omit_reference_placeholders(result)
+                self.assertEqual(result, before)
+
+    def test_saved_metadata_enrichment_removes_legacy_null_placeholders(self):
+        result = self.semantic_result()
+        for section, keys in Metadata.REFERENCE_NULL_PLACEHOLDERS.items():
+            result[section].update(dict.fromkeys(keys))
+        before = deepcopy(result)
+        expected = deepcopy(result)
+        Metadata.omit_reference_placeholders(expected)
+        Metadata.add_recorded_semantics(result)
+        self.assertEqual(result, expected)
+        for section in ("dynamic", "evaluation", "native_controller", "provenance"):
+            self.assertEqual(result[section], before[section])
+
     def test_legacy_native_metadata_and_weights_relocated_without_losing_only_copy(self):
         result = self.semantic_result()
         weights = {"q_pos": 3., "q_theta": 1.2}
@@ -141,6 +204,8 @@ class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
             self.assertEqual(result["provenance"]["c3plus"]["configurations"]["config/repository/profiles/reposition.yaml"],
                              {"saved_parameter": 123})
             self.assertEqual(result["provenance"]["c3plus"]["sampler_environment"], {"SAMPLING_C3_SEED": "123"})
+            self.assertEqual(result["provenance"]["c3plus"]["wall_cap_seconds"], 321)
+            self.assertNotIn("simulation_cap_seconds", result["provenance"]["c3plus"])
             self.assertEqual(result["run"]["seed"], 123)
             self.assertEqual(result["run"]["start_index"], "2")
             self.assertEqual(result["run"]["goal_index"], "3")
@@ -150,6 +215,15 @@ class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
             self.assertEqual(sources, {str(path): hashlib.sha256(data).hexdigest()
                                        for path, data in before.items()})
 
+
+    def test_simulation_cap_is_exported_without_relabelling_it_as_wall_time(self):
+        cfg, summary, steps, rows = self.fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            (out / 'runtime_status.json').write_text(json.dumps({'simulation_cap_seconds': 600}))
+            result = self.project(out, cfg, summary, steps, rows)
+        self.assertEqual(result['provenance']['c3plus']['simulation_cap_seconds'], 600)
+        self.assertNotIn('wall_cap_seconds', result['provenance']['c3plus'])
 
     def test_missing_recorded_metadata_stays_unknown(self):
         cfg, summary, steps, rows = self.fixture()
@@ -163,13 +237,13 @@ class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
                 str(S.REPO / "examples/sampling_c3/shared_parameters/profiles/mesh_objects/sampling_c3plus_options.yaml")}))
             result = self.project(out, cfg, summary, steps, rows, pos_tol=None, ang_tol=None)
         hyper = result["hyperparameters"]
-        for key in ("horizon", "n_admm", "rho", "rho_torque", "temperature", "samples",
-                    "iterations", "goal_pos_tol", "goal_theta_tol"):
+        for key in ("horizon", "n_admm", "goal_pos_tol", "goal_theta_tol"):
             self.assertIsNone(hyper[key], key)
+        for section, keys in Metadata.REFERENCE_NULL_PLACEHOLDERS.items():
+            for key in keys:
+                self.assertNotIn(key, result[section])
         self.assertIsNone(result["run"]["seed"])
         self.assertIsNone(result["static"]["sim_timestep"])
-        self.assertIsNone(result["static"]["object_limit_surface_d"])
-        self.assertIsNone(result["static"]["object_wrench_limit"])
         self.assertTrue(result["provenance"]["missing_optional_metadata"])
 
 

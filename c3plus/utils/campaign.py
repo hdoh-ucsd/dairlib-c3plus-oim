@@ -13,7 +13,7 @@ from c3plus.configs import REPO, SCENES, OBJECTS, configuration_snapshot
 from c3plus.configs.catalog import canonical_task, canonical_object
 from c3plus.configs.poses import pose_ids, pose_provenance
 from c3plus.runtime.environment import full_preflight
-from c3plus.utils.plan import DEFAULT_WALL_CAP_SECONDS, plan_run, yaw_suffix
+from c3plus.utils.plan import DEFAULT_SIMULATION_CAP_SECONDS, plan_run, yaw_suffix
 from c3plus.utils.run import run_one
 from c3plus.evaluation.package import completion, load_status
 from c3plus.evaluation.serialization import _json
@@ -53,7 +53,7 @@ def write_summary(planned, output_root):
     """Refresh the campaign table from saved artifacts, including resumed runs."""
     phase_codes = ("wrapper_rc", "postprocess_rc", "render_rc", "cost_fig_rc")
     fields = ["run_id", "scene", "obstacle_cost", "start", "goal_index",
-              "goal_yaw_degrees", "seed", "wall_cap_seconds", "status", "success",
+              "goal_yaw_degrees", "seed", "simulation_cap_seconds", "status", "success",
               "t_success", "simulation_wall_seconds", "sim_time_end", "n_control_steps",
               "final_position_error", "final_orientation_error", "failures", *phase_codes,
               "seed_verified", "goal_yaw_verified", "video", "folder"]
@@ -91,12 +91,16 @@ def build_manifest(args):
     """Resolve the complete ordered selection without writing or launching."""
     selected, planned = jobs(args), []
     for index, job in enumerate(selected, 1):
+        if "wall_cap_seconds" in job and args.cap is None:
+            raise ValueError("Manifest uses a legacy wall-time cap; supply --cap explicitly "
+                             "to select a simulation-time cap and use a new --out")
         task = canonical_task(job["scene"])
         obj = canonical_object(job.get("object_name") or "T_shape")
         pair = f"s{job['start']:02d}g{job['goal']:02d}" + yaw_suffix(job.get("goal_yaw_degrees"))
         out = args.output_root / job["obstacle_cost"] / task / obj / pair
         plan = plan_run(task, job["obstacle_cost"], job["start"], job["goal"], out,
-                        args.cap if args.cap is not None else job.get("cap", DEFAULT_WALL_CAP_SECONDS),
+                        args.cap if args.cap is not None else
+                        job.get("simulation_cap_seconds", job.get("cap", DEFAULT_SIMULATION_CAP_SECONDS)),
                         args.port_base + index, job.get("goal_pose"),
                         goal_yaw_degrees=job.get("goal_yaw_degrees"), object_name=obj)
         if args.suite == "full":
@@ -140,10 +144,16 @@ def validate_completed_run(plan):
     runtime = result.get("runtime_status") or {}
     if any(runtime.get(key) != 0 for key in ("wrapper_rc", "postprocess_rc", "render_rc")):
         raise ValueError("saved launch/postprocess/render did not finish successfully")
-    if runtime.get("seed_verified") is not True or runtime.get("goal_yaw_verified") is False:
+    from c3plus.utils.run import goal_reached_without_sampling
+    recording = result.get("recording") or {}
+    unsampled_goal = (runtime.get("seed_verified") is None
+                     and runtime.get("seed_verification_not_applicable") == "goal_reached_before_sampling"
+                     and goal_reached_without_sampling(recording.get("execution_native"),
+                                                       recording.get("planning_updates")))
+    if (runtime.get("seed_verified") is not True and not unsampled_goal) or runtime.get("goal_yaw_verified") is False:
         raise ValueError("saved seed or goal verification failed")
     for key in ("run_id", "scene", "native_scene", "object_name", "native_object_name", "start", "goal_index",
-                "seed", "configuration_digest", "wall_cap_seconds", "canonical_start_pose", "canonical_goal_pose",
+                "seed", "configuration_digest", "simulation_cap_seconds", "canonical_start_pose", "canonical_goal_pose",
                 "controller_goal", "simulation_model", "controller_model", "start_pose", "evaluation_goal",
                 "object_body_name", "object_channel_substring", "max_frames"):
         if runtime.get(key) != plan[key]:
@@ -195,7 +205,7 @@ def main(argv=None):
     parser.add_argument("--pairs", choices=["all", "diagonal", "smoke"])
     parser.add_argument("--seed", type=int, choices=[42], default=42)
     parser.add_argument("--cap", type=int,
-                        help=f"Per-run wall-time cap (default {DEFAULT_WALL_CAP_SECONDS} seconds; "
+                        help=f"Per-run simulation-time cap (default {DEFAULT_SIMULATION_CAP_SECONDS} seconds; "
                              "preserves manifest caps unless explicitly overridden)")
     parser.add_argument("--port-base", type=int, default=19000)
     parser.add_argument("--out", "--output-root", dest="output_root", type=Path, required=not name,
@@ -273,7 +283,7 @@ def main(argv=None):
                 print(f"[START] {index}/{len(data['runs'])} {out}", flush=True)
                 try:
                     status = run_one(plan["scene"], plan["obstacle_cost"], plan["start"], plan["goal_index"],
-                                     out, plan["wall_cap_seconds"], plan["port"], plan["evaluation_goal"],
+                                     out, plan["simulation_cap_seconds"], plan["port"], plan["evaluation_goal"],
                                      goal_yaw_degrees=plan.get("goal_yaw_degrees"), object_name=plan["object_name"])
                 finally:
                     write_summary(data["runs"], args.output_root)

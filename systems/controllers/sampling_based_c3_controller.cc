@@ -1179,7 +1179,8 @@ SamplingC3Controller::SamplingC3Controller(
     const std::vector<
         std::vector<drake::SortedPair<drake::geometry::GeometryId>>>&
         contact_geoms,
-    SamplingC3ControllerParams controller_params, bool verbose)
+    SamplingC3ControllerParams controller_params, bool verbose,
+    bool stop_on_topple)
     : plant_(plant),
       context_(context),
       plant_ad_(plant_ad),
@@ -1194,7 +1195,8 @@ SamplingC3Controller::SamplingC3Controller(
       G_(std::vector<MatrixXd>(sampling_c3_options_.N, sampling_c3_options_.G)),
       U_(std::vector<MatrixXd>(sampling_c3_options_.N, sampling_c3_options_.U)),
       N_(sampling_c3_options_.N),
-      verbose_(verbose) {
+      verbose_(verbose),
+      stop_on_topple_(stop_on_topple) {
   this->set_name("sampling_c3_controller");
 
   // Build C3Options from SamplingC3Options.
@@ -1924,20 +1926,22 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
   // Check for workspace limit violations; if any, the controller stops.
   CheckForWorkspaceLimitViolations(lcs_x_curr);
 
-  // Topple termination guard: if any object has rolled/pitched past 0.5 rad,
-  // classify the run as toppled and stop cleanly (logs preserved).
-  for (int i = 0; i < controller_params_.num_objects; i++) {
-    Eigen::Quaterniond quat(x_lcs_curr[3 + 7 * i], x_lcs_curr[4 + 7 * i],
-                            x_lcs_curr[5 + 7 * i], x_lcs_curr[6 + 7 * i]);
-    quat.normalize();
-    const Eigen::Matrix3d R = quat.toRotationMatrix();
-    const double roll = std::atan2(R(2, 1), R(2, 2));
-    const double pitch = std::asin(std::clamp(-R(2, 0), -1.0, 1.0));
-    if (std::max(std::abs(roll), std::abs(pitch)) > 0.5) {
-      std::cout << "SAMPLING_C3_TOPPLE_GUARD=TRIP roll=" << roll
-                << " pitch=" << pitch << " t=" << lcs_x_curr->get_timestamp()
-                << std::endl;
-      throw std::runtime_error("SAMPLING_C3_TOPPLE_GUARD tripped");
+  // Hardware retains the topple stop. Simulation can keep planning through
+  // contact-induced tipping and let the normal run limits end the trial.
+  if (stop_on_topple_) {
+    for (int i = 0; i < controller_params_.num_objects; i++) {
+      Eigen::Quaterniond quat(x_lcs_curr[3 + 7 * i], x_lcs_curr[4 + 7 * i],
+                              x_lcs_curr[5 + 7 * i], x_lcs_curr[6 + 7 * i]);
+      quat.normalize();
+      const Eigen::Matrix3d R = quat.toRotationMatrix();
+      const double roll = std::atan2(R(2, 1), R(2, 2));
+      const double pitch = std::asin(std::clamp(-R(2, 0), -1.0, 1.0));
+      if (std::max(std::abs(roll), std::abs(pitch)) > 0.5) {
+        std::cout << "SAMPLING_C3_TOPPLE_GUARD=TRIP roll=" << roll
+                  << " pitch=" << pitch << " t=" << lcs_x_curr->get_timestamp()
+                  << std::endl;
+        throw std::runtime_error("SAMPLING_C3_TOPPLE_GUARD tripped");
+      }
     }
   }
 

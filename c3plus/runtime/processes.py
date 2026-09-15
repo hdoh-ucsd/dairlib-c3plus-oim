@@ -62,7 +62,7 @@ def check_binary(name, repo=REPO):
     if name in ("franka_sim", "franka_osc_controller"):
         required.append("execution_logging")
     if name == "franka_sim":
-        required.extend(("execution_step_budget", "execution_stop_file"))
+        required.extend(("execution_step_budget", "execution_stop_file", "execution_goal"))
     if name == "franka_sampling_c3_controller":
         required.append("goal_yaw_degrees")
     missing = [flag for flag in required
