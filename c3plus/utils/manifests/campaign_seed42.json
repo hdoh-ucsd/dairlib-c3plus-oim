@@ -11,7 +11,7 @@
         -0.4,
         3.1416
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -23,7 +23,7 @@
         -0.4,
         3.1416
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -35,7 +35,7 @@
         -0.431,
         3.24
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -47,7 +47,7 @@
         -0.431,
         3.24
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -59,7 +59,7 @@
         -0.393,
         2.7924
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -71,7 +71,7 @@
         -0.393,
         2.7924
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -83,7 +83,7 @@
         -0.424,
         2.7704
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -95,7 +95,7 @@
         -0.424,
         2.7704
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -107,7 +107,7 @@
         -0.424,
         2.7338
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -119,7 +119,7 @@
         -0.424,
         2.7338
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -131,7 +131,7 @@
         -0.4,
         3.1416
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -143,7 +143,7 @@
         -0.4,
         3.1416
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -155,7 +155,7 @@
         -0.431,
         3.24
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -167,7 +167,7 @@
         -0.431,
         3.24
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -179,7 +179,7 @@
         -0.393,
         2.7924
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -191,7 +191,7 @@
         -0.393,
         2.7924
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -203,7 +203,7 @@
         -0.424,
         2.7704
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -215,7 +215,7 @@
         -0.424,
         2.7704
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -227,7 +227,7 @@
         -0.424,
         2.7338
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -239,7 +239,7 @@
         -0.424,
         2.7338
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -251,7 +251,7 @@
         -0.4,
         3.1416
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -263,7 +263,7 @@
         -0.4,
         3.1416
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -275,7 +275,7 @@
         -0.431,
         3.24
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -287,7 +287,7 @@
         -0.431,
         3.24
       ],
-      "cap": 600
+      "cap": 300
     },
     {
       "scene": "single_obstacle",
@@ -299,7 +299,7 @@
         -0.393,
         2.7924
       ],
-      "cap": 600
+      "cap": 300
     }
   ]
 }

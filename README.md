@@ -9,6 +9,11 @@ building and running experiments; host Python, Conda, ROS, and a GPU are not req
 [Experiments](#experiments) · [Results](#results) ·
 [Repository Structure](#repository-structure)
 
+In command templates, replace quoted placeholder names with your values,
+keeping the quotes. Paths may be absolute or relative to
+the repository root. For example, `"output_directory"` could become
+`"results/my_run"`; `"max_time"` could become `"300"` (the default cap).
+
 ## Quick Start
 
 You need Git, Bash, and a local Docker engine running **Linux amd64 containers**.
@@ -93,7 +98,7 @@ already running container, list its name and open another shell:
 
 ```bash
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-docker exec -it CONTAINER_NAME bash
+docker exec -it "container_name" bash
 ```
 
 Bazel's ignored `.build/` shortcuts point into the persistent cache; their
@@ -120,13 +125,13 @@ shell, or `./docker/shell.sh --help` for all launcher options.
 
 ## Experiments
 
-After the Quick Start setup, run this single command **inside the container,
-from the repository root**:
+After the Quick Start setup, run commands **inside the container, from the
+repository root**. This single launcher selects the full experiment suite:
 
 ```bash
 python3 -m c3plus.utils campaign \
-  --suite full --seed 42 --cap 600 --resume \
-  --out results/full_campaign
+  --suite full --seed 42 --cap 300 --resume \
+  --out "output_directory"
 ```
 
 `--suite full` automatically selects **all six tasks, all five objects, and
@@ -145,26 +150,62 @@ or shell loops are needed.
 | Cost | `exponential` by default; `--obstacle_cost relu` selects the other existing preset |
 
 The launcher runs serially in task → object → start → goal order and validates
-the whole selection before trial 1. `--cap 600` sets each trial's recorder
-wall-time budget; startup, success settling and packaging add time. Replace
-`results/full_campaign` with your chosen output directory.
+the whole selection before trial 1.
+
+The default cap is **300 wall-clock seconds per trial** for both `run` and
+`campaign`; omit `--cap` to use it, or supply `--cap "max_time"` to override it.
+An explicit per-run cap in a custom campaign manifest is retained unless
+overridden by `--cap`.
+
+At this cap, the estimated recording budgets are:
+
+| Selection | Trials | If every trial reaches the 300-second cap |
+| --- | --- | --- |
+| All `open_table` objects and start/goal pairs | 125 | **10 hours 25 minutes** |
+| Full suite, one obstacle cost | 750 | **62 hours 30 minutes** (2 days 14 hours 30 minutes) |
+
+Allow approximately **3 days** for the full suite as a planning estimate:
+`750 × (300 + 30–60) / 3600 = 68.75–75 hours`, assuming an additional
+30–60 seconds per trial for work outside the cap. That overhead is an allowance,
+not a measured full-suite average. Early success can shorten the campaign;
+slower postprocessing or rendering can lengthen it. This estimate assumes
+continuous serial execution, excludes the initial Docker/native build, and is
+not a measured completion time or a strict upper bound. The previous 600-second
+cap allocated 125 hours before overhead.
+
+| Placeholder | Value |
+| --- | --- |
+| `task` | One task from the table above |
+| `object` | One object from the table above; `T_block` is also accepted for `T_shape` |
+| `start`, `goal` | Independent pose IDs from 1 to 5 |
+| `max_time` | Positive whole seconds of recorder wall time **per trial/object**; default `300`; historical tested caps are listed below |
+| `output_directory` | Destination for the trial, batch, campaign, or evaluation output |
+| `input_directory` | Existing run, batch, or campaign directory containing recorded results |
+| `file_path` | File path, including the extension required by the command |
+
+`--cap` includes waiting for simulation data: the recorder starts before a
+three-second launcher delay and simulator initialization. A two-second cap can
+expire with no recorded samples. Use `--dry-run` for a quick configuration check;
+use a longer cap for an actual trial. Success settling can add five seconds, and
+postprocessing and video rendering take additional time outside the cap.
 
 To **preview the plan**, append `--dry-run` to the same command. This validates
 poses and assets and prints the full manifest plus completed, pending,
 invalid/partial and total counts, without writing run data or launching trials.
-To **resume**, repeat the command with the same settings and output directory.
+To **resume**, repeat the command with the same settings, checkout state, and
+output directory. Full-suite manifests compare the Git commit and tracked-edit
+hash, including README edits.
 `--resume` also works for a fresh campaign. Valid completed JSON/video packages
 are skipped; partial or corrupt trials are reported and preserved. A different
-selection or configuration requires a new output directory.
+selection, cap, configuration, or checkout state requires a new output directory. `--resume`
+does not retry partial runs or overwrite their recordings.
 
-Create `<output-directory>/STOP_AFTER_CURRENT` to stop after the current trial
+Create `output_directory/STOP_AFTER_CURRENT` to stop after the current trial
 is packaged. Remove that file and repeat the same command to continue.
 
 **Validation limit:** all 750 configurations and 300 start/goal endpoints pass
-static preflight, but some 10-second trials still hit the existing strict
-native-quaternion export guard. A long campaign can halt there and preserve the
-partial run for inspection. The full 600-second-per-trial campaign has not been
-runtime validated.
+static preflight. The entire 750-run campaign has not been validated to completion;
+launch or packaging failures preserve the partial run for inspection.
 
 ### Pose and object definitions
 
@@ -200,46 +241,73 @@ are available for targeted checks and visualization.
 
 ### `run`: object selection and obstacle costs
 
-For one experiment or a cheap startup check:
+Run one object at your selected task and pose pair:
 
 ```bash
 python3 -m c3plus.utils run \
-  --task open_table --object T_shape --start 2 --goal 2 \
-  --obstacle_cost exponential --seed 42 --cap 10 --max-frames 40 \
-  --out results/smoke/startup_check
+  --task "task" --object "object" \
+  --start "start" --goal "goal" \
+  --obstacle_cost exponential --seed 42 --cap "max_time" \
+  --out "output_directory"
 ```
 
-Add `--dry-run` to inspect it, or use a longer cap and fresh output directory for
-a substantive trial. `run` has no resume flag. Use
+Add `--dry-run` to inspect the resolved selection. Use a fresh output directory
+for each invocation; `run` has no resume flag. Use
 `python3 -m c3plus.utils COMMAND --help` for each command's complete options.
 
 | Option | Meaning |
 | --- | --- |
-| `--task NAME` | Required task; `--scene` remains an alias |
-| `--object NAME` / `--objects NAME [...]` | One object (default `T_shape`) or a serial multi-object batch; mutually exclusive |
+| `--task "task"` | Required task; `--scene` remains an alias |
+| `--object "object"` / `--objects "object_1" "object_2" ...` | One object (default `T_shape`) or a serial multi-object batch; mutually exclusive |
 | `--start`, `--goal` | Independent pose IDs 1–5, default 1 |
 | `--goal-yaw-degrees` | Optional absolute goal yaw: 90, 0 or −90 degrees; omit to preserve the source pose |
 | `--obstacle_cost` | `exponential` (default) or `relu` |
-| `--cap SECONDS` | Recorder wall-time budget per trial, default 600 |
-| `--steps B` | Applied-policy budget including reposition; unlimited when omitted |
-| `--out PATH` | Fresh trial directory, or parent directory for a multi-object batch |
+| `--cap "max_time"` | Recorder wall-time budget per trial, default 300; includes waiting for initial data |
+| `--steps "step_budget"` | Applied-policy budget including reposition; unlimited when omitted |
+| `--out "output_directory"` | Fresh trial directory, or parent directory for a multi-object batch |
 | `--max-frames`, `--port` | Maximum video frames (1200) and trial LCM port (18001) |
 
-Run all five objects on the open table:
+Run all five objects serially on one task using the same pose pair and cap:
 
 ```bash
 python3 -m c3plus.utils run \
-  --task open_table --objects T_shape sugar_box power_drill hammer banana \
-  --start 2 --goal 2 --obstacle_cost exponential --seed 42 --cap 600 \
-  --out results/object_generalization/open_table
+  --task "task" --objects T_shape sugar_box power_drill hammer banana \
+  --start "start" --goal "goal" \
+  --obstacle_cost exponential --seed 42 --cap "max_time" \
+  --out "output_directory"
 ```
 
 All five objects are supported across the six tasks, subject to pose preflight.
-One selected object writes directly to `--out`; multiple objects write to
-`<out>/<object>/`. All destinations are checked before the batch starts, and a
-launch or packaging error stops it. Progress messages appear every ten recorder
-snapshots; their `step` counter is separate from physical execution steps.
+To select a subset, replace the five names with your chosen objects, separated
+by spaces. One selected object writes directly to `--out`; multiple objects
+write to `output_directory/object/`. All destinations are checked before the
+batch starts, and a launch or packaging error stops it. Progress messages appear
+every ten recorder snapshots; their `step` counter is separate from physical execution steps.
 Recording can continue five wall seconds after first success to capture settling.
+
+The batch pattern above produced complete JSON/MP4 packages for all five objects
+on each task with **start 2, goal 2, seed 42, exponential cost, and no goal-yaw
+override**, using these caps:
+
+| `task` | Tested `max_time` (seconds per object) |
+| --- | --- |
+| `open_table` | `600` |
+| `icra_sign` | `100` |
+| `shelf_gap` | `50` |
+| `single_obstacle` | `10` |
+| `slalom` | `10` |
+| `ycb_clutter` | `10` |
+
+These checks verify recording and packaging. Goal-reaching success is reported
+per trial in the JSON. Startup duration depends on the machine, so short caps
+may leave little time for control.
+
+For the recorded `open_table` S2→G2, seed-42 batch, successful trials reached
+their goals after approximately 104, 124, and 182 seconds of execution wall time.
+The slowest successful launch completed in approximately 192 seconds before
+postprocessing. The new 300-second default leaves margin above those observed
+times; it has not been validated across all 25 pose pairs or all six tasks.
+The caps in the table above remain the values actually used in those past tests.
 
 Both cost presets preserve `lcs_contact` handling: `exponential` ranking is
 currently suppressed in that mode; `relu` uses the existing footprint-aware
@@ -252,14 +320,15 @@ For a smaller selection, omit `--suite full` and specify tasks, objects and pair
 
 ```bash
 python3 -m c3plus.utils campaign \
-  --tasks open_table shelf_gap --objects T_shape hammer \
-  --pairs smoke --obstacle_cost exponential --seed 42 \
-  --out results/targeted_check --dry-run
+  --tasks "task_1" "task_2" --objects "object_1" "object_2" \
+  --pairs smoke --obstacle_cost exponential --seed 42 --cap "max_time" \
+  --out "output_directory" --dry-run
 ```
 
+Provide one or more task and object names; remove `--dry-run` to execute.
 Targeted campaigns accept `--pairs smoke|diagonal|all`, `--obstacle_cost both`
-for a two-cost comparison, or `--manifest PATH` for a saved job list. The full
-suite accepts one cost preset and no manual task/object/pair selectors.
+for a two-cost comparison, or `--manifest "file_path"` for a saved job list.
+The full suite accepts one cost preset and no manual task/object/pair selectors.
 `--output-root` remains an alias for `--out`. The older `run_launch` and
 `run_launch_simple_s2` commands select goal G2, three goal yaws and both costs;
 they are debugging presets, separate from the full five-object suite.
@@ -271,21 +340,22 @@ end-effector positions overlaid:
 
 ```bash
 python3 -m c3plus.utils visualize \
-  --task open_table --object T_shape --start 2 \
+  --task "task" --object "object" --start "start" \
   --view top --hide-robot --ee-samples --frames \
-  --output results/previews/T_shape_ee.png
+  --output "file_path"
 ```
 
-The command exits after saving; no native build, browser or server is needed.
+Use a `.png` file path, such as `results/previews/object_ee.png`. The command
+exits after saving; no native build, browser or server is needed.
 `--ee-samples` defaults to 64 candidates and also saves
-`<PNG stem>.ee_samples.json`; use `--ee-samples 100 --sample-seed 42` to change
+`png_stem.ee_samples.json`; use `--ee-samples 100 --sample-seed 42` to change
 the preview count. Repeating the command overwrites those preview files.
 
 Use `--view scene|object|top`, `--geometry visual|collision`, or
-`--pose goal --goal 2` to inspect another view or placement. `--model PATH`
-accepts SDF, URDF or MJCF, and `--mesh PATH` accepts raw OBJ visuals; they are
-mutually exclusive. Raw OBJ sampling requires `--position X Y Z`;
-`--mesh-scale 0.001` converts millimetres to metres, and `--sample-height Z`
+`--pose goal --goal "goal"` to inspect another view or placement.
+`--model "file_path"` accepts SDF, URDF or MJCF, and `--mesh "file_path"`
+accepts raw OBJ visuals; they are mutually exclusive. Raw OBJ sampling requires
+`--position X Y Z`; `--mesh-scale 0.001` converts millimetres to metres, and `--sample-height Z`
 selects the sampling height in world metres. `--dry-run` prints paths and
 placement without writing.
 
@@ -306,8 +376,8 @@ configurations, diagnostics, hashes, and completion status. Intermediates are
 removed only after successful validation; failures preserve them for recovery.
 The full campaign keeps `manifest.json`, its driver log and summary at the
 campaign root. Trials are stored under
-`<out>/<task>/<object>/<cost>_<task>_<object>_sXXgYY_seed42/`. Each trial directory
-contains `<run_id>_result.json` and `<run_id>.mp4`; the manifest records the
+`output_directory/task/object/cost_task_object_sXXgYY_seed42/`. Each trial directory
+contains `run_id_result.json` and `run_id.mp4`; the manifest records the
 shared pose-source identity and exact per-trial selection.
 
 The JSON separates physical execution, planning updates and recorder snapshots.
@@ -315,6 +385,12 @@ One execution step begins when the simulator first applies commands from a
 selected policy; both C3 and reposition count. Unselected plans, OSC ticks and
 debug snapshots are not execution steps. For N applied policies, aligned
 trajectories contain N+1 observed boundaries, including the terminal state.
+
+Raw native quaternions are preserved in `dynamic.object_pose_3d` and
+`recording.execution_native`. When integration drift exceeds the exporter's
+legacy unit tolerance, it normalizes a temporary copy only to derive planar yaw.
+Previously accepted yaw values, snapshot diagnostics and execution timing remain
+unchanged; zero or nonfinite quaternions still fail validation.
 
 | Recorded field | Meaning |
 | --- | --- |
@@ -331,23 +407,62 @@ intervals. Common snapshot success requires simultaneous position error below
 `evaluation.final_success` describe retained snapshots; native thresholds are
 recorded separately and native completion remains unknown.
 
-Compatible external Table-II evaluation uses the first qualifying execution
+The aggregate evaluator uses the first qualifying execution
 endpoint for success, steps and elapsed simulation time. Failures use the
 configured step budget when present and the full recorded simulation span.
 Frequency uses all recorded execution wall intervals. Historical files without
 proven physical alignment cannot supply execution-based steps, time or frequency.
 The implementation is in [c3plus/evaluation/](c3plus/evaluation/).
 
-Use `python3 -m c3plus.utils eval --help` for saved-run postprocessing and export options.
-This invokes the existing postprocessor; `postprocess` remains an alias.
-It does not launch a simulation or add a benchmark comparison table.
+Evaluate completed trials recursively, grouped by task and method:
+
+```bash
+python3 -m c3plus.utils eval \
+  --runs-dir "input_directory" \
+  --out-dir "output_directory"
+```
+
+Set `input_directory` to the output of a completed multi-object batch or
+campaign. The evaluator writes `input_directory_name.json` and
+`input_directory_name.txt` under `output_directory`, using the input
+directory's final path component as the filename. The output may be a subfolder
+of the input, such as its `eval/` directory. Omit `--out-dir` to print without
+writing files. Use any batch or campaign directory with `--runs-dir`;
+`--format text|markdown|latex` selects the table format, and `--diagnostics`
+prints compact per-trial metrics. No experiments are launched or source results
+modified.
+
+The table reports trial count, success rate, position error `eps_d` (meters),
+orientation error `eps_o` (radians), their successful-only means `eps_d^s` and
+`eps_o^s`, execution steps, execution frequency, and elapsed simulation execution
+time. Both errors use the first execution endpoint that simultaneously satisfies
+the recorded position and orientation tolerances, or the final endpoint if the
+trial fails. Group values are arithmetic per-trial means. The initial state is
+excluded, and missing measurements appear as `-`.
+
+Aggregate JSON schema `c3plus-aggregate-evaluation-v2` uses these endpoint errors.
+The previous trajectory averages remain separately in JSON as
+`trajectory_mean_position_error` and `trajectory_mean_orientation_error`, with
+their `_success` means. These averages cover executed endpoints through first
+success, or all endpoints on failure, so even successful trials can have large
+trajectory averages. The legacy JSON field `theta` retains its trajectory-mean
+meaning; `eps_o_success` is the successful-only endpoint orientation error.
+Original run JSON files are unchanged by evaluation.
+
+Failed trials without a configured execution-step budget have unavailable
+censored steps. Numeric means use available values; the saved summary records
+their counts. “Averaged over” lists experiment settings that vary within a group,
+such as object, start, goal, or seed.
+
+`postprocess` remains the separate command for updating one saved run's JSON.
+Use `eval --help` or `postprocess --help` for their respective options.
 
 | Saved-data command | Purpose |
 | --- | --- |
-| `eval --export-only --run-dir PATH --scene TASK --run-id RUN_ID` | Update the JSON from recorded data and settings, with validation before replacement |
-| `compact --run-dir PATH` | Validate the JSON/video package and remove redundant intermediates; safe to repeat |
-| `render --result PATH_TO_JSON --out PATH_TO_MP4` | Replay a modern recorded trajectory; matching repository assets are required |
-| `cost-figure --run-dir PATH --scene TASK --obstacle_cost exponential` | Legacy diagnostic plot; cannot directly read compacted semantics-version-4 results |
+| `postprocess --export-only --run-dir "input_directory" --scene "task" --run-id "run_id"` | Update one saved run's JSON from recorded data and settings, with validation before replacement |
+| `compact --run-dir "input_directory"` | Validate one run's JSON/video package and remove redundant intermediates; safe to repeat |
+| `render --result "json_file_path" --out "video_file_path"` | Replay a modern recorded trajectory to MP4; matching repository assets are required |
+| `cost-figure --run-dir "input_directory" --scene "task" --obstacle_cost exponential` | Legacy diagnostic plot; cannot directly read compacted semantics-version-4 results |
 
 These commands use the `python3 -m c3plus.utils` prefix and cannot recover
 execution telemetry that was never recorded. `oim.run_eval` is an external

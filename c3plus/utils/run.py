@@ -14,7 +14,7 @@ from c3plus.configs import (BINARIES, MODELS, OBSTACLE_COSTS,
                            REPO, RUN_OBJECTS, SCENES, environment, planner_environment,
                            write_demo_configs)
 from c3plus.configs.catalog import canonical_task, canonical_object, evaluation_config
-from c3plus.utils.plan import plan_run
+from c3plus.utils.plan import DEFAULT_WALL_CAP_SECONDS, plan_run
 from c3plus.runtime.processes import classify_failure, logged_command, check_experiment_capabilities
 from c3plus.runtime.provenance import capture_source_state, runtime_versions
 from c3plus.evaluation.package import compact_run
@@ -34,7 +34,7 @@ def verify_goal_yaw(log, plan):
             return True
     return False
 
-def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
+def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS, port=18001,
             goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None):
     plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
                     goal_yaw_degrees, object_name, steps)
@@ -162,7 +162,8 @@ def main(argv=None):
     parser.add_argument("--goal-yaw-degrees", type=int, choices=[90, 0, -90],
                         help="Absolute world yaw; preserve the indexed goal position")
     parser.add_argument("--seed", type=int, choices=[42], default=42)
-    parser.add_argument("--cap", type=int, default=600, help="Recorder wall-time cap, seconds")
+    parser.add_argument("--cap", type=int, default=DEFAULT_WALL_CAP_SECONDS,
+                        help=f"Recorder wall-time cap (default {DEFAULT_WALL_CAP_SECONDS} seconds)")
     parser.add_argument("--steps", type=int, help="Maximum actually applied outer policies, including reposition; default unlimited")
     parser.add_argument("--port", type=int, default=18001)
     parser.add_argument("--out", type=Path, required=True, help="New directory; existing dirs are refused")

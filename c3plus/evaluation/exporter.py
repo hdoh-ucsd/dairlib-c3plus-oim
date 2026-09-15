@@ -143,11 +143,20 @@ def add_execution_projection(result, cfg, native, updates):
         rq, rv = boundary.get("robot_q"), boundary.get("robot_v")
         if (not finite_vector(q, 7) or not finite_vector(v, 6)
                 or not finite_vector(rq) or not rq or not finite_vector(rv, len(rq))
-                or robot_q and len(rq) != len(robot_q[0])
-                or not math.isclose(sum(x*x for x in q[:4]), 1.0, abs_tol=1e-5)):
-            raise ValueError("Invalid exact native execution state")
+                or robot_q and len(rq) != len(robot_q[0])):
+            raise ValueError(f"Invalid exact native execution state at boundary {i}")
+        quaternion = q[:4]
+        norm = math.hypot(*quaternion)
+        if not math.isfinite(norm) or norm == 0:
+            raise ValueError(f"Invalid native execution quaternion norm at boundary {i}: {norm}")
+        # Drake's integrated coordinates can drift away from unit norm. Keep
+        # every raw coordinate below; normalize only a copy for derived yaw.
+        # Preserve the exact projection of states accepted by older exports,
+        # so their saved packages still pass deterministic revalidation.
+        if not math.isclose(sum(x*x for x in quaternion), 1.0, abs_tol=1e-5):
+            quaternion = [component / norm for component in quaternion]
         wall.append(w); sim.append(t)
-        poses.append([q[4], q[5], quat_yaw(q[:4])])
+        poses.append([q[4], q[5], quat_yaw(quaternion)])
         full_poses.append(q); velocities.append(v)
         robot_q.append(rq); robot_v.append(rv)
     intervals = [b-a for a, b in zip(wall, wall[1:])]
@@ -193,6 +202,11 @@ def add_execution_projection(result, cfg, native, updates):
                  "State 0 is recorded immediately before the first applied policy; state i+1 closes policy i. "
                  "Raw asynchronous snapshots remain in recording.snapshot_dynamic.",
         sampling="Exact native plant states at physical policy boundaries; no snapshot interpolation.",
+        execution_orientation="object_pose_3d and recording.execution_native retain raw native quaternions. "
+                              "For derived object_pose yaw only, a finite nonzero quaternion is normalized "
+                              "when its squared norm differs from 1 beyond the legacy tolerance "
+                              "(math.isclose, abs_tol=1e-5). "
+                              "Previously accepted states retain their original yaw projection.",
         compute_time="For C3+, dynamic.compute_time is the measured wall-clock duration of each genuine outer "
                      "execution/control step and is used for execution frequency. It is not optimizer solve time. "
                      "Internal planner solve timing, when available, lives under planning.",

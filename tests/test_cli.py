@@ -24,7 +24,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             "campaign": "c3plus.utils.campaign",
             "run_launch": "c3plus.utils.campaign",
             "run_launch_simple_s2": "c3plus.utils.campaign",
-            "eval": "c3plus.evaluation.postprocess",
+            "eval": "c3plus.evaluation.run_eval",
             "postprocess": "c3plus.evaluation.postprocess",
             "compact": "c3plus.evaluation.package",
             "render": "c3plus.visualization.render",
@@ -49,3 +49,25 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
 
     def test_cli_has_no_root_tools_wrapper_directory(self):
         self.assertFalse((R.REPO / "tools").exists())
+
+    def test_eval_and_postprocess_expose_distinct_workflows(self):
+        for command, expected, excluded in (
+                ("eval", ("--runs-dir", "--out-dir", "--format"), ("--run-id", "--export-only")),
+                ("postprocess", ("--run-dir", "--scene", "--run-id", "--export-only"),
+                 ("--runs-dir", "--out-dir"))):
+            with self.subTest(command=command):
+                result = subprocess.run(
+                    [sys.executable, "-m", "c3plus.utils", command, "--help"],
+                    cwd=R.REPO, text=True, capture_output=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                for option in expected:
+                    self.assertIn(option, result.stdout)
+                for option in excluded:
+                    self.assertNotIn(option, result.stdout)
+
+    def test_eval_requires_a_runs_directory(self):
+        result = subprocess.run([sys.executable, "-m", "c3plus.utils", "eval"],
+                                cwd=R.REPO, text=True, capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("required", result.stderr)
+        self.assertIn("--runs-dir", result.stderr)

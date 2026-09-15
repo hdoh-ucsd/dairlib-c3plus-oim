@@ -34,10 +34,31 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
         self.assertEqual(jobs[-1]["start"], 3)
         self.assertEqual(jobs[-1]["goal"], 3)
         self.assertEqual(jobs[0]["goal_pose"], [0.381, -0.4, 3.1416])
+        self.assertEqual({job["cap"] for job in jobs}, {300})
         for job in jobs:
             plan = R.plan_run(job["scene"], job["obstacle_cost"], job["start"], job["goal"],
                               "/unused/test", goal_pose=job["goal_pose"])
             self.assertEqual(plan["evaluation_goal"], tuple(job["goal_pose"]))
+            self.assertEqual(plan["wall_cap_seconds"], 300)
+
+
+    def test_custom_manifest_caps_are_preserved_and_explicit_cli_cap_wins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root / "custom.json"
+            jobs = [{"scene": "open_table", "obstacle_cost": "exponential", "start": 1, "goal": goal}
+                    for goal in (1, 2, 3)]
+            jobs[0]["cap"], jobs[1]["cap"] = 600, 17
+            original = json.dumps({"seed": 42, "runs": jobs})
+            manifest.write_text(original)
+            for flags, expected in (([], [600, 17, 300]), (["--cap", "91"], [91, 91, 91])):
+                stream = io.StringIO()
+                with self.subTest(flags=flags), redirect_stdout(stream), patch.object(G, "run_one") as run:
+                    G.main(["--manifest", str(manifest), "--out", str(root / "out"), "--dry-run", *flags])
+                self.assertEqual([job["wall_cap_seconds"] for job in json.loads(stream.getvalue())["runs"]], expected)
+                self.assertEqual(manifest.read_text(), original)
+                self.assertFalse((root / "out").exists())
+                run.assert_not_called()
 
 
     def test_manifest_rejects_explicit_grid_selection(self):
@@ -72,6 +93,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             self.assertEqual({job["obstacle_cost"] for job in plan["runs"]}, {"exponential", "relu"})
             for job in plan["runs"]:
                 self.assertEqual(Path(job["out"]).relative_to(out).parts[0], job["obstacle_cost"])
+                self.assertEqual(job["wall_cap_seconds"], 300)
             self.assertFalse(out.exists())
             run.assert_not_called()
 
@@ -106,7 +128,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                         self.assertAlmostEqual(run["controller_goal"][2], math.radians(run["goal_yaw_degrees"]))
                         self.assertEqual(run["evaluation_goal"], run["controller_goal"])
                         self.assertEqual(run["seed"], 42)
-                        self.assertEqual(run["wall_cap_seconds"], 600)
+                        self.assertEqual(run["wall_cap_seconds"], 300)
                         self.assertTrue(Path(run["out"]).is_relative_to(out))
                     for first, second in zip(runs[::2], runs[1::2]):
                         self.assertEqual(first["controller_goal"], second["controller_goal"])

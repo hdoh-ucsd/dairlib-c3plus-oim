@@ -13,7 +13,7 @@ from c3plus.configs import REPO, SCENES, OBJECTS, configuration_snapshot
 from c3plus.configs.catalog import canonical_task, canonical_object
 from c3plus.configs.poses import pose_ids, pose_provenance
 from c3plus.runtime.environment import full_preflight
-from c3plus.utils.plan import plan_run, yaw_suffix
+from c3plus.utils.plan import DEFAULT_WALL_CAP_SECONDS, plan_run, yaw_suffix
 from c3plus.utils.run import run_one
 from c3plus.evaluation.package import completion, load_status
 from c3plus.evaluation.serialization import _json
@@ -96,7 +96,7 @@ def build_manifest(args):
         pair = f"s{job['start']:02d}g{job['goal']:02d}" + yaw_suffix(job.get("goal_yaw_degrees"))
         out = args.output_root / job["obstacle_cost"] / task / obj / pair
         plan = plan_run(task, job["obstacle_cost"], job["start"], job["goal"], out,
-                        args.cap if args.cap is not None else job.get("cap", 600),
+                        args.cap if args.cap is not None else job.get("cap", DEFAULT_WALL_CAP_SECONDS),
                         args.port_base + index, job.get("goal_pose"),
                         goal_yaw_degrees=job.get("goal_yaw_degrees"), object_name=obj)
         if args.suite == "full":
@@ -194,7 +194,9 @@ def main(argv=None):
     parser.add_argument("--obstacle_cost", choices=["exponential", "relu", "both"])
     parser.add_argument("--pairs", choices=["all", "diagonal", "smoke"])
     parser.add_argument("--seed", type=int, choices=[42], default=42)
-    parser.add_argument("--cap", type=int, help="Per-run wall-time cap (default 600 seconds)")
+    parser.add_argument("--cap", type=int,
+                        help=f"Per-run wall-time cap (default {DEFAULT_WALL_CAP_SECONDS} seconds; "
+                             "preserves manifest caps unless explicitly overridden)")
     parser.add_argument("--port-base", type=int, default=19000)
     parser.add_argument("--out", "--output-root", dest="output_root", type=Path, required=not name,
                         default=REPO / "results" / name if name else None)

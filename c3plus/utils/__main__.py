@@ -12,7 +12,7 @@ COMMANDS = {
     "campaign": ("c3plus.utils.campaign", "Launch the full benchmark or a targeted grid, with safe resume"),
     "run_launch": ("c3plus.utils.campaign", "Targeted 180-trial goal-2/yaw comparison"),
     "run_launch_simple_s2": ("c3plus.utils.campaign", "Start-2 run: 36 trials at goal 2 with yaw 90/0/-90 degrees"),
-    "eval": ("c3plus.evaluation.postprocess", "Compute existing offline diagnostics or enrich a saved result JSON"),
+    "eval": ("c3plus.evaluation.run_eval", "Aggregate saved C3+ trials into a comparison table"),
     "postprocess": ("c3plus.evaluation.postprocess", "Recompute metrics from an existing run"),
     "compact": ("c3plus.evaluation.package", "Consolidate a completed run into JSON and MP4, then remove intermediates"),
     "render": ("c3plus.visualization.render", "Render a saved result JSON or trace to MP4"),

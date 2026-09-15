@@ -4,6 +4,7 @@ from contextlib import redirect_stdout
 from copy import deepcopy
 import io
 import json
+import math
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
@@ -14,6 +15,55 @@ from c3plus.evaluation import exporter as P
 from tests.fixtures.results import ArtifactFixtures, RUN_ID
 
 class RunArtifactTests(ArtifactFixtures, unittest.TestCase):
+    def test_drifted_native_quaternions_survive_regeneration_and_reject_tampering(self):
+        from tests.fixtures import results as fixtures
+        for scale in (1.000059, .999941):
+            with self.subTest(scale=scale), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp) / "run"
+                original = self.make_run(root)
+                native, updates = fixtures.ProjectionFixtures().physical_fixture()
+                native["headers"][0]["step_budget"] = None
+                native["terminals"][0]["reason"] = "shutdown"
+                for state in [*native["boundaries"], *native["terminals"]]:
+                    state["objects"][0]["q"][:4] = [
+                        math.cos(.6) * scale, 0, 0, math.sin(.6) * scale]
+                with (root / "sim.log").open("a") as stream:
+                    for key, prefix in (("headers", "C3_EXECUTION_LOGGING"),
+                                        ("boundaries", "C3_EXECUTION_BOUNDARY"),
+                                        ("terminals", "C3_EXECUTION_TERMINAL")):
+                        for record in native[key]:
+                            stream.write(f"[{prefix}] " + json.dumps(record) + "\n")
+                with (root / "planner.log").open("a") as stream:
+                    for update in updates:
+                        stream.write("[C3_PLANNING_UPDATE] " + json.dumps(update) + "\n")
+                args = SimpleNamespace(run_dir=str(root), scene="open_task", run_id=RUN_ID)
+                path = root / f"{RUN_ID}_result.json"
+                with redirect_stdout(io.StringIO()):
+                    Postprocess.export_existing_result(args, None)
+                exported = json.loads(path.read_text())
+                compacted = self.compact(root)
+                self.assertEqual(compacted["dynamic"], exported["dynamic"])
+                self.assertEqual(compacted["recording"]["execution_native"], native)
+                self.assertEqual(compacted["recording"]["steps_raw"], original["steps"])
+                self.assertEqual(compacted["recording"]["state_trace"], original["trace"])
+                self.assertEqual({p.name for p in root.iterdir()}, {path.name, f"{RUN_ID}.mp4"})
+                cfg = compacted["provenance"]["evaluation_scene_config"]
+                Validation._validate(compacted, compacted["recording"], cfg, root)
+                with redirect_stdout(io.StringIO()):
+                    Postprocess.export_existing_result(args, None)
+                self.assertEqual(json.loads(path.read_text()), compacted)
+                for location in ("raw quaternion", "projected quaternion", "projected yaw"):
+                    bad = deepcopy(compacted)
+                    if location == "raw quaternion":
+                        bad["recording"]["execution_native"]["boundaries"][0]["objects"][0]["q"][0] += .05
+                    elif location == "projected quaternion":
+                        bad["dynamic"]["object_pose_3d"][0][0] += .05
+                    else:
+                        bad["dynamic"]["object_pose"][0][2] += .05
+                    with self.subTest(tampered=location), self.assertRaises(ValueError):
+                        Validation._validate(bad, bad["recording"], cfg, root)
+
+
     def test_execution_events_survive_compaction_and_reject_timing_tampering(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "run"
