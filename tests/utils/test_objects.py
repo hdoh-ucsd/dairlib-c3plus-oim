@@ -203,5 +203,6 @@ class ObjectRunTests(ObjectFixtures, unittest.TestCase):
                                  str(out / "config/repository" / profile["controller_model"])
                                  if name in S.MESH_OBJECTS else profile["controller_model"])
                 compact.assert_called_once_with(out, status["run_id"], status=status,
-                                                require_legacy_complete=False)
+                                                require_legacy_complete=False,
+                                                video_required=True)
                 self.assertFalse((out / "RUN_COMPLETE").exists())

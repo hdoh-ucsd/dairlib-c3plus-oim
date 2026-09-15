@@ -52,6 +52,41 @@ class RunArtifactTests(ArtifactFixtures, unittest.TestCase):
             self.assertEqual(A.load_status(root, RUN_ID), original["status"])
 
 
+    def test_skipped_rendering_packages_one_json_and_is_recognized_complete(self):
+        """--no-video keeps every recording; only the MP4 and its checks are dropped."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "run"
+            original = self.make_run(root, success=False)
+            (root / f"{RUN_ID}.mp4").unlink()
+            result = self.compact(root, video_required=False)
+            self.assertEqual(set(path.name for path in root.iterdir()),
+                             {f"{RUN_ID}_result.json"})
+            self.assertIsNone(result["package"]["video"])
+            self.assertTrue(result["package"]["video_skipped"])
+            self.assertEqual(result["package"]["status"], "complete")
+            self.assertTrue(result["package"]["cleanup_complete"])
+            # The recordings a skipped render must never cost us.
+            self.assertEqual(result["recording"]["steps_raw"], original["steps"])
+            self.assertEqual(result["recording"]["state_trace"], original["trace"])
+            self.assertTrue(A.completion(root, RUN_ID))
+
+    def test_missing_video_is_still_incomplete_when_rendering_was_expected(self):
+        """A video-less bundle must not pass as complete unless it says so."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "run"
+            self.make_run(root, success=False)
+            self.compact(root)
+            (root / f"{RUN_ID}.mp4").unlink()
+            self.assertFalse(A.completion(root, RUN_ID))
+
+    def test_skipped_rendering_refuses_a_present_video(self):
+        """Disagreement between the flag and the artifacts must not be silent."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "run"
+            self.make_run(root, success=False)
+            self.assert_rejected_without_changes(root, video_required=False)
+
+
     def test_finished_inline_packaging_does_not_require_a_legacy_marker(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "run"

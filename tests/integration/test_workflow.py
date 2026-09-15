@@ -121,7 +121,8 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
             self.assertEqual(status["commit"], "test-commit")
             self.assertTrue(status["worktree_dirty"])
             compact.assert_called_once_with(out, status["run_id"], status=status,
-                                            require_legacy_complete=False)
+                                            require_legacy_complete=False,
+                                            video_required=True)
             self.assertFalse((out / "RUN_COMPLETE").exists())
             self.assertEqual(status["runtime"]["container_image"], "test:tag")
             self.assertEqual(status["runtime"]["container_image_id"], "sha256:test")
