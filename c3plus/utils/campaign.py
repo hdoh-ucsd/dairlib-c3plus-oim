@@ -12,6 +12,7 @@ import sys
 from c3plus.configs import REPO, SCENES, OBJECTS, configuration_snapshot
 from c3plus.configs.catalog import canonical_task, canonical_object
 from c3plus.configs.poses import pose_ids, pose_provenance
+from c3plus.configs.campaign_spec import DEFAULT_SPEC, load_campaign_spec
 from c3plus.runtime.environment import full_preflight
 from c3plus.utils.plan import DEFAULT_SIMULATION_CAP_SECONDS, plan_run, yaw_suffix
 from c3plus.utils.run import run_one
@@ -44,8 +45,9 @@ def jobs(args):
     return [dict(scene=s, object_name=obj, start=m, goal=n, obstacle_cost=v) for s in args.scenes
             for obj in (getattr(args, "objects", None) or ["T_shape"])
             for m in map(int, pose_ids("start", s)) for n in map(int, pose_ids("goal", s))
-            if args.pairs == "all" or (args.pairs == "diagonal" and m == n)
-            or (args.pairs == "smoke" and m == n == 1)
+            if (((m, n) in args.pairs) if isinstance(args.pairs, list)
+                else (args.pairs == "all" or (args.pairs == "diagonal" and m == n)
+                      or (args.pairs == "smoke" and m == n == 1)))
             for v in obstacle_costs]
 
 
@@ -210,6 +212,12 @@ def main(argv=None):
     parser.add_argument("--port-base", type=int, default=19000)
     parser.add_argument("--out", "--output-root", dest="output_root", type=Path, required=not name,
                         default=REPO / "results" / name if name else None)
+    parser.add_argument("--oim-out", type=Path,
+                        help="Also write OIM-contract run files for oim.run_eval into this "
+                             "directory, shared by every trial in the campaign")
+    parser.add_argument("--spec", type=Path,
+                        help=f"Campaign selection YAML (default: {DEFAULT_SPEC.name} at the repository "
+                             "root, used only when no selection flag is given)")
     parser.add_argument("--resume", action="store_true", help="Skip validated complete runs; refuse partial output")
     parser.add_argument("--dry-run", action="store_true", help="Validate and print the manifest without writing or simulating")
     args = parser.parse_args(argv)
@@ -223,6 +231,28 @@ def main(argv=None):
         parser.error("--suite full uses one obstacle cost per campaign; choose exponential or relu")
     if args.manifest and any(value is not None for value in (*selectors, args.obstacle_cost)):
         parser.error("--manifest supplies the exact job list; do not combine it with grid selectors")
+    if args.spec and (args.suite or name or args.manifest):
+        parser.error("--spec supplies the selection; do not combine it with --suite, "
+                     "a named campaign or --manifest")
+    chose_on_command_line = any(value is not None
+                                for value in (*selectors, args.obstacle_cost))
+    spec_path = args.spec if args.spec is not None else DEFAULT_SPEC
+    args.spec_used = None
+    if not (args.suite or name or args.manifest or chose_on_command_line) and spec_path.is_file():
+        # Command-line selectors win outright: a one-off run must never need
+        # this file edited, and a half-spec/half-flag selection would be
+        # ambiguous about which trials it describes.
+        try:
+            spec = load_campaign_spec(spec_path)
+        except (ValueError, OSError) as exc:
+            parser.error(f"{spec_path}: {exc}")
+        for key, value in spec.items():
+            if key != "cap" or args.cap is None:
+                setattr(args, key, value)
+        args.spec_used = str(spec_path)
+        print(f"[CAMPAIGN] selection from {spec_path}", flush=True)
+    elif args.spec is not None and not spec_path.is_file():
+        parser.error(f"Missing campaign spec: {spec_path}")
     args.scenes = args.scenes or ["single_obstacle", "icra_sign"]
     args.obstacle_cost = args.obstacle_cost or ("exponential" if args.suite else "both")
     args.pairs = args.pairs or "smoke"
@@ -284,7 +314,8 @@ def main(argv=None):
                 try:
                     status = run_one(plan["scene"], plan["obstacle_cost"], plan["start"], plan["goal_index"],
                                      out, plan["simulation_cap_seconds"], plan["port"], plan["evaluation_goal"],
-                                     goal_yaw_degrees=plan.get("goal_yaw_degrees"), object_name=plan["object_name"])
+                                     goal_yaw_degrees=plan.get("goal_yaw_degrees"), object_name=plan["object_name"],
+                                     oim_out=args.oim_out)
                 finally:
                     write_summary(data["runs"], args.output_root)
                 driver.write(f"[COMPLETE] {out} failures={status['failures']}\n")

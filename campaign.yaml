@@ -1,0 +1,68 @@
+# Default campaign selection: what to run.
+#
+# `python3 -m c3plus.utils campaign --out DIR` reads this file when you pass no
+# selection flags. Passing any of --tasks, --objects, --pairs or
+# --obstacle_cost selects from the command line instead and ignores this file,
+# so a one-off run needs no edit here.
+#
+# This file says WHAT TO RUN. What a task or object *is* -- geometry, sampler
+# settings, controller profile -- lives in
+# examples/sampling_c3/shared_parameters/experiments.yaml.
+#
+# Preview any change before committing to a long campaign:
+#   python3 -m c3plus.utils campaign --out results/check --dry-run
+
+# icra_sign, open_table, shelf_gap, single_obstacle, slalom, ycb_clutter
+tasks:
+  - open_table
+  - single_obstacle
+  - shelf_gap
+  - ycb_clutter
+  - icra_sign
+  - slalom
+
+# T_shape, hammer, sugar_box, power_drill, banana
+objects:
+  - T_shape
+  - hammer
+  - sugar_box
+  - power_drill
+  - banana
+
+# A preset -- all (25 pairs), diagonal (S1-G1 .. S5-G5), smoke (S1-G1 only) --
+# or explicit [start, goal] pairs, for example:
+#   pairs:
+#     - [2, 2]
+#     - [1, 3]
+pairs:
+  - [1, 1]
+  - [1, 2]
+  - [1, 3]
+  - [1, 4]
+  - [1, 5]
+  - [2, 1]
+  - [2, 2]
+  - [2, 3]
+  - [2, 4]
+  - [2, 5]
+  - [3, 1]
+  - [3, 2]
+  - [3, 3]
+  - [3, 4]
+  - [3, 5]
+  - [4, 1]
+  - [4, 2]
+  - [4, 3]
+  - [4, 4]
+  - [4, 5]
+  - [5, 1]
+  - [5, 2]
+  - [5, 3]
+  - [5, 4]
+  - [5, 5]
+
+# exponential, relu, or both
+obstacle_cost: exponential
+
+# Per-trial elapsed simulation-time budget, in seconds.
+cap: 300

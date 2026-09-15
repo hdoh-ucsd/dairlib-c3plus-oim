@@ -116,3 +116,10 @@ class RecordingFlagTests(WorkflowFixtures, unittest.TestCase):
                 R.main()
             self.assertNotIn("record", plan.call_args.kwargs)
             self.assertNotIn("video", plan.call_args.kwargs)
+
+    def test_oim_out_is_forwarded_and_defaults_to_none(self):
+        self.assertIsNone(self._forwarded([])["oim_out"])
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "oim"
+            kwargs = self._forwarded(["--oim-out", str(target)])
+            self.assertEqual(Path(kwargs["oim_out"]), target)

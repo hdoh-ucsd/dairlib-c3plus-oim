@@ -131,37 +131,24 @@ def launch(demo, object_name, goal, cap, port, out, controller_params=None,
                 "--robot_model=xarm6", "--execution_logging=true", f"--lcm_url={url}", *controller_args])
             native("planner", "franka_sampling_c3_controller", ["--is_simulation=true", f"--demo_name={demo}",
                 "--robot_model=xarm6", f"--lcm_url={url}", *controller_args, *planner_goal_args])
-<<<<<<< HEAD
             if record:
                 # Retain shell pipefail/tee semantics in this single recorder pipeline.
+                # --exit-on-success is gone: franka_sim now stops at the goal itself
+                # via --execution_goal, so the recorder must not race it.
                 processes["recorder"] = start_session(["bash", "-c",
                     'set -o pipefail; recorder_log=$1; shift; "$@" 2>&1 | tee "$recorder_log"',
                     "recorder", str(out / "recorder.log"), env.get("PYTHON") or "python3",
                     "-m", "c3plus.recording.recorder", "--goal", *map(str, goal),
                     "--object-name", object_name, "--out-steps", str(out / "steps_raw.jsonl"),
                     "--out-trace", str(out / "state_trace.jsonl"), "--url", url,
-                    "--duration", str(cap), "--exit-on-success", *recorder_args], cwd=REPO, env=env)
+                    "--duration", str(cap), *recorder_args], cwd=REPO, env=env)
             time.sleep(3)
             native("sim", "franka_sim", [f"--demo_name={demo}", "--robot_model=xarm6", "--matched_mu",
                 f"--lcm_url={url}", *controller_args, *simulation_args])
             if record:
-                rc = processes["recorder"].wait()
+                rc = wait_for_recording(processes["recorder"], processes["sim"], stop_file)
             else:
                 rc = _wait_without_recorder(processes, float(cap))
-=======
-            # Retain shell pipefail/tee semantics in this single recorder pipeline.
-            processes["recorder"] = start_session(["bash", "-c",
-                'set -o pipefail; recorder_log=$1; shift; "$@" 2>&1 | tee "$recorder_log"',
-                "recorder", str(out / "recorder.log"), env.get("PYTHON") or "python3",
-                "-m", "c3plus.recording.recorder", "--goal", *map(str, goal),
-                "--object-name", object_name, "--out-steps", str(out / "steps_raw.jsonl"),
-                "--out-trace", str(out / "state_trace.jsonl"), "--url", url,
-                "--duration", str(cap), *recorder_args], cwd=REPO, env=env)
-            time.sleep(3)
-            native("sim", "franka_sim", [f"--demo_name={demo}", "--robot_model=xarm6", "--matched_mu",
-                f"--lcm_url={url}", *controller_args, *simulation_args])
-            rc = wait_for_recording(processes["recorder"], processes["sim"], stop_file)
->>>>>>> 00412ca6deb3e7d05707f4b2126d7cb34ef3b8b0
             print(f"RUN DONE {demo} -> {out}", flush=True)
             return rc if rc >= 0 else 128 - rc
     finally:
