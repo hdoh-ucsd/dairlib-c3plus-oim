@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<!-- Faithful OIM icra_sign obstacle row: "ICRA 2026" minus the pushed C.
+<!-- OIM icra_sign obstacle row: seven fixed glyphs with the C slot empty.
+     The manipulated object is configured separately; the default is T_block.
      Each glyph collides as the extruded 10-vertex convex hull of its COMPILED
      MJX mesh (oim/utils/scenes.py) — the same geometry MJX collides and the
      same polygons the planner holds, so planner == simulation by construction.

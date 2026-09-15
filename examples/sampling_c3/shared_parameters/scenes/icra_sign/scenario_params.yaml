@@ -1,8 +1,9 @@
-# Faithful OIM 'icra_sign': seven fixed glyphs spell "ICRA 2026" with the C
-# slot empty; the pushed object is the C glyph (see push_c_glyph.sdf).
+# OIM 'icra_sign' obstacle layout: seven fixed glyphs with the C slot empty.
+# The manipulated object is selected independently in experiments.yaml;
+# the default is T_block (public CLI/result name T_shape).
 # Discs below are the CIRCUMSCRIBED fallback per glyph (max hull-vertex
 # radius); the exact 10-vertex hulls are supplied via SAMPLING_C3_OBS_POLYS
-# (see tools/experiments/scene_configs/icra_sign.yaml) and override indices
+# (see c3plus/configs/scenes/icra_sign.yaml) and override indices
 # 0-6. Index 7 is the upstream planner-only robot-base circle (scenes.py
 # _ROBOT_BASE_RADIUS = 0.09) and stays a true disc.
 scenario_name: icra_sign
