@@ -6,7 +6,7 @@ This checkout contains the Drake simulator, controllers, scene assets, and
 building and running experiments; host Python, Conda, ROS, and a GPU are not required.
 
 [Quick Start](#quick-start) · [Docker Environment](#docker-environment) ·
-[Experiments](#experiments) · [Results](#results) ·
+[Run All Experiments](#run-all-experiments) · [Results](#results) ·
 [Troubleshooting](#troubleshooting) · [Repository Structure](#repository-structure)
 
 ## Quick Start
@@ -38,7 +38,7 @@ The launcher derives the mount path from this checkout, builds the selected
 image if missing, and otherwise reuses it. The checkout is mounted at
 `/home/dairlib/dairlib`; the Bazel cache lives in a persistent Docker volume.
 You are now in a container shell at the repository root. Run every command in
-steps 3–8 **inside this container**.
+steps 3–7 **inside this container**.
 
 **3. CONTAINER — build the native simulator and both controllers.**
 
@@ -73,38 +73,11 @@ python3 -m unittest discover -s tests
 
 These tests do not launch experiments.
 
-**7. CONTAINER — validate and inspect the complete suite without launching it.**
+**7. CONTAINER — [run all experiments](#run-all-experiments).**
 
-```bash
-python3 -m c3plus.utils campaign \
-  --suite full --seed 42 \
-  --out results/full_campaign --dry-run
-```
-
-This prints the deterministic manifest, pose/asset preflight, and completed,
-pending, invalid/partial, and total counts. Resolve every preflight failure
-before collecting data.
-
-**8. CONTAINER — launch or resume the complete suite.**
-
-```bash
-python3 -m c3plus.utils campaign \
-  --suite full --seed 42 --resume \
-  --out results/full_campaign
-```
-
-This is the canonical dataset launcher. It runs serially and validates the
-whole selection before trial 1. Valid completed packages are skipped on resume;
-partial or corrupt trials are reported and never silently overwritten.
-`--cap` is the per-trial recorder wall-time budget, default 600 seconds; startup,
-success settling and packaging add time. Use the single-run example below for
-a short setup check instead of launching the full dataset.
-
-**Validation limit:** all 750 configurations and 300 start/goal endpoints pass
-static preflight, but some 10-second trials still hit the existing strict
-native-quaternion export guard. A long campaign can halt there and preserve the
-partial run for inspection. The full 600-second-per-trial campaign has not been
-runtime validated.
+Use the single campaign command below to launch every task, object and
+initial/goal pose combination. Add `--dry-run` to inspect the complete selection
+first without starting experiments.
 
 ## Docker Environment
 
@@ -147,17 +120,59 @@ shell, or `./docker/shell.sh --help` for all launcher options.
 
 ## Experiments
 
-All commands run **inside the container, from the repository root**. The full
-suite expands deterministically as task × object × start × goal:
+### Run all experiments
+
+After the Quick Start setup, run this single command **inside the container,
+from the repository root**:
+
+```bash
+python3 -m c3plus.utils campaign \
+  --suite full --seed 42 --cap 600 --resume \
+  --out results/full_campaign
+```
+
+`--suite full` automatically selects **all six tasks, all five objects, and
+every initial-pose × goal-pose combination**. No per-task commands, object lists
+or shell loops are needed.
 
 | Selection | Values |
 | --- | --- |
 | Tasks | `icra_sign`, `open_table`, `shelf_gap`, `single_obstacle`, `slalom`, `ycb_clutter` |
 | Manipulated objects | `T_shape`, `hammer`, `sugar_box`, `power_drill`, `banana` |
-| Poses | Five start IDs and five goal IDs per task, from [examples/poses/](examples/poses/) |
-| Total | **6 tasks × 5 objects × 25 pairs = 750 runs** |
+| Initial poses | S1, S2, S3, S4, S5 for each task |
+| Goal poses | G1, G2, G3, G4, G5 for each task |
+| Pose combinations | Every start is paired with every goal: 25 pairs per task/object, including S1→G1 through S5→G5 |
+| Total | **6 tasks × 5 objects × 5 starts × 5 goals = 750 runs** |
 | Seed | 42 for every trial |
 | Cost | `exponential` by default; `--obstacle_cost relu` selects the other existing preset |
+
+The launcher runs serially in task → object → start → goal order and validates
+the whole selection before trial 1. `--cap 600` sets each trial's recorder
+wall-time budget; startup, success settling and packaging add time. Replace
+`results/full_campaign` with your chosen output directory.
+
+To **preview the plan**, append `--dry-run` to the same command. This validates
+poses and assets and prints the full manifest plus completed, pending,
+invalid/partial and total counts, without writing run data or launching trials.
+To **resume**, repeat the command with the same settings and output directory.
+`--resume` also works for a fresh campaign. Valid completed JSON/video packages
+are skipped; partial or corrupt trials are reported and preserved. A different
+selection or configuration requires a new output directory.
+
+Create `<output-directory>/STOP_AFTER_CURRENT` to stop after the current trial
+is packaged. Remove that file and repeat the same command to continue.
+
+**Validation limit:** all 750 configurations and 300 start/goal endpoints pass
+static preflight, but some 10-second trials still hit the existing strict
+native-quaternion export guard. A long campaign can halt there and preserve the
+partial run for inspection. The full 600-second-per-trial campaign has not been
+runtime validated.
+
+### Pose and object definitions
+
+Each initial and goal pose in [examples/poses/](examples/poses/) contains
+`[x, y, yaw]`: position in metres and orientation in radians. The full launcher
+uses both poses' saved orientations for every pair.
 
 The local pose files match the [pinned OIM source](https://github.com/NikolaRaicevic2001/Object-Informed-Manipulation-MJX/tree/a31203d8e9a347ba7bf373954a4b7e4059d1e350/examples/poses)
 byte-for-byte. That source defines **task-specific** coordinates: every object
@@ -175,6 +190,14 @@ Tasks select the environment; the object selection supplies its model, sampling
 geometry, footprint and support height. The launcher checks all selected
 combinations and rejects incompatible poses before running anything.
 
+<details>
+<summary>Optional CLI commands: individual runs, smaller grids and previews</summary>
+
+The full campaign above covers the complete benchmark. The following commands
+are available for targeted checks and visualization.
+
+### `run`: object selection and obstacle costs
+
 For one experiment or a cheap startup check:
 
 ```bash
@@ -187,8 +210,6 @@ python3 -m c3plus.utils run \
 Add `--dry-run` to inspect it, or use a longer cap and fresh output directory for
 a substantive trial. `run` has no resume flag. Use
 `python3 -m c3plus.utils COMMAND --help` for each command's complete options.
-
-### `run`: object selection and obstacle costs
 
 | Option | Meaning |
 | --- | --- |
@@ -223,10 +244,9 @@ currently suppressed in that mode; `relu` uses the existing footprint-aware
 ranking with `eps=0.01`, `w=200`. Full-suite selection uses one preset, so changing
 the preset does not double the 750 runs.
 
-### `campaign`: targeted grids and resume
+### `campaign`: smaller grids
 
-Use the Quick Start's `--suite full` command for the canonical dataset. For a
-smaller selection, omit `--suite full` and specify tasks, objects and pairs:
+For a smaller selection, omit `--suite full` and specify tasks, objects and pairs:
 
 ```bash
 python3 -m c3plus.utils campaign \
@@ -241,11 +261,6 @@ suite accepts one cost preset and no manual task/object/pair selectors.
 `--output-root` remains an alias for `--out`. The older `run_launch` and
 `run_launch_simple_s2` commands select goal G2, three goal yaws and both costs;
 they are debugging presets, separate from the full five-object suite.
-
-Create `results/full_campaign/STOP_AFTER_CURRENT` to stop after the current trial
-is packaged. Remove the file and repeat the same `--resume` command to continue.
-Keep the manifest and selected configuration unchanged; use another output root
-for another selection.
 
 ### `visualize`: mesh and EE previews
 
@@ -276,6 +291,8 @@ Preview samples use an independent seeded generator and do not establish native
 IK feasibility, runtime filtering or pushing success. Check
 [object profiles](examples/sampling_c3/shared_parameters/experiments.yaml) and
 [models](examples/sampling_c3/urdf/) for geometry and sampler settings.
+
+</details>
 
 ## Results
 
