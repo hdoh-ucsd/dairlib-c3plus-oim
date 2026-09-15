@@ -48,4 +48,4 @@ obstacle_cost: exponential
 
 cap: 300              # Elapsed simulation time budget, in seconds.
 video: false          # Skip MP4 rendering. Keeps every recording, metric and result JSON, so `eval` and `--oim-out` still work. This is the flag to use when a sweep only needs numbers.
-record: true         # Skip the recorder entirely. Logs only: no telemetry, no result JSON, no metrics, nothing to resume or evaluate. 
+record: true          # Skip the recorder entirely. Logs only: no telemetry, no result JSON, no metrics, nothing to resume or evaluate. 
