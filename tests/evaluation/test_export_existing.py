@@ -17,7 +17,7 @@ from tests.fixtures.results import ArtifactFixtures, RUN_ID
 
 class RunArtifactTests(ArtifactFixtures, unittest.TestCase):
     def test_offline_entrypoints_parse_help_and_reject_missing_required_arguments(self):
-        for entrypoint in (("c3plus.evaluation.postprocess",), ("c3plus.utils", "eval"), ("c3plus.utils", "postprocess")):
+        for entrypoint in (("c3plus.evaluation.postprocess",), ("c3plus.utils", "postprocess")):
             with self.subTest(entrypoint=entrypoint):
                 command = [sys.executable, "-m", *entrypoint]
                 help_result = subprocess.run([*command, "--help"], cwd=REPO, capture_output=True,
@@ -29,7 +29,7 @@ class RunArtifactTests(ArtifactFixtures, unittest.TestCase):
                 self.assertEqual(invalid.returncode, 2, invalid.stdout + invalid.stderr)
                 self.assertIn("required", invalid.stderr)
 
-    def test_eval_and_postprocess_entrypoints_export_identical_saved_json(self):
+    def test_direct_and_cli_postprocess_export_identical_saved_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "saved run with spaces"
             self.make_run(root)
@@ -43,7 +43,7 @@ class RunArtifactTests(ArtifactFixtures, unittest.TestCase):
             retained = {path.name: (path.read_bytes(), path.stat().st_mtime_ns)
                         for path in root.iterdir() if path != result_file}
             exports = []
-            for entrypoint in (("c3plus.evaluation.postprocess",), ("c3plus.utils", "postprocess"), ("c3plus.utils", "eval")):
+            for entrypoint in (("c3plus.evaluation.postprocess",), ("c3plus.utils", "postprocess")):
                 with self.subTest(entrypoint=entrypoint):
                     result_file.write_bytes(original)
                     result = subprocess.run(
@@ -56,7 +56,7 @@ class RunArtifactTests(ArtifactFixtures, unittest.TestCase):
                     self.assertIn("evaluation", json.loads(exports[-1]))
                     self.assertEqual({path.name: (path.read_bytes(), path.stat().st_mtime_ns)
                                       for path in root.iterdir() if path != result_file}, retained)
-            self.assertEqual(exports, [exports[0]] * 3)
+            self.assertEqual(exports, [exports[0]] * 2)
 
     def test_compacted_export_only_adds_semantics_without_changing_recordings_or_video(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -78,6 +78,12 @@ class Obstacles:
         obs = cfg.get("obstacles") or {}
         self.polys = [np.asarray(p, float) for p in (obs.get("polygons") or [])]
         self.discs = [tuple(d) for d in (obs.get("discs") or [])]
+        self._edges = []
+        for vertices in self.polys:
+            end = np.roll(vertices, -1, axis=0)
+            delta = end - vertices
+            length_squared = np.maximum(np.sum(delta * delta, axis=1), 1e-16)
+            self._edges.append((vertices, end, delta, length_squared))
 
     def empty(self):
         return not self.polys and not self.discs
@@ -86,6 +92,35 @@ class Obstacles:
         ds = [poly_signed_dist(p, poly) for poly in self.polys]
         ds += [math.hypot(p[0] - cx, p[1] - cy) - r for cx, cy, r in self.discs]
         return min(ds) if ds else float("inf")
+
+    def sdf_batch(self, points):
+        """Evaluate the same signed distances for an (N, 2) array of points.
+
+        Broadcast points against one polygon's cached edges at a time, keeping
+        temporary storage proportional to one snapshot rather than the run.
+        The projection clamp and strict ray crossings match the scalar path.
+        """
+        points = np.asarray(points, dtype=float)
+        if points.ndim != 2 or points.shape[1] != 2:
+            raise ValueError("points must have shape (N, 2)")
+        result = np.full(len(points), np.inf)
+        x, y = points[:, 0, None], points[:, 1, None]
+        for start, end, delta, length_squared in self._edges:
+            offset = points[:, None, :] - start
+            fraction = np.clip(np.sum(offset * delta, axis=2) / length_squared, 0.0, 1.0)
+            nearest = start + fraction[:, :, None] * delta
+            distances = np.linalg.norm(points[:, None, :] - nearest, axis=2).min(axis=1)
+
+            crosses = (start[:, 1] > y) != (end[:, 1] > y)
+            intersection_x = start[:, 0] + np.divide(
+                (y - start[:, 1]) * delta[:, 0], delta[:, 1],
+                out=np.zeros_like(fraction), where=crosses)
+            inside = np.logical_xor.reduce(crosses & (x < intersection_x), axis=1)
+            np.minimum(result, np.where(inside, -distances, distances), out=result)
+        for cx, cy, radius in self.discs:
+            distances = np.hypot(points[:, 0] - cx, points[:, 1] - cy) - radius
+            np.minimum(result, distances, out=result)
+        return result
 
 
 def table_sdf(p, center, half):
@@ -146,7 +181,7 @@ def compute_row(k, x, y, yaw, ex, ey, ez, R_tip, goal, cfg, geo, q, q_prev, dt):
         b["obstacle"] = 0.0
         min_clear = nan
     else:
-        ds = np.array([obstacles.sdf(p) for p in world_pts])
+        ds = obstacles.sdf_batch(world_pts)
         b["obstacle"] = W_OBSTACLE * float(np.sum(np.exp(-ds / OBSTACLE_DECAY)))
         min_clear = float(np.min(ds))
 

@@ -22,9 +22,30 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                     R.main()
                 plan = json.loads(stream.getvalue())
                 self.assertEqual(plan["obstacle_cost"], expected)
+                self.assertEqual(plan["wall_cap_seconds"], 300)
                 self.assertEqual(plan["run_id"], f"{expected}_open_table_T_shape_s01g01_seed42")
                 self.assertFalse(out.exists())
                 run.assert_not_called()
+
+
+    def test_explicit_wall_cap_overrides_run_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "run"
+            stream = io.StringIO()
+            with patch.object(R, "run_one") as run, redirect_stdout(stream):
+                R.main(["--task", "open_table", "--out", str(out), "--cap", "600", "--dry-run"])
+            self.assertEqual(json.loads(stream.getvalue())["wall_cap_seconds"], 600)
+            self.assertFalse(out.exists())
+            run.assert_not_called()
+
+
+    def test_direct_run_default_and_explicit_cap_are_forwarded_to_plan(self):
+        for options, expected in (({}, 300), ({"cap": 600}, 600)):
+            with self.subTest(options=options), \
+                    patch.object(R, "plan_run", side_effect=RuntimeError("planning-only stop")) as plan:
+                with self.assertRaisesRegex(RuntimeError, "planning-only stop"):
+                    R.run_one("open_table", "exponential", 1, 1, "/unused/test", **options)
+                self.assertEqual(plan.call_args.args[5], expected)
 
 
     def test_invalid_parameters(self):

@@ -1,4 +1,5 @@
 from copy import deepcopy
+import math
 import tempfile
 import unittest
 import numpy as np
@@ -7,6 +8,81 @@ import numpy as np
 from tests.fixtures.results import ProjectionFixtures
 
 class ResultProjectionTests(ProjectionFixtures, unittest.TestCase):
+    def test_execution_quaternion_drift_only_normalizes_derived_yaw(self):
+        cfg, summary, steps, rows = self.fixture()
+        for scale in (1.000059, .999941, -1.000059, -.999941):
+            with self.subTest(scale=scale), tempfile.TemporaryDirectory() as tmp:
+                native, updates = self.physical_fixture()
+                states = [*native["boundaries"], *native["terminals"]]
+                angles = [.4, -.7, 1.2]
+                for state, angle in zip(states, angles):
+                    state["objects"][0]["q"][:4] = [
+                        math.cos(angle / 2) * scale, 0, 0,
+                        math.sin(angle / 2) * scale]
+                    state["objects"][0]["v"] = [.1, -.2, .3, -.4, .5, -.6]
+                original = deepcopy((native, updates, cfg, summary, steps, rows))
+                snapshots = self.project(tmp, cfg, summary, steps, rows)
+                result = self.project(tmp, cfg, summary, steps, rows,
+                                      execution_native=native, planning_updates=updates)
+                self.assertEqual((native, updates, cfg, summary, steps, rows), original)
+                self.assertEqual(result["recording"]["execution_native"], native)
+                self.assertEqual(result["recording"]["snapshot_dynamic"], snapshots["dynamic"])
+                self.assertEqual(result["dynamic"]["object_pose_3d"],
+                                 [state["objects"][0]["q"] for state in states])
+                self.assertEqual(result["dynamic"]["object_spatial_velocity"],
+                                 [state["objects"][0]["v"] for state in states])
+                self.assertEqual(result["dynamic"]["robot_joint_positions"],
+                                 [state["robot_q"] for state in states])
+                self.assertEqual(result["dynamic"]["robot_joint_velocities"],
+                                 [state["robot_v"] for state in states])
+                np.testing.assert_allclose(
+                    [pose[2] for pose in result["dynamic"]["object_pose"]], angles, atol=1e-14)
+                self.assertEqual(result["dynamic"]["time"], [7.1, 7.2, 7.35])
+                self.assertEqual(result["execution"]["wall_time"], [0.0, .035, .08])
+                self.assertEqual(result["dynamic"]["compute_time"], [.035, .08 - .035])
+                self.assertEqual(result["execution"]["frequency_hz"], 25.0)
+                for key in ("success", "t_success", "steps_run", "evaluation", "native_controller"):
+                    self.assertEqual(result[key], snapshots[key], key)
+
+
+    def test_previously_accepted_quaternion_drift_preserves_exact_legacy_yaw(self):
+        cfg, summary, steps, rows = self.fixture()
+        native, updates = self.physical_fixture()
+        scale, angle = 1.000002, 1.2
+        q = [math.cos(angle / 2) * scale, 0, 0, math.sin(angle / 2) * scale]
+        self.assertTrue(math.isclose(sum(x*x for x in q), 1.0, abs_tol=1e-5))
+        expected = math.atan2(2 * (q[0] * q[3] + q[1] * q[2]),
+                              1 - 2 * (q[2] * q[2] + q[3] * q[3]))
+        self.assertNotEqual(expected, angle)
+        for state in [*native["boundaries"], *native["terminals"]]:
+            state["objects"][0]["q"][:4] = q
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.project(tmp, cfg, summary, steps, rows,
+                                  execution_native=native, planning_updates=updates)
+        self.assertEqual([pose[2] for pose in result["dynamic"]["object_pose"]], [expected] * 3)
+
+
+    def test_execution_quaternion_drift_fix_still_rejects_invalid_states(self):
+        cfg, summary, steps, rows = self.fixture()
+        invalid = {
+            "zero quaternion": [0, 0, 0, 0, .2, -.4, -.02],
+            "nan quaternion": [float("nan"), 0, 0, 0, .2, -.4, -.02],
+            "infinite quaternion": [float("inf"), 0, 0, 0, .2, -.4, -.02],
+            "nonfinite translation": [1, 0, 0, 0, float("inf"), -.4, -.02],
+            "truncated state": [1, 0, 0, 0, .2, -.4],
+            "non-list state": None,
+            "boolean quaternion": [True, 0, 0, 0, .2, -.4, -.02],
+            "string quaternion": ["1", 0, 0, 0, .2, -.4, -.02],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for label, q in invalid.items():
+                native, updates = self.physical_fixture()
+                native["boundaries"][0]["objects"][0]["q"] = q
+                with self.subTest(state=label), self.assertRaises(ValueError):
+                    self.project(tmp, cfg, summary, steps, rows,
+                                 execution_native=native, planning_updates=updates)
+
+
     def test_physical_execution_uses_exact_states_and_preserves_all_snapshots(self):
         cfg, summary, steps, rows = self.fixture()
         native, updates = self.physical_fixture()

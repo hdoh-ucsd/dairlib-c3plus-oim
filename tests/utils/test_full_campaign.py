@@ -20,7 +20,7 @@ from c3plus.utils import campaign as C
 def args(output_root):
     return argparse.Namespace(suite='full', campaign_name=None, manifest=None, scenes=None,
                               objects=None, pairs=None, obstacle_cost='exponential', seed=42,
-                              cap=600, port_base=19000, output_root=Path(output_root),
+                              cap=None, port_base=19000, output_root=Path(output_root),
                               resume=False, dry_run=True)
 
 
@@ -87,7 +87,7 @@ class FullCampaignTests(unittest.TestCase):
         for plan in manifest['runs']:
             task, obj = plan['scene'], plan['object_name']
             self.assertEqual(plan['seed'], 42)
-            self.assertEqual(plan['wall_cap_seconds'], 600)
+            self.assertEqual(plan['wall_cap_seconds'], 300)
             self.assertEqual(plan['canonical_start_pose'], self.poses[task]['starts'][str(plan['start'])])
             self.assertEqual(plan['canonical_goal_pose'], self.poses[task]['goals'][str(plan['goal_index'])])
             self.assertEqual(plan['start_pose'][4:6], plan['canonical_start_pose'][:2])
@@ -99,6 +99,15 @@ class FullCampaignTests(unittest.TestCase):
             self.assertNotIn('asset_sha256', plan)
             self.assertNotIn('pose_catalogue', plan)
         self.assertFalse(self.root.exists(), 'Manifest generation must not create output')
+
+    def test_full_campaign_explicit_cap_overrides_default_for_every_run(self):
+        options = args(self.root)
+        options.cap = 600
+        with patch.object(C.subprocess, 'check_output', side_effect=git_output):
+            manifest = C.build_manifest(options)
+        self.assertEqual(manifest['run_count'], 750)
+        self.assertEqual({plan['wall_cap_seconds'] for plan in manifest['runs']}, {600})
+        self.assertFalse(self.root.exists())
 
     def test_manifest_is_deterministic_for_unchanged_inputs(self):
         with patch.object(C, 'plan_run', side_effect=deepcopy(self.raw_plans)), \
