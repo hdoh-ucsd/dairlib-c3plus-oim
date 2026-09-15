@@ -18,3 +18,5 @@ attic/multibody/solver_log/
 /MODULE.bazel.lock
 /model_IIS.ilp
 /valgrind.log
+core
+core.*
