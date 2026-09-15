@@ -20,7 +20,7 @@ import os
 from pathlib import Path
 
 from c3plus.configs.paths import CONFIG_DIR
-from c3plus.configs.catalog import OBSTACLE_COSTS, SCENES
+from c3plus.configs.catalog import OBSTACLE_COSTS, SCENES, canonical_task, evaluation_config
 
 W_XY, W_PRE = 10000.0, 12500.0
 W_ROT_POST, W_ROT_PRE = 510.0, 5.0
@@ -35,8 +35,10 @@ def load_scene(scene, scene_config=None):
 
     if isinstance(scene_config, dict):
         cfg = scene_config
+    elif scene_config is None:
+        cfg = evaluation_config(scene)
     else:
-        path = Path(scene_config) if scene_config is not None else CONFIG_DIR / f"{scene}.yaml"
+        path = Path(scene_config)
         with path.open() as f:
             cfg = yaml.safe_load(f)
     obs = cfg.get("obstacles") or {}
@@ -263,7 +265,7 @@ def render_cost_figure(a):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-dir", required=True)
-    ap.add_argument("--scene", required=True, choices=SCENES)
+    ap.add_argument("--scene", required=True, type=canonical_task, choices=SCENES)
     ap.add_argument("--scene-config", type=Path,
                     help="Saved evaluation_scene_config.yaml for the selected object and goal")
     ap.add_argument("--obstacle_cost", required=True,

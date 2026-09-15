@@ -38,17 +38,17 @@ def launch(demo, object_name, goal, cap, port, out, controller_params=None,
                 return re.search(r"(?:^|\s)-" + re.escape(flag) + r"(?:\s|=)", result.stdout)
             if not supports("controller_params"):
                 raise ValueError(f"{name} does not support --controller_params. "
-                                 "Rebuild with python3 -m tools build before launching.")
+                                 "Rebuild with python3 -m c3plus.utils build before launching.")
             if name != "franka_sampling_c3_controller" and not supports("execution_logging"):
                 raise ValueError(f"{name} lacks physical execution logging. "
-                                 "Rebuild all native targets with python3 -m tools build.")
+                                 "Rebuild all native targets with python3 -m c3plus.utils build.")
         controller_args = [f"--controller_params={controller_params}"]
     if goal_yaw_degrees is not None:
         if not re.fullmatch(r"([+-]?90|[+-]?0)([.]0+)?", str(goal_yaw_degrees)):
             raise ValueError("GOAL_YAW_DEGREES must be -90, 0, or 90 (absolute world yaw).")
         if not _supports(binary_dir / "franka_sampling_c3_controller", "goal_yaw_degrees"):
             raise ValueError("Controller does not support --goal_yaw_degrees. "
-                             "Rebuild with python3 -m tools build before launching this campaign.")
+                             "Rebuild with python3 -m c3plus.utils build before launching this campaign.")
         planner_goal_args = [f"--goal_yaw_degrees={goal_yaw_degrees}"]
     out = Path(out).resolve()
     out.mkdir(parents=True, exist_ok=True)

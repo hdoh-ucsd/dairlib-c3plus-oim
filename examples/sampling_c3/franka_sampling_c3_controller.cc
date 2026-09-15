@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iomanip>
 #include <limits>
 #include <locale>
@@ -67,6 +68,8 @@ using multibody::MakeNameToVelocitiesMap;
 using std::vector;
 
 DEFINE_bool(is_simulation, true, "True for simulation, false for hardware");
+DEFINE_bool(print_experiment_capabilities, false,
+            "Print managed experiment geometry capabilities and exit without loading systems.");
 DEFINE_string(lcm_url, "udpm://239.255.76.67:7667?ttl=0",
               "LCM URL with IP, port, and TTL settings");
 DEFINE_string(demo_name, "jacktoy",
@@ -86,6 +89,11 @@ DEFINE_double(goal_yaw_degrees, 0.0,
 
 int DoMain(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  if (FLAGS_print_experiment_capabilities) {
+    std::cout << R"({"object_scene_support_version":1,"mesh_objects_with_obstacles":true,"custom_object_footprint":true})"
+              << std::endl;
+    return 0;
+  }
   const bool override_goal_yaw =
       !gflags::GetCommandLineFlagInfoOrDie("goal_yaw_degrees").is_default;
   if (override_goal_yaw &&
@@ -105,23 +113,28 @@ int DoMain(int argc, char* argv[]) {
   SamplingC3ControllerParams controller_params =
       drake::yaml::LoadYamlFile<SamplingC3ControllerParams>(
           controller_params_path);
-  const bool mesh_object_demo = FLAGS_demo_name.rfind("open_table_mesh_", 0) == 0;
+  const bool mesh_object_demo = FLAGS_demo_name.rfind("mesh_", 0) == 0 ||
+                               FLAGS_demo_name.rfind("open_table_mesh_", 0) == 0;
   const bool mesh_section_sampler = controller_params.sampling_params.sampling_strategy ==
                                     SamplingStrategy::kMeshSectionPerimeter;
   if (mesh_object_demo || mesh_section_sampler) {
-    const auto& scenario = controller_params.scenario_params;
     if (!mesh_object_demo || !mesh_section_sampler || !FLAGS_is_simulation ||
         FLAGS_robot_model != "xarm6" || controller_params.num_objects != 1 ||
         controller_params.object_models.size() != 1 ||
         controller_params.include_end_effector_orientation ||
         controller_params.sampling_c3_options.include_walls ||
-        scenario.scenario_name != "open_table" || !scenario.obstacles.empty() ||
-        (scenario.obstacle_model && !scenario.obstacle_model->empty()) ||
         !controller_params.sampling_mesh_files ||
         controller_params.sampling_mesh_files->size() != 1) {
       throw std::runtime_error(
-          "Mesh objects require a single-object open_task xarm6 simulation, "
-          "open_table_mesh_ demo, sampling strategy 8 and one sampling_mesh_files entry");
+          "Mesh objects require a single-object xarm6 simulation, mesh_ "
+          "(or legacy open_table_mesh_) demo, sampling strategy 8 and one sampling_mesh_files entry");
+    }
+    const char* footprint = std::getenv("SAMPLING_C3_OBJECT_FOOTPRINT_POINTS");
+    if (!controller_params.scenario_params.obstacles.empty() &&
+        (footprint == nullptr || footprint[0] == '\0')) {
+      throw std::runtime_error(
+          "Mesh objects with obstacles require their selected local-frame "
+          "SAMPLING_C3_OBJECT_FOOTPRINT_POINTS geometry");
     }
   }
   if (override_goal_yaw) {

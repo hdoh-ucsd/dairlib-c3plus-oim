@@ -15,7 +15,7 @@ from unittest.mock import patch
 import yaml
 
 from c3plus import configs as S
-from c3plus.experiments import run as R
+from c3plus.utils import run as R
 from c3plus.visualization import objects as V
 from c3plus.evaluation import exporter as P, package as A
 

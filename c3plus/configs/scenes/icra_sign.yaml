@@ -1,28 +1,6 @@
-# icra_sign: push_c_glyph among the seven fixed ICRA sign-glyph hull
-# obstacles (world frame, native slots 0-6) + robot base.
-# Footprint = the exact union boundary of push_c_glyph.sdf's three boxes
-# (CFootprint() in systems/controllers/sampling_based_c3_controller.cc):
-#   spine  center (-0.0323, 0.0),    size 0.032 x 0.103
-#   top    center (0.0,     0.0355), size 0.0966 x 0.032
-#   bottom center (0.0,    -0.0355), size 0.0966 x 0.032
-# expressed as the CCW 8-vertex union outline (CFootprint stores a densified
-# boundary point cloud; the schema wants the outline polygon).
-# push_c_glyph.sdf box height 0.025 -> half height 0.0125; the C rests at
-# z = -0.016 world (table top -0.029 + half height), so tip_target_z = -0.016.
+# Static task geometry. Selected object properties come from evaluation_config().
 goal: [0.50, -0.40, 1.5708]
-object_channel_substring: G_shape_video
-footprint:
-  - [-0.0483, -0.0515]
-  - [0.0483, -0.0515]
-  - [0.0483, -0.0195]
-  - [-0.0163, -0.0195]
-  - [-0.0163, 0.0195]
-  - [0.0483, 0.0195]
-  - [0.0483, 0.0515]
-  - [-0.0483, 0.0515]
 pusher_radius: 0.00555  # OIM stick tip sphere (end_effector_xarm6_stick.urdf)
-block_half_height: 0.0125
-tip_target_z: -0.016
 obstacles:
   polygons:
     # Glyph hull 0
@@ -66,7 +44,6 @@ tip_floor_branch: real
 control_dt: 0.1
 boundary_sample_spacing: 0.002
 planner:
-  # Faithful anything_icra_c_v5 settings; slot 7 remains the robot base disc.
+  # Native obstacle slots 0-6 are fixed glyphs; slot 7 remains the robot base disc.
   polygon_overrides: {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6}
-  object_footprint: c_glyph
   obstacle_top_z: 0.046

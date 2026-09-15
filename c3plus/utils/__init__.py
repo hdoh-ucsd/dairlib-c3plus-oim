@@ -1,1 +1,1 @@
-"""C3+ utils support."""
+"""Public command line, experiment planning and orchestration."""

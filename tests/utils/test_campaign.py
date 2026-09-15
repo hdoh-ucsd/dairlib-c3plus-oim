@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from c3plus import configs as S
-from c3plus.experiments import run as R, campaign as G
+from c3plus.utils import run as R, campaign as G
 
 from tests.fixtures.results import WorkflowFixtures
 
@@ -28,7 +28,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
 
 
     def test_exact_campaign_manifest(self):
-        jobs = G.jobs(self.args(manifest=S.REPO / "c3plus/experiments/manifests/campaign_seed42.json"))
+        jobs = G.jobs(self.args(manifest=S.REPO / "c3plus/utils/manifests/campaign_seed42.json"))
         self.assertEqual(len(jobs), 25)
         self.assertEqual(sum(j["obstacle_cost"] == "exponential" for j in jobs), 13)
         self.assertEqual(jobs[-1]["start"], 3)
@@ -41,7 +41,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
 
 
     def test_manifest_rejects_explicit_grid_selection(self):
-        manifest = S.REPO / "c3plus/experiments/manifests/campaign_seed42.json"
+        manifest = S.REPO / "c3plus/utils/manifests/campaign_seed42.json"
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "campaign"
             for flags in (["--scenes", "open_task"], ["--obstacle_cost", "both"],
@@ -54,7 +54,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                             redirect_stderr(errors), self.assertRaises(SystemExit) as error:
                         G.main()
                     self.assertEqual(error.exception.code, 2)
-                    self.assertIn("cannot be combined", errors.getvalue())
+                    self.assertIn("do not combine", errors.getvalue())
                     self.assertFalse(out.exists())
                     run.assert_not_called()
 
@@ -83,7 +83,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                 with self.subTest(campaign=name):
                     out = Path(tmp) / name
                     result = subprocess.run(
-                        [sys.executable, "-m", "tools", name,
+                        [sys.executable, "-m", "c3plus.utils", name,
                          "--output-root", str(out), "--dry-run"],
                         cwd=R.REPO, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
@@ -122,7 +122,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                 G.main([name, "--dry-run"])
             run.assert_not_called()
             for plan in json.loads(stream.getvalue())["runs"]:
-                self.assertTrue(Path(plan["out"]).is_relative_to(R.REPO / "results/reproduce" / name))
+                self.assertTrue(Path(plan["out"]).is_relative_to(R.REPO / "results" / name))
             for flags in (("--scenes", "open_task"), ("--pairs", "all"),
                           ("--obstacle_cost", "relu"), ("--manifest", "unused"), ("--seed", "7")):
                 with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
@@ -186,7 +186,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
     def test_named_campaign_resume_refuses_partial_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            partial = root / "exponential/open_task/s02g02_yaw_p090"
+            partial = root / "exponential/icra_sign/T_shape/s02g02_yaw_p090"
             partial.mkdir(parents=True)
             (partial / "planner.log").write_text("partial run evidence")
             with patch.object(R, "logged_command") as launch, redirect_stdout(io.StringIO()), \
@@ -194,10 +194,8 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
                 G.main(["run_launch_simple_s2", "--output-root", str(root), "--resume"])
             launch.assert_not_called()
             self.assertEqual((partial / "planner.log").read_text(), "partial run evidence")
-            with (root / "summary.csv").open() as stream:
-                rows = list(csv.DictReader(stream))
-            self.assertEqual(rows[0]["status"], "partial")
-            self.assertTrue(all(row["status"] == "pending" for row in rows[1:]))
+            self.assertFalse((root / "campaign_plan.json").exists())
+            self.assertFalse((root / "summary.csv").exists())
 
 
     def test_resume_refuses_changed_plan(self):
@@ -230,7 +228,7 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
     def test_stop_after_current(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            def complete(*args):
+            def complete(*args, **kwargs):
                 (root / "STOP_AFTER_CURRENT").touch()
                 return {"failures": []}
             argv = ["run_grid_campaign.py", "--output-root", tmp, "--scenes", "open_task"]
@@ -242,10 +240,10 @@ class WorkflowTests(WorkflowFixtures, unittest.TestCase):
 
     def test_resume_skips_only_complete(self):
         with tempfile.TemporaryDirectory() as tmp:
-            done = Path(tmp) / "exponential/open_task/s01g01"
+            done = Path(tmp) / "exponential/open_table/T_shape/s01g01"
             done.mkdir(parents=True)
             (done / "RUN_COMPLETE").touch()
-            run_id = "exponential_open_task_s01g01_seed42"
+            run_id = "exponential_open_table_T_shape_s01g01_seed42"
             (done / f"{run_id}_result.json").write_text(json.dumps({"run_id": run_id}))
             (done / f"{run_id}.mp4").write_bytes(b"legacy video fixture")
             argv = ["run_grid_campaign.py", "--output-root", tmp,

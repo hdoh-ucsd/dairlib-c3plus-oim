@@ -305,7 +305,8 @@ def build_metadata(run_dir, scene, run_id, cfg, summary, n_intervals, control_dt
         "runtime", "commit", "worktree_dirty", "configuration_digest", "config_sha256",
         "binary_sha256", "asset_sha256", "execution", "simulation_wall_seconds",
         "seed_verified", "goal_yaw_verified", "wrapper_rc", "postprocess_rc", "render_rc",
-        "cost_fig_rc", "failures") if key in runtime}
+        "cost_fig_rc", "failures", "task", "native_scene", "object_name", "native_object_name",
+        "canonical_start_pose", "canonical_goal_pose", "pose_catalogue") if key in runtime}
     run = {"world": "3d", "task": scene, "robot": "xarm6", "algorithm": "c3plus",
            "robot_opt": None, "object_opt": None, "seed": runtime.get("seed"),
            "start_index": str(runtime["start"]) if runtime.get("start") is not None else None,

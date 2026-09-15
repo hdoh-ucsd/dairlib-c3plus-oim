@@ -9,7 +9,7 @@ from unittest.mock import patch
 import yaml
 
 from c3plus import configs as S
-from c3plus.experiments import run as R
+from c3plus.utils import run as R
 from c3plus.runtime import provenance as Provenance
 from c3plus.visualization import costs as C
 
@@ -37,7 +37,7 @@ class ObjectRunTests(ObjectFixtures, unittest.TestCase):
                                 "--goal-yaw-degrees", "90")
             self.assertFalse(out.exists())
             self.assertEqual(data["execution"], "serial")
-            self.assertEqual(tuple(S.RUN_OBJECTS), ("T_block", "sugar_box", "power_drill", "hammer", "banana"))
+            self.assertEqual(S.RUN_OBJECTS, S.OBJECTS)
             self.assertEqual(data["run_count"], 5)
             self.assertEqual([p["object_name"] for p in data["runs"]], list(S.RUN_OBJECTS))
             self.assertEqual(len({p["run_id"] for p in data["runs"]}), 5)
@@ -45,7 +45,7 @@ class ObjectRunTests(ObjectFixtures, unittest.TestCase):
             for name, plan in zip(S.RUN_OBJECTS, data["runs"]):
                 self.assertEqual(Path(plan["out"]), out / name)
                 self.assertIn(name, plan["run_id"])
-                if name == "T_block":
+                if name == "T_shape":
                     self.assertEqual(plan["demo"], S.demo_name("open_task", 2, 2))
                 else:
                     self.assertIn(name, plan["demo"])
@@ -61,8 +61,8 @@ class ObjectRunTests(ObjectFixtures, unittest.TestCase):
             self.assertEqual(Path(selected["out"]), out)
             self.assertEqual(selected["object_name"], "banana")
             default = self.dry_run(out)
-            self.assertEqual(default["run_id"], "exponential_open_task_s01g01_seed42")
-            self.assertNotIn("object_name", default)
+            self.assertEqual(default["run_id"], "exponential_open_table_T_shape_s01g01_seed42")
+            self.assertEqual(default["object_name"], "T_shape")
             self.assertFalse(out.exists())
 
 
@@ -78,8 +78,8 @@ class ObjectRunTests(ObjectFixtures, unittest.TestCase):
                     selected = self.dry_run(out, "--objects", "T_block", *flags)
                     for key in ("demo", "controller_goal", "evaluation_goal", "start_pose", "configuration_digest"):
                         self.assertEqual(selected[key], default[key], key)
-                    self.assertEqual(selected["run_id"], default["run_id"].replace("open_task_", "open_task_T_block_", 1))
-                    self.assertEqual(selected["object_name"], "T_block")
+                    self.assertEqual(selected["run_id"], default["run_id"])
+                    self.assertEqual(selected["object_name"], "T_shape")
                     self.assertEqual(Path(selected["out"]), out)
                     self.assertEqual(selected["object_channel_substring"], "G_shape_video")
                     self.assertTrue(selected["asset_sha256"])
@@ -114,10 +114,8 @@ class ObjectRunTests(ObjectFixtures, unittest.TestCase):
     def test_bad_selection_is_rejected_before_any_launch_or_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "unused"
-            for flags in (["--scene", "shelf_gap", "--objects", "banana"],
-                          ["--scene", "open_task", "--objects", "banana", "banana"],
+            for flags in (["--scene", "open_task", "--objects", "banana", "banana"],
                           ["--scene", "open_task", "--objects", "Tblock"],
-                          ["--scene", "icra_sign", "--objects", "T_block"],
                           ["--scene", "open_task", "--objects", "Cblock"],
                           ["--scene", "open_task", "--objects", "unknown"]):
                 with self.subTest(flags=flags), patch.object(R, "run_one") as launch, \
@@ -180,15 +178,14 @@ class ObjectRunTests(ObjectFixtures, unittest.TestCase):
                 self.assertTrue(simulation_model.is_file())
                 evaluation_path = out / "evaluation_scene_config.yaml"
                 cfg = yaml.safe_load(evaluation_path.read_text())
-                expected_evaluation = (profile if name in S.MESH_OBJECTS else
-                                       yaml.safe_load((R.CONFIG_DIR / "open_task.yaml").read_text()))
+                expected_evaluation = S.evaluation_config("open_table", name)
                 for field in ("footprint", "block_half_height", "tip_target_z", "object_channel_substring"):
                     self.assertEqual(cfg[field], expected_evaluation[field])
                 if "tip_floor_z_real" in expected_evaluation:
                     self.assertEqual(cfg["tip_floor_z_real"], expected_evaluation["tip_floor_z_real"])
                 else:
                     self.assertNotIn("tip_floor_z_real", cfg)
-                if name == "T_block":
+                if name == "T_shape":
                     for key, value in expected_evaluation.items():
                         if key != "goal":
                             self.assertEqual(cfg[key], value, key)

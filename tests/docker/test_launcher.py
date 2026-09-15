@@ -20,7 +20,7 @@ class LauncherTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.context = self.root / "docker"
         self.context.mkdir()
-        for marker in ("MODULE.bazel", ".bazeliskrc", "tools/__main__.py"):
+        for marker in ("MODULE.bazel", ".bazeliskrc", "c3plus/utils/__main__.py"):
             path = self.root / marker
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("checkout marker\n")

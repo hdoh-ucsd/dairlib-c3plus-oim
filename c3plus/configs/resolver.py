@@ -11,9 +11,11 @@ import shutil
 import sys
 import xml.etree.ElementTree as ET
 
-from .catalog import (MESH_OBJECTS, MODELS, _demo_selection, _merge, _read_yaml,
-                      _scene_config, demo_name, resolve_object_profile)
+from .catalog import (MESH_OBJECTS, MODELS, _demo_selection, _read_yaml,
+                      _scene_config, asset_sha256, canonical_object, canonical_task, demo_name,
+                      evaluation_config, native_task, resolve_object_profile)
 from .paths import CONFIG_DIR, EXPERIMENTS_FILE, REPO, _yaml_references, model_assets
+from .poses import pose_ids, pose_provenance, pose_source_files, resolve_pose
 
 
 def planner_environment(config) -> dict[str, str]:
@@ -27,7 +29,7 @@ def planner_environment(config) -> dict[str, str]:
     if not isinstance(planner, dict):
         raise ValueError("planner must be a mapping")
     unknown = planner.keys() - {"box_polygons", "polygon_overrides",
-                                "object_footprint", "obstacle_top_z"}
+                                "object_footprint", "object_footprint_points", "obstacle_top_z"}
     if unknown:
         raise ValueError(f"unknown planner settings: {sorted(unknown, key=str)}")
     boxes = planner.get("box_polygons", [])
@@ -90,6 +92,20 @@ def planner_environment(config) -> dict[str, str]:
         if footprint not in ("c_glyph", "i_glyph", "r_glyph", "a_glyph"):
             raise ValueError(f"unsupported planner object_footprint: {footprint!r}")
         environment["SAMPLING_C3_OBJECT_FOOTPRINT"] = footprint
+    if "object_footprint_points" in planner:
+        if "object_footprint" in planner:
+            raise ValueError("planner must choose either a named or an explicit object footprint")
+        points = planner["object_footprint_points"]
+        if (not isinstance(points, list) or len(points) < 3
+                or any(not isinstance(p, (list, tuple)) or len(p) != 2 for p in points)):
+            raise ValueError("planner.object_footprint_points must contain at least three [x, y] vertices")
+        points = [tuple(number(v) for v in point) for point in points]
+        if (len(set(points)) < 3 or any(a == b for a, b in zip(points, points[1:] + points[:1]))
+                or sum(a[0] * b[1] - b[0] * a[1]
+                       for a, b in zip(points, points[1:] + points[:1])) == 0):
+            raise ValueError("planner.object_footprint_points must define a nondegenerate polygon")
+        environment["SAMPLING_C3_OBJECT_FOOTPRINT_POINTS"] = ";".join(
+            ",".join(format(value, ".17g") for value in point) for point in points)
     if "obstacle_top_z" in planner:
         environment["SAMPLING_C3_OBS_TOP_Z"] = encode([planner["obstacle_top_z"]])
     return environment
@@ -146,28 +162,22 @@ def compose_demo_configs(demo, repo=REPO, goal_yaw_degrees=None, object_name=Non
         simulation = _read_yaml(repo / controller.pop("sim_params_file"))
     else:
         scene_name, start, goal_index, encoded_object = selection
-        if encoded_object is not None and object_name not in (None, encoded_object):
+        if object_name is not None and canonical_object(object_name) != encoded_object:
             raise ValueError("Object selection does not match the demo identifier")
         data = _read_yaml(repo / EXPERIMENTS_FILE)
         if data["schema_version"] != 1:
             raise ValueError("Unsupported experiment configuration schema")
-        scene = _scene_config(data["scenes"], scene_name)
+        scene = _scene_config(data["scenes"], native_task(scene_name))
         profile = resolve_object_profile(scene_name, object_name or encoded_object, repo)
         defaults = data["defaults"]
-        start_refs = _merge(profile["start_positions"], scene.get("start_positions", {}))
-        start_orientation_refs = _merge(_merge(defaults["start_orientations"],
-                                               profile.get("start_orientations", {})),
-                                        scene.get("start_orientations", {}))
-        goal_refs = _merge(profile["goal_positions"], scene.get("goal_positions", {}))
-        orientation_refs = _merge(profile["goal_orientations"], scene.get("goal_orientations", {}))
-        start_xy = _vector(data["start_positions"][start_refs[start]], 2, "Start position")
-        goal_xy = _vector(data["goal_positions"][goal_refs[goal_index]], 2, "Goal position")
-        start_q = _vector(data["orientations"][start_orientation_refs[start]],
-                          4, "Start orientation", quaternion=True)
-        goal_q = _vector(data["orientations"][orientation_refs[goal_index]],
-                         4, "Goal orientation", quaternion=True)
+        start_pose = _vector(list(resolve_pose(scene_name, "start", start, repo=repo)), 3, "Start pose")
+        goal_pose = _vector(list(resolve_pose(scene_name, "goal", goal_index, repo=repo)), 3, "Goal pose")
+        start_xy, goal_xy = start_pose[:2], goal_pose[:2]
+        start_q = [math.cos(start_pose[2] / 2), 0.0, 0.0, math.sin(start_pose[2] / 2)]
+        goal_q = [math.cos(goal_pose[2] / 2), 0.0, 0.0, math.sin(goal_pose[2] / 2)]
         height = _vector([profile["object_height"]], 1, "Object height")[0]
-        robot = scene.get("robot_joint_overrides", {}).get(start, profile["robot_joint_preset"])
+        robot = scene.get("robot_joint_overrides", {}).get(
+            start, scene.get("robot_joint_preset", profile["robot_joint_preset"]))
         joints = _vector(data["robot_joint_presets"][robot], 5, "Robot joint preset")
         controller = deepcopy(defaults["controller"])
         controller.update(sampling_c3_options_file=profile["sampling_c3_options_file"],
@@ -201,20 +211,24 @@ def load_demo_configs(demo, repo=REPO, object_name=None):
     if _demo_selection(demo) is not None:
         composed = compose_demo_configs(demo, repo, object_name=object_name)
         return {repo / EXPERIMENTS_FILE: _read_yaml(repo / EXPERIMENTS_FILE),
-                **_yaml_dependencies(composed, repo)}
+                **_yaml_dependencies(composed, repo),
+                **{path: _read_yaml(path) for path in pose_source_files(repo=repo)}}
     path = repo / "examples/sampling_c3" / demo / "parameters/sampling_c3_controller_params.yaml"
     controller = _read_yaml(path)
     return {path: controller, **_yaml_dependencies(controller, repo)}
 
-def demo_config_digest(demo, repo=REPO, goal_yaw_degrees=None, object_name=None):
+def demo_config_digest(demo, repo=REPO, goal_yaw_degrees=None, object_name=None, *, composed=None):
     """Fingerprint effective settings and dependencies, excluding unused trials."""
     repo = Path(repo)
-    composed = compose_demo_configs(demo, repo, goal_yaw_degrees, object_name)
+    if composed is None:
+        composed = compose_demo_configs(demo, repo, goal_yaw_degrees, object_name)
     dependencies = {str(path.relative_to(repo)): data
                     for path, data in _yaml_dependencies(composed, repo).items()}
     payload = {"composed": composed, "dependencies": dependencies}
+    if _demo_selection(demo) is not None:
+        payload["poses"] = pose_provenance(repo=repo)
     if composed["controller"].get("sampling_mesh_files"):
-        payload["assets"] = {str(path.relative_to(repo.resolve())): hashlib.sha256(path.read_bytes()).hexdigest()
+        payload["assets"] = {str(path.relative_to(repo.resolve())): asset_sha256(path)
                              for path in model_assets(composed, repo)}
         selection = _demo_selection(demo)
         profile = resolve_object_profile(selection[0], object_name or selection[3], repo)
@@ -232,6 +246,8 @@ def write_demo_configs(demo, directory, repo=REPO, goal_yaw_degrees=None, object
         raise FileExistsError(f"Refusing to overwrite configuration directory: {directory}")
     composed = compose_demo_configs(demo, repo, goal_yaw_degrees, object_name)
     dependencies = _yaml_dependencies(composed, repo)
+    pose_files = set(pose_source_files(repo=repo)) if _demo_selection(demo) is not None else set()
+    dependencies.update({path: _read_yaml(path) for path in pose_files})
     assets = model_assets(composed, repo) if composed["controller"].get("sampling_mesh_files") else []
     copies = {str(path.relative_to(repo)): directory / "repository" / path.relative_to(repo)
               for path in (*dependencies, *assets)}
@@ -250,7 +266,10 @@ def write_demo_configs(demo, directory, repo=REPO, goal_yaw_degrees=None, object
     for source, data in dependencies.items():
         target = copies[str(source.relative_to(repo))]
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(yaml.safe_dump(localize(data), sort_keys=False))
+        if source in pose_files:
+            shutil.copy2(source, target)
+        else:
+            target.write_text(yaml.safe_dump(localize(data), sort_keys=False))
     for source in assets:
         target = copies[str(source.relative_to(repo))]
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -297,15 +316,15 @@ def environment(obstacle_cost):
     return env
 
 
-def check_scene_assets(scene, object_name=None, repo=REPO):
+def check_scene_assets(scene, object_name=None, repo=REPO, *, all_poses=True):
     """Resolve selected configurations and parse assets; never advance physics."""
-    import yaml
     from pydrake.multibody.parsing import Parser
     from pydrake.multibody.plant import MultibodyPlant
 
     repo = Path(repo).resolve()
+    scene = canonical_task(scene)
     profile = resolve_object_profile(scene, object_name, repo=repo)
-    config = yaml.safe_load((repo / CONFIG_DIR.relative_to(REPO) / f"{scene}.yaml").read_text())
+    config = evaluation_config(scene, object_name, repo=repo)
     planner_environment(config)
     selected = compose_demo_configs(demo_name(scene, 1, 1, object_name), repo=repo, object_name=object_name)
     # Legacy primitive SDFs use Drake extensions without XML namespace
@@ -356,11 +375,15 @@ def check_scene_assets(scene, object_name=None, repo=REPO):
             path = (metadata_path.parent / relative).resolve()
             if path not in assets:
                 raise RuntimeError(f"Physics metadata asset is not selected by the native models: {path}")
-            if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            if asset_sha256(path) != digest:
                 raise RuntimeError(f"Physics metadata hash differs from the checked-in asset: {path}")
 
-    for start in range(1, 6):
-        for goal in range(1, 6):
+    starts = pose_ids("start", task=scene, repo=repo)
+    goals = pose_ids("goal", task=scene, repo=repo)
+    if not all_poses:
+        starts, goals = starts[:1], goals[:1]
+    for start in starts:
+        for goal in goals:
             name = demo_name(scene, start, goal, object_name)
             inspect_refs(compose_demo_configs(name, repo=repo, object_name=object_name))
             for path, saved_config in load_demo_configs(name, repo=repo, object_name=object_name).items():
@@ -370,9 +393,11 @@ def check_scene_assets(scene, object_name=None, repo=REPO):
     plant = MultibodyPlant(0.001)
     model_parser = Parser(plant)
     model_parser.SetAutoRenaming(True)
-    for path in sorted(models):
-        if not path.is_file():
-            raise RuntimeError(f"Missing model: {path}")
-        model_parser.AddModels(str(path))
-    return (f"{profile['object_name']}: 25 start/goal configurations, selected dependencies, "
+    from .geometry import _quiet_parser
+    with _quiet_parser():
+        for path in sorted(models):
+            if not path.is_file():
+                raise RuntimeError(f"Missing model: {path}")
+            model_parser.AddModels(str(path))
+    return (f"{profile['object_name']}: {len(starts) * len(goals)} start/goal configurations, selected dependencies, "
             "robot/tool/object/obstacle models and available mesh hashes verified; no simulation advanced")

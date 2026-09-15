@@ -4,7 +4,7 @@ from copy import deepcopy
 import io
 import math
 
-from c3plus.utils.serialization import _json_values
+from .serialization import _json_values
 from .exporter import project_result, add_result_semantics, add_execution_projection
 
 def _validate(result, recording, cfg, directory):

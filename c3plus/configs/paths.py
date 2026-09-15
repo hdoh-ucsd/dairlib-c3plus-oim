@@ -5,7 +5,6 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 REPO = Path(__file__).resolve().parents[2]
-TOOL_DIR = REPO / "tools"
 RUNTIME_DIR = REPO / "c3plus/runtime"
 CONFIG_DIR = Path(__file__).resolve().parent / "scenes"
 EXPERIMENTS_FILE = Path("examples/sampling_c3/shared_parameters/experiments.yaml")
@@ -40,7 +39,12 @@ def model_assets(composed, repo=REPO):
             raise FileNotFoundError(path)
         paths.add(path)
         if path.suffix == ".sdf":
-            for uri in ET.fromstring(path.read_text()).iter("uri"):
+            document = path.read_text()
+            # Drake accepts its historical extension prefix without an XML
+            # namespace declaration. Supply it only to this read-only parser.
+            if "xmlns:drake=" not in document:
+                document = document.replace("<sdf", '<sdf xmlns:drake="http://drake.mit.edu"', 1)
+            for uri in ET.fromstring(document).iter("uri"):
                 value = (uri.text or "").strip()
                 if "://" in value:
                     raise ValueError(f"Object model must reference local mesh assets: {value}")

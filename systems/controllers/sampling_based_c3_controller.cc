@@ -7,7 +7,9 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <locale>
 #include <sstream>
+#include <stdexcept>
 #include <algorithm>
 #include <array>
 #include <map>
@@ -334,12 +336,51 @@ inline const std::vector<std::pair<double, double>>& AFootprint() {
        {-0.0501, 0.018}});
   return pts;
 }
+// Imported object outlines are read in their existing model's local XY frame.
+// Use the same boundary densification as the existing glyph geometry; all
+// witness, distance, routing and obstacle-contact calculations below are shared.
+inline const std::vector<std::pair<double, double>>& CustomFootprint() {
+  static const std::vector<std::pair<double, double>> pts = [] {
+    const char* encoded = std::getenv("SAMPLING_C3_OBJECT_FOOTPRINT_POINTS");
+    std::istringstream entries(encoded ? encoded : "");
+    std::string entry;
+    std::vector<std::pair<double, double>> hull;
+    while (std::getline(entries, entry, ';')) {
+      std::istringstream point(entry);
+      point.imbue(std::locale::classic());
+      double x, y;
+      char comma;
+      if (!(point >> x >> comma >> y) || comma != ',' ||
+          !std::isfinite(x) || !std::isfinite(y) ||
+          !(point >> std::ws).eof()) {
+        throw std::runtime_error("Invalid SAMPLING_C3_OBJECT_FOOTPRINT_POINTS: expected finite x,y pairs");
+      }
+      hull.emplace_back(x, y);
+    }
+    double twice_area = 0.0;
+    for (size_t i = 0; i < hull.size(); ++i) {
+      const auto& a = hull[i];
+      const auto& b = hull[(i + 1) % hull.size()];
+      if (a == b) {
+        throw std::runtime_error("Invalid SAMPLING_C3_OBJECT_FOOTPRINT_POINTS: repeated boundary vertex");
+      }
+      twice_area += a.first * b.second - b.first * a.second;
+    }
+    if (hull.size() < 3 || !std::isfinite(twice_area) || twice_area == 0.0) {
+      throw std::runtime_error("Invalid SAMPLING_C3_OBJECT_FOOTPRINT_POINTS: degenerate polygon");
+    }
+    return DensifyHull(hull);
+  }();
+  return pts;
+}
 // Object footprint selector: SAMPLING_C3_OBJECT_FOOTPRINT switches every
 // footprint consumer (LCS witness, route, swept veto, legacy nonpen) from
 // the default T to the named glyph: c_glyph, i_glyph, r_glyph, a_glyph.
 // Scene representation only — no controller semantics.
 inline const std::vector<std::pair<double, double>>& Footprint() {
   static const std::vector<std::pair<double, double>>* sel = [] {
+    const char* points = std::getenv("SAMPLING_C3_OBJECT_FOOTPRINT_POINTS");
+    if (points != nullptr && points[0] != '\0') return &CustomFootprint();
     const char* f = std::getenv("SAMPLING_C3_OBJECT_FOOTPRINT");
     const std::string s = f ? f : "";
     if (s == "c_glyph") return &CFootprint();

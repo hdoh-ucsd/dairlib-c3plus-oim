@@ -1,0 +1,40 @@
+{
+  "format": "oim-canonical-poses/v1",
+  "source_repository": "https://github.com/NikolaRaicevic2001/Object-Informed-Manipulation-MJX.git",
+  "source_commit": "a31203d8e9a347ba7bf373954a4b7e4059d1e350",
+  "selection": "task-specific source files; clutter is outside the six-task suite",
+  "coordinate_convention": {
+    "frame": "world object body origin",
+    "position_units": "m",
+    "orientation": "yaw about world +Z",
+    "orientation_units": "rad",
+    "robot_configuration_included": false,
+    "height_included": false
+  },
+  "files": {
+    "icra_sign.yaml": {
+      "source_path": "examples/poses/icra_sign.yaml",
+      "sha256": "2732c85e4baeaa79e45161d9b4c755861f95ee1c08e8f69a78e26c92d10056bd"
+    },
+    "open_table.yaml": {
+      "source_path": "examples/poses/open_table.yaml",
+      "sha256": "f285627313e946398a92b7176bba61556a46441a8da42e2ccff530d5f3d38c5d"
+    },
+    "shelf_gap.yaml": {
+      "source_path": "examples/poses/shelf_gap.yaml",
+      "sha256": "5ae3be09ca4e1b3b9b733b8e2cee03fa31a93c21c1f2709b53b27a91af0c3c81"
+    },
+    "single_obstacle.yaml": {
+      "source_path": "examples/poses/single_obstacle.yaml",
+      "sha256": "a0462bd160d9d714fac0e8d4344ae2be557bf6bebe4ffed9048ffddfaff45eaa"
+    },
+    "slalom.yaml": {
+      "source_path": "examples/poses/slalom.yaml",
+      "sha256": "c6f1a304fc066f8035eb416afe01ad1b08b0727763666267e3243f7f9e4de93a"
+    },
+    "ycb_clutter.yaml": {
+      "source_path": "examples/poses/ycb_clutter.yaml",
+      "sha256": "75a3bfc9fa8c86cd7f7ed152a3d98db2a99d77c5fe5c801a6bd864c6f93853ea"
+    }
+  }
+}

@@ -15,7 +15,7 @@ import yaml
 from c3plus.configs.paths import REPO
 from c3plus.recording.execution import read_execution_steps, read_native_execution
 from c3plus.recording.planning import read_planning_updates
-from c3plus.utils.serialization import _json
+from .serialization import _json
 from .metadata import add_recorded_semantics
 from .validation import _validate
 
@@ -319,3 +319,7 @@ def main(argv=None):
         print(f"[COMPACT] {result['run_id']} JSON + MP4: {args.run_dir}")
     except (OSError, ValueError, KeyError, TypeError, RuntimeError, subprocess.SubprocessError) as exc:
         parser.exit(1, f"{exc}\n")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from c3plus.experiments import run as R
+from c3plus.utils import run as R
 
 from tests.fixtures.results import WorkflowFixtures
 

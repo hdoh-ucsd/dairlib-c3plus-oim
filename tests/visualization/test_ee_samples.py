@@ -33,25 +33,28 @@ class MeshPreviewTests(MeshPreviewFixtures, unittest.TestCase):
                     rotation = RollPitchYaw(0, 0, math.radians(yaw)).ToRotationMatrix().matrix()
                     np.testing.assert_allclose(local @ rotation.T + settings["position_m"], world, atol=1e-12)
                     self.assertEqual(world.shape, (32, 3))
-                    height = 0.005 if scene == "open_task" else -0.012
-                    np.testing.assert_allclose(world[:, 2], height, atol=1e-12)
+                    np.testing.assert_allclose(world[:, 2], 0.005, atol=1e-12)
                     self.assertTrue(np.all((world[:, 0] >= 0.17) & (world[:, 0] <= 0.73)))
                     self.assertTrue(np.all((world[:, 1] >= -0.58) & (world[:, 1] <= 0.58)))
                     radius = np.linalg.norm(world[:, :2], axis=1)
                     self.assertTrue(np.all((radius >= 0.27) & (radius <= 0.68)))
-                    if scene == "open_task":
-                        distances = np.minimum(
-                            box_distance(local, [0, 0.0099, 0], [0.0445, 0.0099, 0.0298]),
-                            box_distance(local, [0, -0.0397, 0], [0.0099, 0.0397, 0.0298]))
-                        self.assertTrue(np.all(distances - 0.00555 > 0.019 - 1e-12))
-                    else:
-                        distances = np.minimum.reduce([
-                            box_distance(local, [-0.0323, 0, 0], [0.016, 0.0515, 0.0125]),
-                            box_distance(local, [0, 0.0355, 0], [0.0483, 0.016, 0.0125]),
-                            box_distance(local, [0, -0.0355, 0], [0.0483, 0.016, 0.0125]),
-                        ])
-                        self.assertTrue(np.all(distances > 0.027))
+                    distances = np.minimum(
+                        box_distance(local, [0, 0.0099, 0], [0.0445, 0.0099, 0.0298]),
+                        box_distance(local, [0, -0.0397, 0], [0.0099, 0.0397, 0.0298]))
+                    self.assertTrue(np.all(distances - 0.00555 > 0.019 - 1e-12))
                     self.assertNotEqual(first["points_world"], V.sample_ee_candidates(settings, 32, 43)["points_world"])
+
+    def test_configured_imported_meshes_use_existing_section_preview(self):
+        for name in ("hammer", "sugar_box", "power_drill", "banana"):
+            for task in ("open_table", "icra_sign"):
+                with self.subTest(object=name, task=task):
+                    settings = self.settings("--task", task, "--object", name, "--ee-samples", "8")
+                    report = V.sample_ee_candidates(settings, 8, 42)
+                    direct = V.sample_raw_mesh_ee_candidates(settings, 8, 42)
+                    self.assertEqual(report, direct)
+                    self.assertEqual(len(report["points_world"]), 8)
+                    np.testing.assert_allclose(np.asarray(report["points_world"])[:, 2], -0.012, atol=1e-12)
+                    self.assertGreaterEqual(report["validation"]["minimum_center_clearance_m"], 0.027 - 1e-10)
 
 
     def test_raw_mesh_ee_samples_preserve_concavity(self):

@@ -10,11 +10,12 @@ import sys
 import time
 import yaml
 
-from c3plus.configs import (BINARIES, CONFIG_DIR, MESH_OBJECTS, MODELS, OBSTACLE_COSTS,
+from c3plus.configs import (BINARIES, MODELS, OBSTACLE_COSTS,
                            REPO, RUN_OBJECTS, SCENES, environment, planner_environment,
                            write_demo_configs)
-from c3plus.experiments.plan import plan_run
-from c3plus.runtime.processes import classify_failure, logged_command
+from c3plus.configs.catalog import canonical_task, canonical_object, evaluation_config
+from c3plus.utils.plan import plan_run
+from c3plus.runtime.processes import classify_failure, logged_command, check_experiment_capabilities
 from c3plus.runtime.provenance import capture_source_state, runtime_versions
 from c3plus.evaluation.package import compact_run
 
@@ -37,27 +38,21 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
             goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None):
     plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
                     goal_yaw_degrees, object_name, steps)
+    scene, object_name = plan["scene"], plan["object_name"]
     pose = plan["evaluation_goal"]
     out = Path(out).resolve()
     if out.exists():
         raise FileExistsError(f"Refusing to overwrite existing run directory: {out}")
-    config = yaml.safe_load((CONFIG_DIR / f"{scene}.yaml").read_text())
+    config = evaluation_config(scene, object_name)
     config["goal"] = list(pose)
-    if object_name in MESH_OBJECTS:
-        profile = plan["object_profile"]
-        config.update({key: profile[key] for key in ("footprint", "block_half_height", "tip_target_z",
-                                                    "object_channel_substring")})
-        if "tip_floor_z_real" in profile:
-            config["tip_floor_z_real"] = profile["tip_floor_z_real"]
-    if object_name is not None:
-        config.update(object_name=object_name, simulation_model=plan["simulation_model"],
-                      controller_model=plan["controller_model"], object_body_name=plan["object_body_name"])
     env = environment(obstacle_cost)
     env.update(planner_environment(config))
     binary_dir = REPO / ".build/bin/examples/sampling_c3"
     for name in BINARIES:
         if not os.access(binary_dir / name, os.X_OK):
             raise RuntimeError(f"Build {name} from this checkout first")
+    if "franka_sampling_c3_controller" in BINARIES:
+        check_experiment_capabilities(REPO)
     cache = REPO / ".cache"
     cache.mkdir(exist_ok=True)
     with (cache / "sampling_c3_run.lock").open("a") as lock:
@@ -155,10 +150,12 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=600, port=18001,
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--scene", choices=SCENES, required=True)
-    parser.add_argument("--objects", nargs="+", choices=RUN_OBJECTS,
-                        help="Objects to push serially; T_block uses its existing scenes, "
-                             "imported meshes require open_task; multiple objects use OUT/object_name")
+    parser.add_argument("--task", "--scene", dest="scene", type=canonical_task, choices=SCENES, required=True)
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--object", type=canonical_object, choices=RUN_OBJECTS,
+                           help="One manipulated object (default: T_shape)")
+    selection.add_argument("--objects", nargs="+", type=canonical_object, choices=RUN_OBJECTS,
+                           help="Objects to push serially; multiple objects use OUT/object_name")
     parser.add_argument("--obstacle_cost", choices=OBSTACLE_COSTS, default="exponential")
     parser.add_argument("--start", type=int, choices=range(1, 6), default=1)
     parser.add_argument("--goal", type=int, choices=range(1, 6), default=1)
@@ -173,7 +170,7 @@ def main(argv=None):
     parser.add_argument("--dry-run", action="store_true", help="Print the resolved run plan without building, running, or writing files")
     args = parser.parse_args(argv)
     try:
-        selected = args.objects if args.objects is not None else [None]
+        selected = args.objects if args.objects is not None else [args.object or "T_shape"]
         if len(set(selected)) != len(selected):
             raise ValueError("--objects must not contain duplicates")
         options = dict(max_frames=args.max_frames, goal_yaw_degrees=args.goal_yaw_degrees)

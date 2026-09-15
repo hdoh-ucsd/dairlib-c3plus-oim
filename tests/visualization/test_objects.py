@@ -11,7 +11,7 @@ from unittest.mock import patch
 import numpy as np
 
 from c3plus import configs as S
-from tools import __main__ as cli
+from c3plus.utils import __main__ as cli
 from c3plus.visualization import objects as V
 
 from tests.fixtures.results import MeshPreviewFixtures
@@ -19,7 +19,7 @@ from tests.fixtures.results import MeshPreviewFixtures
 class MeshPreviewTests(MeshPreviewFixtures, unittest.TestCase):
     def test_help_without_drake(self):
         result = subprocess.run(
-            [sys.executable, "-S", "-m", "tools.visualize", "--help"],
+            [sys.executable, "-S", "-m", "c3plus.visualization.objects", "--help"],
             capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("--mesh", result.stdout)
@@ -29,7 +29,7 @@ class MeshPreviewTests(MeshPreviewFixtures, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             image = Path(tmp) / "new" / "object.png"
             result = subprocess.run(
-                [sys.executable, "-m", "tools", "visualize",
+                [sys.executable, "-m", "c3plus.utils", "visualize",
                  "--output", str(image), "--view", "top", "--ee-samples", "--dry-run"],
                 cwd=S.REPO, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -50,7 +50,23 @@ class MeshPreviewTests(MeshPreviewFixtures, unittest.TestCase):
         self.assertEqual(goal["position_m"][:2], [0.397, -0.431])
         self.assertAlmostEqual(goal["quaternion_wxyz"][0], math.sqrt(0.5))
         self.assertAlmostEqual(goal["quaternion_wxyz"][3], -math.sqrt(0.5))
-        self.assertTrue(self.settings("--scene", "icra_sign")["object_file"].endswith("push_c_glyph.sdf"))
+        self.assertTrue(self.settings("--scene", "icra_sign")["object_file"].endswith("push_t_oimscale_m01.sdf"))
+
+    def test_every_public_object_has_matching_configured_preview(self):
+        for task in S.TASKS:
+            for name in S.OBJECTS:
+                with self.subTest(task=task, object=name):
+                    settings = self.settings("--task", task, "--object", name, "--ee-samples", "8")
+                    profile = S.resolve_object_profile(task, name)
+                    self.assertEqual(settings["object_name"], name)
+                    self.assertEqual(settings["object_file"], str(S.REPO / profile["simulation_model"]))
+                    self.assertEqual(settings["position_m"][2], profile["object_height"])
+                    self.assertFalse(settings["raw_mesh"])
+                    if name in S.MESH_OBJECTS:
+                        sampling = settings["ee_sampling"]
+                        self.assertEqual(sampling["mode"], "mesh_section_perimeter")
+                        self.assertEqual(sampling["mesh_file"], str(S.REPO / profile["controller"]["sampling_mesh_files"][0]))
+        self.assertEqual(self.settings("--task", "open_task", "--object", "T_block")["object_name"], "T_shape")
 
 
     def test_invalid_preview_options_fail_before_viewer(self):
@@ -91,10 +107,9 @@ class MeshPreviewTests(MeshPreviewFixtures, unittest.TestCase):
             mjcf.write_text('<mujoco model="preview_test"><worldbody><body name="test_object">'
                             '<freejoint/><geom type="box" size=".01 .02 .03"/>'
                             '</body></worldbody></mujoco>')
-            cases = [(self.settings("--scene", scene, "--start", "2"),
-                      "c_glyph_base" if scene == "icra_sign" else "vertical_link")
+            cases = [(self.settings("--scene", scene, "--start", "2"), "vertical_link")
                      for scene in S.SCENES]
-            for scene, body in (("open_task", "vertical_link"), ("icra_sign", "c_glyph_base")):
+            for scene, body in (("open_task", "vertical_link"), ("icra_sign", "vertical_link")):
                 for yaw in (90, 0, -90):
                     cases.append((self.settings("--scene", scene, "--pose", "goal", "--goal", "2",
                                                 "--goal-yaw-degrees", str(yaw)), body))

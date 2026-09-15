@@ -13,6 +13,14 @@ def yaw_of(q):
 
 
 def progress_label(object_name, steps_path):
+    # New managed runs already record their canonical public identity. Retain
+    # the model/channel fallback below for archived or direct native runs.
+    try:
+        runtime = json.loads((Path(steps_path).parent / "runtime_status.json").read_text())
+        if isinstance(runtime.get("object_name"), str) and runtime["object_name"]:
+            return runtime["object_name"]
+    except (OSError, ValueError, AttributeError):
+        pass
     if object_name in {f"{name}_base" for name in ("sugar_box", "power_drill", "hammer", "banana")}:
         return object_name.removesuffix("_base")
     known = {"T_shape_video": "T_block", "vertical_link": "T_block", "c_glyph_base": "Cblock"}

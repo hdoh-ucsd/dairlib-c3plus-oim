@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 from c3plus import configs as S
 from c3plus.runtime import processes as Processes
-from c3plus.experiments import run as R
+from c3plus.utils import run as R
 
 from tests.fixtures.results import WorkflowFixtures, launch_subprocess
 
