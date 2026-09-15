@@ -35,7 +35,17 @@ def verify_goal_yaw(log, plan):
     return False
 
 def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS, port=18001,
-            goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None):
+            goal_pose=None, max_frames=1200, goal_yaw_degrees=None, object_name=None, steps=None,
+            record=True, video=True):
+    """Run and package one trial.
+
+    ``video=False`` keeps every recording and metric but skips the MP4 replay,
+    which is the bulk of the per-trial cost after the cap. ``record=False``
+    additionally skips the recorder, so the trial produces only logs: there is
+    no telemetry, no result JSON, no metrics and nothing for ``eval`` to read.
+    """
+    if not record:
+        video = False
     plan = plan_run(scene, obstacle_cost, start, goal, out, cap, port, goal_pose, max_frames,
                     goal_yaw_degrees, object_name, steps)
     scene, object_name = plan["scene"], plan["object_name"]
@@ -77,6 +87,7 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS
                   "config_sha256": {str(path.relative_to(out)): hashlib.sha256(path.read_bytes()).hexdigest()
                                     for path in sorted((out / "config").rglob("*.yaml"))},
                   "execution": "serial", "python": sys.executable,
+                  "recording_enabled": record, "video_enabled": video,
                   "worktree_dirty": source_state["worktree_dirty"],
                   "source_state": {"path": "config/source_state.json",
                                    "sha256": hashlib.sha256(source_bytes).hexdigest(),
@@ -95,6 +106,8 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS
             launch.extend(["--goal-yaw-degrees", str(plan["goal_yaw_degrees"])])
         if steps is not None:
             launch.extend(["--steps", str(steps)])
+        if not record:
+            launch.append("--no-record")
         rc = logged_command(launch, out / "launcher.log", env)
         # A launcher preflight failure happens before process logs exist.
         # Preserve its actual error without masking it with a missing-file error.
@@ -110,9 +123,15 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS
             status["goal_yaw_verified"] = verify_goal_yaw(out / "planner.log", plan)
         status_path = out / "runtime_status.json"
         status_path.write_text(json.dumps(status, indent=2) + "\n")
+        recordings = ("steps_raw.jsonl", "state_trace.jsonl") if record else ()
         if rc or not status["seed_verified"] or not status.get("goal_yaw_verified", True) or any(not (out / name).is_file() or not (out / name).stat().st_size
-                    for name in ("steps_raw.jsonl", "state_trace.jsonl")):
+                    for name in recordings):
             raise RuntimeError(f"Invalid/no-data run; preserved logs in {out}")
+        if not record:
+            # Nothing was recorded, so there is no result to postprocess,
+            # render, validate or compact. Keep the logs and stop here.
+            print(f"[COMPLETE] {run_id} unrecorded failures={status['failures']} folder={out}", flush=True)
+            return status
         # Packaging occurs after simulation cleanup and under the same lock.
         (out / "tmp").mkdir(exist_ok=True)
         env.update(TMPDIR=str(out / "tmp"), MPLCONFIGDIR=str(out / "tmp/matplotlib"), OMP_NUM_THREADS="1",
@@ -134,8 +153,9 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS
             "postprocess": [sys.executable, "-m", "c3plus.evaluation.postprocess",
                             "--run-dir", str(out), "--scene", scene, "--run-id", run_id,
                             "--scene-config", str(config_path), "--demo", demo],
-            "render": render,
         }
+        if video:
+            commands["render"] = render
         for phase, command in commands.items():
             print(f"[PACKAGE] {run_id} {phase}", flush=True)
             status[phase + "_rc"] = logged_command(command, out / f"{phase}.log", env)
@@ -144,7 +164,8 @@ def run_one(scene, obstacle_cost, start, goal, out, cap=DEFAULT_WALL_CAP_SECONDS
                 raise RuntimeError(f"{phase} failed; inspect {out / (phase + '.log')}")
         # Commit one validated record before deleting redundant intermediate files.
         print(f"[PACKAGE] {run_id} consolidate and clean", flush=True)
-        compact_run(out, run_id, status=status, require_legacy_complete=False)
+        compact_run(out, run_id, status=status, require_legacy_complete=False,
+                    video_required=video)
         print(f"[COMPLETE] {run_id} failures={status['failures']} folder={out}", flush=True)
         return status
 
@@ -168,6 +189,11 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=18001)
     parser.add_argument("--out", type=Path, required=True, help="New directory; existing dirs are refused")
     parser.add_argument("--max-frames", type=int, default=1200)
+    parser.add_argument("--no-video", dest="video", action="store_false",
+                        help="Skip MP4 rendering; keep all recordings, metrics and the result JSON")
+    parser.add_argument("--no-record", dest="record", action="store_false",
+                        help="Skip the recorder entirely: logs only, no telemetry, "
+                             "no result JSON and nothing for eval; implies --no-video")
     parser.add_argument("--dry-run", action="store_true", help="Print the resolved run plan without building, running, or writing files")
     args = parser.parse_args(argv)
     try:
@@ -177,6 +203,9 @@ def main(argv=None):
         options = dict(max_frames=args.max_frames, goal_yaw_degrees=args.goal_yaw_degrees)
         if args.steps is not None:
             options["steps"] = args.steps
+        # Recording choices affect execution and packaging only; plan_run
+        # resolves the configuration and does not accept them.
+        execution_options = dict(record=args.record, video=args.video)
         jobs = [(name, args.out / name if len(selected) > 1 else args.out) for name in selected]
         plans = [plan_run(args.scene, args.obstacle_cost, args.start, args.goal,
                           out, args.cap, args.port, **options,
@@ -190,7 +219,7 @@ def main(argv=None):
                 raise FileExistsError(f"Refusing to overwrite existing run directory: {out.resolve()}")
         for name, out in jobs:
             run_one(args.scene, args.obstacle_cost, args.start, args.goal, out,
-                    args.cap, args.port, **options,
+                    args.cap, args.port, **options, **execution_options,
                     **({"object_name": name} if name is not None else {}))
     except (RuntimeError, ValueError, OSError, KeyError, TypeError) as exc:
         parser.exit(1, f"{exc}\n")

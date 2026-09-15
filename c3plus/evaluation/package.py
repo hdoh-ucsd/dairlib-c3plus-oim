@@ -70,10 +70,16 @@ def completion(run_dir, run_id=None):
         identity = result["run_id"]
         if path.name != f"{identity}_result.json":
             return False
+        package = result.get("package")
         video = directory / f"{identity}.mp4"
+        # A bundle may omit the MP4 only when it recorded that rendering was
+        # skipped on purpose; a missing video is otherwise still incomplete.
+        if package is not None and package.get("video_skipped") is True:
+            return (package.get("status") == "complete"
+                    and package.get("cleanup_complete") is True
+                    and not video.exists())
         if video.is_symlink() or not video.is_file() or not video.stat().st_size:
             return False
-        package = result.get("package")
         if package is None:
             return (directory / "RUN_COMPLETE").is_file()
         recorded = package.get("video", {})
@@ -194,7 +200,8 @@ def _write(path, data):
             temporary.unlink(missing_ok=True)
 
 
-def compact_run(run_dir, run_id=None, status=None, require_legacy_complete=True):
+def compact_run(run_dir, run_id=None, status=None, require_legacy_complete=True,
+                video_required=True):
     """Validate and embed original data before removing known transient files.
 
     The caller must hold sampling_c3_run.lock. Cleanup is retriable: the first
@@ -231,16 +238,26 @@ def compact_run(run_dir, run_id=None, status=None, require_legacy_complete=True)
     for key, expected in (("run_id", run_id), ("scene", result["scenario"])):
         if key in runtime and runtime[key] != expected:
             raise ValueError(f"Runtime {key} does not match this result")
-    if any(runtime.get(key) != 0 for key in ("wrapper_rc", "postprocess_rc", "render_rc")):
+    # A retry must keep the rendering decision of the bundle it is resuming.
+    if retry and package.get("video_skipped") is True:
+        video_required = False
+    required_rc = ("wrapper_rc", "postprocess_rc") + (("render_rc",) if video_required else ())
+    if any(runtime.get(key) != 0 for key in required_rc):
         raise ValueError("Successful launch, postprocessing and rendering are required before cleanup")
     if any(runtime.get(key) is False for key in ("seed_verified", "goal_yaw_verified")):
         raise ValueError("A run with failed seed or goal verification cannot be compacted")
-    video = _video(directory / f"{run_id}.mp4")
+    if video_required:
+        video = _video(directory / f"{run_id}.mp4")
+    else:
+        video = None
+        if (directory / f"{run_id}.mp4").exists():
+            raise ValueError("A rendered MP4 is present although rendering was skipped")
     if retry:
         expected_inventory = package["cleanup_inventory"]
         if any(expected_inventory.get(name) != digest for name, digest in inventory.items()):
             raise ValueError("A remaining artifact changed after partial cleanup")
-        if any(package["video"].get(key) != video[key] for key in ("file", "size_bytes", "sha256")):
+        if video is not None and any(package["video"].get(key) != video[key]
+                                     for key in ("file", "size_bytes", "sha256")):
             raise ValueError("The video changed after partial cleanup")
         recording = result["recording"]
         cfg = result["provenance"]["configuration"]["files"]["evaluation_scene_config.yaml"]["data"]
@@ -275,9 +292,11 @@ def compact_run(run_dir, run_id=None, status=None, require_legacy_complete=True)
     _validate(result, recording, cfg, directory)
     if _inventory(directory, run_id) != inventory:
         raise ValueError("Run artifacts changed during compaction")
-    if _digest(directory / video["file"]) != {key: video[key] for key in ("size_bytes", "sha256")}:
+    if video is not None and _digest(directory / video["file"]) != {key: video[key]
+                                                                    for key in ("size_bytes", "sha256")}:
         raise ValueError("Video changed during compaction")
     result["package"] = {"status": "complete", "cleanup_complete": False, "video": video,
+                         "video_skipped": video is None,
                          "cleanup_inventory": package["cleanup_inventory"] if retry else inventory}
     _write(path, result)
     # The verified JSON now contains the original recordings and configuration.
@@ -296,7 +315,8 @@ def compact_run(run_dir, run_id=None, status=None, require_legacy_complete=True)
             for folder in sorted((p for p in root.rglob("*") if p.is_dir()), reverse=True):
                 folder.rmdir()
             root.rmdir()
-    if {item.name for item in directory.iterdir()} != {path.name, video["file"]}:
+    expected_names = {path.name} | ({video["file"]} if video is not None else set())
+    if {item.name for item in directory.iterdir()} != expected_names:
         raise ValueError("Unexpected artifacts appeared during cleanup")
     result["package"]["cleanup_complete"] = True
     _write(path, result)

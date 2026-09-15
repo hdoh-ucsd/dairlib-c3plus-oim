@@ -14,6 +14,23 @@ from c3plus.runtime.lcm import multicast_url
 from c3plus.runtime.processes import cleanup_sessions, start_session
 
 
+def _wait_without_recorder(processes, cap):
+    """Bound an unrecorded trial: first native exit, or the cap.
+
+    No recorder means nothing detects success, so the cap is the normal ending
+    and is reported as success. A native process that exits first is reported
+    with its own status so crashes stay visible to the caller.
+    """
+    deadline = time.monotonic() + cap
+    while time.monotonic() < deadline:
+        for name in ("sim", "planner", "osc"):
+            process = processes[name]
+            if process is not None and process.poll() is not None:
+                return process.returncode
+        time.sleep(0.2)
+    return 0
+
+
 def _supports(binary, flag):
     # Gflags help may exit nonzero; inspect its text without constructing systems.
     result = subprocess.run([str(binary), "--helpshort"], stdout=subprocess.PIPE,
@@ -22,7 +39,18 @@ def _supports(binary, flag):
 
 
 def launch(demo, object_name, goal, cap, port, out, controller_params=None,
-           goal_yaw_degrees=None, steps=None):
+           goal_yaw_degrees=None, steps=None, record=True):
+    """Run one native trial.
+
+    With ``record`` (the default) the snapshot recorder both captures telemetry
+    and defines the trial's lifetime: the trial ends when the recorder exits on
+    its cap, on first success, or on the execution-step budget.
+
+    With ``record=False`` no recorder runs, so nothing observes success and no
+    telemetry is written. The trial then ends when a native process exits or the
+    same ``cap`` elapses, whichever happens first. This is for watching or
+    profiling the algorithm; it cannot produce a result JSON or any metric.
+    """
     binary_dir = REPO / ".build/bin/examples/sampling_c3"
     controller_args = []
     planner_goal_args = []
@@ -87,18 +115,22 @@ def launch(demo, object_name, goal, cap, port, out, controller_params=None,
                 "--robot_model=xarm6", "--execution_logging=true", f"--lcm_url={url}", *controller_args])
             native("planner", "franka_sampling_c3_controller", ["--is_simulation=true", f"--demo_name={demo}",
                 "--robot_model=xarm6", f"--lcm_url={url}", *controller_args, *planner_goal_args])
-            # Retain shell pipefail/tee semantics in this single recorder pipeline.
-            processes["recorder"] = start_session(["bash", "-c",
-                'set -o pipefail; recorder_log=$1; shift; "$@" 2>&1 | tee "$recorder_log"',
-                "recorder", str(out / "recorder.log"), env.get("PYTHON") or "python3",
-                "-m", "c3plus.recording.recorder", "--goal", *map(str, goal),
-                "--object-name", object_name, "--out-steps", str(out / "steps_raw.jsonl"),
-                "--out-trace", str(out / "state_trace.jsonl"), "--url", url,
-                "--duration", str(cap), "--exit-on-success", *recorder_args], cwd=REPO, env=env)
+            if record:
+                # Retain shell pipefail/tee semantics in this single recorder pipeline.
+                processes["recorder"] = start_session(["bash", "-c",
+                    'set -o pipefail; recorder_log=$1; shift; "$@" 2>&1 | tee "$recorder_log"',
+                    "recorder", str(out / "recorder.log"), env.get("PYTHON") or "python3",
+                    "-m", "c3plus.recording.recorder", "--goal", *map(str, goal),
+                    "--object-name", object_name, "--out-steps", str(out / "steps_raw.jsonl"),
+                    "--out-trace", str(out / "state_trace.jsonl"), "--url", url,
+                    "--duration", str(cap), "--exit-on-success", *recorder_args], cwd=REPO, env=env)
             time.sleep(3)
             native("sim", "franka_sim", [f"--demo_name={demo}", "--robot_model=xarm6", "--matched_mu",
                 f"--lcm_url={url}", *controller_args, *simulation_args])
-            rc = processes["recorder"].wait()
+            if record:
+                rc = processes["recorder"].wait()
+            else:
+                rc = _wait_without_recorder(processes, float(cap))
             print(f"RUN DONE {demo} -> {out}", flush=True)
             return rc if rc >= 0 else 128 - rc
     finally:
@@ -131,10 +163,12 @@ def main(argv=None):
     parser.add_argument("--controller-params")
     parser.add_argument("--goal-yaw-degrees")
     parser.add_argument("--steps")
+    parser.add_argument("--no-record", dest="record", action="store_false",
+                        help="Skip the snapshot recorder: no telemetry, no success detection")
     args = parser.parse_args(argv)
     try:
         return launch(args.demo, args.object_name, args.goal, args.cap, args.port, args.out,
-                      args.controller_params, args.goal_yaw_degrees, args.steps)
+                      args.controller_params, args.goal_yaw_degrees, args.steps, args.record)
     except (ValueError, OSError) as exc:
         parser.exit(2, f"{exc}\n")
 
