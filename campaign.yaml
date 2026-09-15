@@ -15,11 +15,7 @@ objects:
   - power_drill
   - banana
 
-# A preset -- all (25 pairs), diagonal (S1-G1 .. S5-G5), smoke (S1-G1 only) --
-# or explicit [start, goal] pairs, for example:
-#   pairs:
-#     - [2, 2]
-#     - [1, 3]
+# All pairs of objects, for example:
 pairs:
   - [1, 1]
   - [1, 2]
