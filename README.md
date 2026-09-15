@@ -23,7 +23,7 @@ Docker engine; the launcher reserves part for the host and requires at least
 **1. HOST — clone the checkout.**
 
 ```bash
-git clone --branch integration/c3plus-oim-consolidated https://github.com/hdoh-ucsd/dairlib-c3plus-oim.git
+git clone --branch main https://github.com/hdoh-ucsd/dairlib-c3plus-oim.git
 cd dairlib-c3plus-oim
 git rev-parse HEAD
 ```
