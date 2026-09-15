@@ -6,8 +6,8 @@ This checkout contains the Drake simulator, controllers, scene assets, and
 building and running experiments; host Python, Conda, ROS, and a GPU are not required.
 
 [Quick Start](#quick-start) · [Docker Environment](#docker-environment) ·
-[Run All Experiments](#run-all-experiments) · [Results](#results) ·
-[Troubleshooting](#troubleshooting) · [Repository Structure](#repository-structure)
+[Experiments](#experiments) · [Results](#results) ·
+[Repository Structure](#repository-structure)
 
 ## Quick Start
 
@@ -73,7 +73,7 @@ python3 -m unittest discover -s tests
 
 These tests do not launch experiments.
 
-**7. CONTAINER — [run all experiments](#run-all-experiments).**
+**7. CONTAINER — launch the [experiments](#experiments).**
 
 Use the single campaign command below to launch every task, object and
 initial/goal pose combination. Add `--dry-run` to inspect the complete selection
@@ -119,8 +119,6 @@ nonroot users. Use `./docker/shell.sh --build-only` to build without opening a
 shell, or `./docker/shell.sh --help` for all launcher options.
 
 ## Experiments
-
-### Run all experiments
 
 After the Quick Start setup, run this single command **inside the container,
 from the repository root**:
@@ -183,9 +181,13 @@ and hashes. Runtime reads only these local files and needs no OIM checkout or
 network access. Goal orientation comes from the selected pose unless explicitly
 overridden for a targeted debugging run.
 
-`T_shape` maps to the existing native T-shaped profile; `open_table` maps to the
-native scene `open_task`. Native assets retain their names. C-block models remain
-for native compatibility/history but are not manipulated experiment options.
+**The default manipulated object for `icra_sign` is `T_block`**, as for the other
+tasks. Its canonical CLI/result name is `T_shape`; `--object T_block` selects
+the same T-shaped model, and omitting `--object` selects it automatically.
+`Cblock` is not a supported experiment object. The fixed ICRA-sign glyphs are
+scene obstacles and do not select the manipulated object.
+
+`open_table` maps to the native scene `open_task`. Native assets retain their names.
 Tasks select the environment; the object selection supplies its model, sampling
 geometry, footprint and support height. The launcher checks all selected
 combinations and rejects incompatible poses before running anything.
@@ -365,30 +367,6 @@ The Ubuntu base digest, Drake, Bazel, libbot2 and Python versions are pinned;
 apt repositories are not snapshot-pinned and Python wheel hashes are not locked.
 The recipe hash cannot guarantee byte-identical rebuilds. Retain the built image
 or its registry digest when sharing an exact environment.
-
-## Troubleshooting
-
-For a busy port, use **HOST:** `MESHCAT_PORT=7001 ./docker/shell.sh`. For missing
-binaries or native flags, rebuild with **CONTAINER:** `python3 -m c3plus.utils build`.
-Use a fresh output directory for each run; campaign `--resume` requires its
-matching manifest.
-
-| Symptom | Action |
-| --- | --- |
-| Docker unavailable or wrong platform | Start a local Linux amd64 engine; enable WSL2 integration on Windows. Check `docker info` on the host. |
-| Python imports fail in an old image | Rebuild with `./docker/shell.sh --build`, then repeat the container build and checks. |
-| Compiler killed or resource limit rejected | Check Docker's allocated RAM and reduce build jobs or adjust the resource settings above. |
-| Bazel cache permission denied | Rebuild/reopen the image; current startup handles a root cache mismatch. Nonroot users need their default UID/GID-specific volume or a correctly owned custom volume. |
-
-For an existing root shell in an older image, repair only the cache root with
-`chown --no-dereference 0:0 /home/dairlib/.cache/bazel`, then rebuild. Do not
-recursively change existing cache ownership.
-
-The existing exporter can reject small raw-quaternion norm drift with
-`Invalid exact native execution state`. A prior 10-second startup packaged
-successfully, while a 20-second check encountered this limit. Longer-run
-packaging is not fully verified; failed runs retain their raw evidence. This
-structural cleanup preserves that guard and the evaluation definitions.
 
 ## Repository Structure
 
