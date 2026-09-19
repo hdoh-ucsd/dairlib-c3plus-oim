@@ -20,3 +20,8 @@ attic/multibody/solver_log/
 /valgrind.log
 core
 core.*
+<<<<<<< HEAD
+=======
+CLAUDE.md
+AGENTS.md
+>>>>>>> 7aac5a0d403971e2643b35f681c0408390f8e328
