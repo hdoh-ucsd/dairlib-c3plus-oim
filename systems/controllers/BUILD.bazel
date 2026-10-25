@@ -56,6 +56,7 @@ cc_library(
     srcs = ["sampling_based_c3_controller.cc"],
     hdrs = ["sampling_based_c3_controller.h"],
     deps = [
+        ":inner_obstacle_trial",
         "//lcm:lcm_trajectory_saver",
         "//lcmtypes:lcmt_robot",
         "//multibody:utils",
@@ -281,4 +282,37 @@ cc_library(
         "//systems/framework:vector",
         "@drake//:drake_shared_library",
     ],
+)
+
+
+cc_library(
+    name = "inner_obstacle_cost",
+    srcs = ["inner_obstacle_cost.cc"],
+    hdrs = ["inner_obstacle_cost.h"],
+    deps = ["@eigen//:eigen"],
+)
+
+cc_library(
+    name = "inner_obstacle_trial",
+    srcs = ["inner_obstacle_trial.cc"],
+    hdrs = ["inner_obstacle_trial.h"],
+    deps = [":inner_obstacle_cost", "@c3//:libc3", "@drake//:drake_shared_library"],
+)
+
+cc_test(
+    name = "c3_checked_solve_test",
+    srcs = ["test/c3_checked_solve_test.cc"],
+    deps = ["@c3//:libc3", "@drake//:drake_shared_library", "@googletest//:gtest_main"],
+)
+
+cc_test(
+    name = "inner_obstacle_cost_test",
+    srcs = ["test/inner_obstacle_cost_test.cc"],
+    deps = [":inner_obstacle_cost", "@googletest//:gtest_main"],
+)
+
+cc_test(
+    name = "inner_obstacle_trial_test",
+    srcs = ["test/inner_obstacle_trial_test.cc"],
+    deps = [":inner_obstacle_trial", "@c3//:libc3", "@drake//:drake_shared_library", "@googletest//:gtest_main"],
 )

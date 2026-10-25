@@ -1,0 +1,304 @@
+diff --git a/core/c3.h b/core/c3.h
+--- a/core/c3.h
++++ b/core/c3.h
+@@ -1,5 +1,9 @@
+ #pragma once
+ 
++#include <functional>
++#include <optional>
++#include <string>
++#include <utility>
+ #include <vector>
+ 
+ #include <Eigen/Dense>
+@@ -9,6 +13,7 @@
+ 
+ #include "drake/solvers/mathematical_program.h"
+ #include "drake/solvers/osqp_solver.h"
++#include "drake/solvers/mathematical_program_result.h"
+ 
+ namespace c3 {
+ typedef drake::solvers::Binding<drake::solvers::LinearConstraint>
+@@ -70,6 +75,50 @@
+    */
+   void Solve(const Eigen::VectorXd& x0);
+ 
++  // Status describes QP execution, not convergence, feasibility of the full
++  // complementarity problem, collision freedom, or downstream acceptance.
++  enum class QPOutcome {
++    kNotAttempted, kSucceeded, kSolverFailure, kInvalidOutput, kException
++  };
++  struct QPStageReport {
++    int admm_iteration = -1;
++    bool is_final = false;
++    bool solver_called = false;
++    bool underlying_solver_success = false;
++    QPOutcome outcome = QPOutcome::kNotAttempted;
++    std::optional<drake::solvers::SolutionResult> solver_status;
++    std::string failure_reason;
++  };
++  struct SolveReport {
++    bool attempted = false;
++    // True only if the entire existing loop and every required QP completed
++    // successfully with finite output during this invocation.
++    bool completed = false;
++    bool had_exception = false;
++    bool invalid_output = false;
++    int required_qp_count = 0;
++    std::vector<QPStageReport> qp_stages;
++    std::string failure_reason;
++  };
++
++  // Abort on the first failed/invalid QP instead of publishing a fabricated
++  // hold-state solution. On failure, legacy solution getters must not be used.
++  // The ordinary Solve retains its historical fallback/continuation behavior.
++  SolveReport SolveChecked(const Eigen::VectorXd& x0);
++  const SolveReport& GetLastSolveReport() const { return last_solve_report_; }
++
++  // Actual final QP state variables x[0..N], before any projection/half step.
++  // Throws unless the current invocation completed every required QP.
++  const std::vector<Eigen::VectorXd>& GetQPStateSolution() const;
++
++  // Optional read-only instrumentation at each actual QP consumption boundary.
++  // The program reference is borrowed for the callback only; do not retain it
++  // or mutate its evaluators. No snapshot/callback work occurs when unset.
++  using QPObserver = std::function<void(
++      int, bool, const drake::solvers::MathematicalProgram&)>;
++  void SetQPObserver(QPObserver observer) { qp_observer_ = std::move(observer); }
++
++
+   /*!cost_matrices_.
+    * Update the dynamics
+    * @param lcs the new LCS
+@@ -389,6 +438,10 @@
+    *
+    * @see SolveQP, z_sol_, x_sol_, lambda_sol_, u_sol_
+    */
++  // Narrow solver boundary for deterministic tests in derived C3 fixtures.
++  // Production delegates to the same pinned OSQP call as the legacy path.
++  virtual drake::solvers::MathematicalProgramResult SolveQPProgram();
++
+   virtual void StoreQPResults(
+       const drake::solvers::MathematicalProgramResult& result,
+       int admm_iteration, bool is_final_solve);
+@@ -399,6 +452,15 @@
+   virtual void SetFallbackSolution(const Eigen::VectorXd& x0,
+                                    bool is_final_solve);
+ 
++ private:
++  void RunSolve(const Eigen::VectorXd& x0, bool checked);
++  void SolveImpl(const Eigen::VectorXd& x0);
++  bool checked_solve_ = false;
++  SolveReport last_solve_report_;
++  QPObserver qp_observer_;
++  std::vector<Eigen::VectorXd> qp_state_solution_;
++
++ protected:
+   LCS lcs_;
+   double AnDn_ = 1.0;  // Scaling factor for lambdas
+   CostMatrices cost_matrices_;
+diff --git a/core/c3.cc b/core/c3.cc
+--- a/core/c3.cc
++++ b/core/c3.cc
+@@ -1,6 +1,8 @@
+ #include "c3.h"
+ 
++#include <algorithm>
+ #include <chrono>
++#include <stdexcept>
+ #include <iostream>
+ 
+ #include <Eigen/Core>
+@@ -18,6 +20,15 @@
+ #include "drake/solvers/solve.h"
+ 
+ namespace c3 {
++namespace {
++// Internal control flow only: a checked solve stops before projection can use
++// failed-QP data. This does not escape SolveChecked or change the ADMM loop.
++class CheckedQPFailure final : public std::runtime_error {
++ public:
++  using std::runtime_error::runtime_error;
++};
++}  // namespace
++
+ 
+ using Eigen::MatrixXd;
+ using Eigen::VectorXd;
+@@ -98,6 +109,9 @@
+     delta_sol_->push_back(VectorXd::Zero(n_z_));
+   }
+ 
++  qp_state_solution_.resize(N_ + 1, VectorXd::Zero(n_x_));
++  last_solve_report_.qp_stages.reserve(options_.admm_iter + 1);
++
+   z_.resize(N_);
+   for (int i = 0; i < N_ + 1; ++i) {
+     x_.push_back(prog_.NewContinuousVariables(n_x_, "x" + std::to_string(i)));
+@@ -264,7 +278,85 @@
+   return target_costs_;
+ }
+ 
+-void C3::Solve(const VectorXd& x0) {
++void C3::Solve(const VectorXd& x0) { RunSolve(x0, false); }
++
++C3::SolveReport C3::SolveChecked(const VectorXd& x0) {
++  RunSolve(x0, true);
++  return last_solve_report_;
++}
++
++const vector<VectorXd>& C3::GetQPStateSolution() const {
++  if (!last_solve_report_.completed) {
++    throw std::logic_error("No complete finite QP trajectory for current solve");
++  }
++  return qp_state_solution_;
++}
++
++void C3::RunSolve(const VectorXd& x0, bool checked) {
++  auto& report = last_solve_report_;
++  report.attempted = true;
++  report.completed = false;
++  report.had_exception = false;
++  report.invalid_output = false;
++  report.required_qp_count = options_.admm_iter + 1;
++  report.qp_stages.clear();  // Retain capacity across legacy invocations.
++  report.failure_reason.clear();
++  checked_solve_ = checked;
++  if (checked && (x0.size() != n_x_ || !x0.allFinite())) {
++    report.invalid_output = true;
++    report.failure_reason = "Invalid initial state dimensions or nonfinite values";
++    checked_solve_ = false;
++    return;
++  }
++  try {
++    SolveImpl(x0);
++    report.completed =
++        static_cast<int>(report.qp_stages.size()) == report.required_qp_count &&
++        std::all_of(report.qp_stages.begin(), report.qp_stages.end(),
++                    [](const QPStageReport& stage) {
++                      return stage.outcome == QPOutcome::kSucceeded;
++                    });
++    const auto finite_vectors = [](const vector<VectorXd>& values) {
++      return std::all_of(values.begin(), values.end(),
++                         [](const VectorXd& v) { return v.allFinite(); });
++    };
++    if (!finite_vectors(*x_sol_) || !finite_vectors(*lambda_sol_) ||
++        !finite_vectors(*u_sol_) || !finite_vectors(*z_sol_) ||
++        !finite_vectors(*delta_sol_) || !finite_vectors(*w_sol_) ||
++        !finite_vectors(qp_state_solution_)) {
++      report.invalid_output = true;
++      report.completed = false;
++      if (report.failure_reason.empty()) {
++        report.failure_reason = "Nonfinite C3 output after QP execution";
++      }
++    }
++  } catch (const CheckedQPFailure&) {
++    // SolveQP has recorded the precise stage and failure reason.
++  } catch (const std::exception& e) {
++    report.had_exception = true;
++    if (report.failure_reason.empty()) report.failure_reason = e.what();
++    if (!report.qp_stages.empty() &&
++        report.qp_stages.back().outcome == QPOutcome::kNotAttempted) {
++      report.qp_stages.back().outcome = QPOutcome::kException;
++      report.qp_stages.back().failure_reason = e.what();
++    }
++    checked_solve_ = false;
++    if (!checked) throw;  // Preserve exceptions outside the old QP catch.
++  } catch (...) {
++    report.had_exception = true;
++    if (report.failure_reason.empty()) report.failure_reason = "Unknown exception";
++    if (!report.qp_stages.empty() &&
++        report.qp_stages.back().outcome == QPOutcome::kNotAttempted) {
++      report.qp_stages.back().outcome = QPOutcome::kException;
++      report.qp_stages.back().failure_reason = "Unknown exception";
++    }
++    checked_solve_ = false;
++    if (!checked) throw;
++  }
++  checked_solve_ = false;
++}
++
++void C3::SolveImpl(const VectorXd& x0) {
+   drake::log()->debug("C3::Solve called");
+   auto start = std::chrono::high_resolution_clock::now();
+   // Set the initial state constraint
+@@ -438,28 +530,75 @@
+   }
+ }
+ 
++MathematicalProgramResult C3::SolveQPProgram() { return osqp_.Solve(prog_); }
++
+ vector<VectorXd> C3::SolveQP(const VectorXd& x0, const vector<MatrixXd>& G,
+                              const vector<VectorXd>& WD,
+                              const vector<VectorXd>& delta, int admm_iteration,
+                              bool is_final_solve) {
++  last_solve_report_.qp_stages.emplace_back();
++  auto& stage = last_solve_report_.qp_stages.back();
++  stage.admm_iteration = admm_iteration;
++  stage.is_final = is_final_solve;
+   AddAugmentedCost(G, WD, delta, is_final_solve);
+   SetInitialGuessQP(x0, admm_iteration);
+ 
+   drake::log()->trace("C3::SolveQP calling solver.");
+   try {
+-    MathematicalProgramResult result = osqp_.Solve(prog_);
++    if (qp_observer_) qp_observer_(admm_iteration, is_final_solve, prog_);
++    stage.solver_called = true;
++    MathematicalProgramResult result = SolveQPProgram();
++    stage.solver_status = result.get_solution_result();
++    stage.underlying_solver_success = result.is_success();
+     if (!result.is_success()) {
++      stage.outcome = QPOutcome::kSolverFailure;
++      stage.failure_reason = "Underlying QP solver reported failure";
+       drake::log()->warn("C3::SolveQP failed to solve the QP with status: {}",
+                          result.get_solution_result());
+-      SetFallbackSolution(x0, is_final_solve);
++      if (!checked_solve_) SetFallbackSolution(x0, is_final_solve);
+     } else {
+-      StoreQPResults(result, admm_iteration, is_final_solve);
++      const bool finite = result.get_x_val().size() == prog_.num_vars() &&
++                          result.get_x_val().allFinite();
++      stage.outcome = finite ? QPOutcome::kSucceeded : QPOutcome::kInvalidOutput;
++      if (!finite) {
++        last_solve_report_.invalid_output = true;
++        stage.failure_reason = "Invalid QP solution dimensions or nonfinite output";
++      }
++      if (finite || !checked_solve_) {
++        // Preserve legacy extraction semantics, but never extract invalid data
++        // on the new checked path.
++        StoreQPResults(result, admm_iteration, is_final_solve);
++        if (finite && is_final_solve) {
++          for (int i = 0; i <= N_; ++i) {
++            qp_state_solution_[i] = result.GetSolution(x_[i]);
++          }
++        }
++      }
+     }
+   } catch (const std::exception& e) {
++    stage.outcome = QPOutcome::kException;
++    stage.failure_reason = e.what();
++    last_solve_report_.had_exception = true;
+     drake::log()->error("C3::SolveQP failed with exception: {}", e.what());
+-    SetFallbackSolution(x0, is_final_solve);
++    if (!checked_solve_) SetFallbackSolution(x0, is_final_solve);
++  } catch (...) {
++    stage.outcome = QPOutcome::kException;
++    stage.failure_reason = "Unknown exception in QP execution or extraction";
++    last_solve_report_.had_exception = true;
++    if (last_solve_report_.failure_reason.empty()) {
++      last_solve_report_.failure_reason = "QP stage " +
++          std::to_string(admm_iteration) + ": " + stage.failure_reason;
++    }
++    if (!checked_solve_) throw;  // Preserve legacy non-std exception propagation.
+   }
+ 
++  if (stage.outcome != QPOutcome::kSucceeded) {
++    if (last_solve_report_.failure_reason.empty()) {
++      last_solve_report_.failure_reason = "QP stage " +
++          std::to_string(admm_iteration) + ": " + stage.failure_reason;
++    }
++    if (checked_solve_) throw CheckedQPFailure(last_solve_report_.failure_reason);
++  }
+   return *z_sol_;
+ }
+ 

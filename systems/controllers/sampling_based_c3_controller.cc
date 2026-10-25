@@ -7,6 +7,8 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
+#include <stdexcept>
 #include <sstream>
 #include <array>
 #include <thread>
@@ -22,6 +24,8 @@
 #include "c3/core/traj_eval.h"
 #include "c3/multibody/lcs_factory.h"
 #include "common/quaternion_error_hessian.h"
+#include "systems/controllers/inner_obstacle_trial.h"
+#include "drake/common/text_logging.h"
 #include "dairlib/lcmt_radio_out.hpp"
 #include "examples/sampling_c3/generate_samples.h"
 #include "examples/sampling_c3/reposition.h"
@@ -76,7 +80,7 @@ class CostLogger {
   }
   bool active() const { return active_; }
   std::ofstream cyc, cand, qp, qpv, innerobs, pushfilt, swept, obslcs, gaptrace,
-      routecsv, routeprog;
+      routecsv, routeprog, innertrial, innerqp;
   int event_id = 0;
 
  private:
@@ -90,6 +94,8 @@ class CostLogger {
     qp.open(d + "/selected_candidate_qp_costs.csv");
     qpv.open(d + "/selected_candidate_qp_variables.jsonl");
     innerobs.open(d + "/inner_qp_obstacle_terms.csv");
+    innertrial.open(d + "/inner_obstacle_trials.jsonl");
+    innerqp.open(d + "/inner_obstacle_consumed_qps.jsonl");
     pushfilt.open(d + "/candidate_collision_filter.csv");
     pushfilt << std::setprecision(9)
              << "time,event_id,candidate_id,ee_x,ee_y,ee_z,closest_obstacle_x,"
@@ -167,10 +173,205 @@ inline double YawWXYZ(double w, double x, double y, double z) {
   return std::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z));
 }
 
+// Extension diagnostics are read-only and serialized across candidate threads.
+void JsonNumber(std::ostream& out, double value) {
+  if (std::isfinite(value)) out << std::setprecision(17) << value;
+  else if (std::isinf(value)) out << (value > 0 ? "\"+inf\"" : "\"-inf\"");
+  else out << "null";
+}
+template <typename Derived>
+void JsonVector(std::ostream& out, const Eigen::MatrixBase<Derived>& value) {
+  out << '[';
+  for (int i = 0; i < value.size(); ++i) {
+    if (i) out << ',';
+    JsonNumber(out, value(i));
+  }
+  out << ']';
+}
+template <typename Derived>
+void JsonMatrix(std::ostream& out, const Eigen::MatrixBase<Derived>& value) {
+  out << '[';
+  for (int i = 0; i < value.rows(); ++i) {
+    if (i) out << ',';
+    JsonVector(out, value.row(i));
+  }
+  out << ']';
+}
+void JsonTrajectory(std::ostream& out, const std::vector<Eigen::VectorXd>& states) {
+  out << '[';
+  for (std::size_t k = 0; k < states.size(); ++k) {
+    if (k) out << ',';
+    JsonVector(out, states[k]);
+  }
+  out << ']';
+}
+void JsonString(std::ostream& out, const std::string& value) {
+  out << '"';
+  for (unsigned char c : value) {
+    if (c == '"' || c == '\\') out << '\\' << c;
+    else if (c == '\n') out << "\\n";
+    else if (c >= 32) out << c;
+  }
+  out << '"';
+}
+void LogInnerConsumedQP(int event, int candidate, int pass, int stage, bool final,
+                       const drake::solvers::MathematicalProgram& program) {
+  if (!CostLogger::Get().active()) return;
+  std::ostringstream out;
+  out << "{\"event\":" << event << ",\"candidate\":" << candidate
+      << ",\"pass\":" << pass << ",\"stage\":" << stage
+      << ",\"final\":" << (final ? "true" : "false") << ",\"costs\":[";
+  bool first = true;
+  for (const auto& binding : program.quadratic_costs()) {
+    if (!first) out << ',';
+    first = false;
+    out << "{\"variables\":[";
+    for (int i = 0; i < binding.variables().size(); ++i) {
+      if (i) out << ',';
+      JsonString(out, binding.variables()[i].get_name());
+    }
+    out << "],\"Q\":"; JsonMatrix(out, binding.evaluator()->Q());
+    out << ",\"b\":"; JsonVector(out, binding.evaluator()->b());
+    out << ",\"c\":"; JsonNumber(out, binding.evaluator()->c());
+    out << '}';
+  }
+  out << "],\"constraints\":[";
+  first = true;
+  for (const auto& binding : program.GetAllConstraints()) {
+    if (!first) out << ',';
+    first = false;
+    out << "{\"variables\":[";
+    for (int i = 0; i < binding.variables().size(); ++i) {
+      if (i) out << ',';
+      JsonString(out, binding.variables()[i].get_name());
+    }
+    out << "],\"lower\":"; JsonVector(out, binding.evaluator()->lower_bound());
+    out << ",\"upper\":"; JsonVector(out, binding.evaluator()->upper_bound());
+    if (const auto* linear = dynamic_cast<const drake::solvers::LinearConstraint*>(binding.evaluator().get())) {
+      out << ",\"A\":"; JsonMatrix(out, linear->GetDenseA());
+    }
+    out << '}';
+  }
+  out << "]}\n";
+#pragma omp critical
+  { CostLogger::Get().innerqp << out.str() << std::flush; }
+}
+void LogInnerTrial(int event, int candidate, const Eigen::VectorXd& initial,
+                   const std::array<int, 2>& xy,
+                   const std::vector<systems::DiscObstacle>& obstacles, double beta,
+                   const std::shared_ptr<C3>& nominal, const LCS& physical_lcs,
+                   const systems::InnerObstacleTrialResult& trial) {
+  if (!CostLogger::Get().active()) return;
+  std::ostringstream out;
+  out << "{\"event\":" << event << ",\"candidate\":" << candidate
+      << ",\"beta\":"; JsonNumber(out, beta);
+  out << ",\"xy_indices\":[" << xy[0] << ',' << xy[1] << "]"
+      << ",\"nominal_completed\":" << (nominal->GetLastSolveReport().completed ? "true" : "false")
+      << ",\"trial_attempted\":" << (trial.trial_attempted ? "true" : "false")
+      << ",\"trial_selected\":" << (trial.trial_selected ? "true" : "false")
+      << ",\"solve_count\":" << (1 + static_cast<int>(trial.trial_attempted))
+      << ",\"fallback_reason\":"; JsonString(out, trial.fallback_reason);
+  out << ",\"construction_seconds\":"; JsonNumber(out, trial.construction_seconds);
+  out << ",\"trial_solve_seconds\":"; JsonNumber(out, trial.solve_seconds);
+  out << ",\"initial_state\":"; JsonVector(out, initial);
+  out << ",\"nominal_qp_x\":"; JsonTrajectory(out, trial.nominal_qp_states);
+  out << ",\"trial_qp_x\":"; JsonTrajectory(out, trial.trial_qp_states);
+  out << ",\"nominal_qp_u\":"; JsonTrajectory(out, nominal->GetInputSolution());
+  out << ",\"nominal_physical_lambda\":"; JsonTrajectory(out, nominal->GetForceSolution());
+  if (trial.trial_selected) {
+    out << ",\"trial_qp_u\":"; JsonTrajectory(out, trial.selected->GetInputSolution());
+    out << ",\"trial_physical_lambda\":"; JsonTrajectory(out, trial.selected->GetForceSolution());
+  }
+  auto costs = [&](const std::vector<Eigen::VectorXd>& states, const std::shared_ptr<C3>& solver) {
+    double exact = 0, surrogate = 0, task = 0;
+    if (states.empty() || states.size() != nominal->GetTargetCost().size()) {
+      out << "null";
+      return;
+    }
+    for (std::size_t k = 0; k < states.size(); ++k) {
+      const auto& x = states[k];
+      const auto* original = nominal->GetTargetCost()[k];
+      task += 0.5 * x.dot(original->Q() * x) + original->b().dot(x) + original->c();
+      if (k == 0) continue;
+      const auto value = systems::EvaluateInnerObstacleCost(x, xy, obstacles, beta);
+      if (value.valid) exact += value.value;
+      else exact = std::numeric_limits<double>::quiet_NaN();
+      if (trial.quadratics.size() != states.size()) {
+        surrogate = std::numeric_limits<double>::quiet_NaN();
+        continue;
+      }
+      const auto& quad = trial.quadratics[k];
+      surrogate += 0.5 * x.dot(quad.delta_Q * x) + quad.delta_b.dot(x) + quad.delta_c;
+    }
+    const auto inputs = solver->GetInputSolution();
+    for (std::size_t k = 0; k < inputs.size(); ++k) {
+      task += inputs[k].dot(nominal->GetCostMatrices().R[k] * inputs[k]);
+    }
+    out << "{\"exact_beta_weighted_obstacle\":"; JsonNumber(out, exact);
+    out << ",\"local_surrogate_obstacle\":"; JsonNumber(out, surrogate);
+    out << ",\"original_task_bindings\":"; JsonNumber(out, task);
+    out << '}';
+  };
+  out << ",\"nominal_costs\":"; costs(trial.nominal_qp_states, nominal);
+  out << ",\"trial_costs\":"; costs(trial.trial_qp_states, trial.selected);
+  double displacement = std::numeric_limits<double>::quiet_NaN();
+  if (!trial.trial_qp_states.empty() &&
+      trial.trial_qp_states.size() == trial.nominal_qp_states.size()) {
+    displacement = 0;
+    for (std::size_t k = 1; k < trial.trial_qp_states.size(); ++k) {
+      Eigen::Vector2d delta(trial.trial_qp_states[k][xy[0]] - trial.nominal_qp_states[k][xy[0]],
+                            trial.trial_qp_states[k][xy[1]] - trial.nominal_qp_states[k][xy[1]]);
+      displacement = std::max(displacement, delta.norm());
+    }
+  }
+  auto residuals = [&](const std::vector<Eigen::VectorXd>& x,
+                       const std::shared_ptr<C3>& solver) {
+    if (x.empty()) { out << "null"; return; }
+    const auto u = solver->GetInputSolution();
+    const auto lambda = solver->GetForceSolution();
+    double dynamics = 0, complementarity = 0;
+    double min_lambda = std::numeric_limits<double>::infinity();
+    double min_eta = std::numeric_limits<double>::infinity();
+    for (int k = 0; k < physical_lcs.N(); ++k) {
+      const Eigen::VectorXd eta = physical_lcs.E()[k] * x[k] + physical_lcs.F()[k] * lambda[k] +
+                       physical_lcs.H()[k] * u[k] + physical_lcs.c()[k];
+      const Eigen::VectorXd residual = x[k+1] - physical_lcs.A()[k] * x[k] -
+          physical_lcs.B()[k] * u[k] - physical_lcs.D()[k] * lambda[k] - physical_lcs.d()[k];
+      dynamics = std::max(dynamics, residual.lpNorm<Eigen::Infinity>());
+      if (lambda[k].size() != 0) {
+        complementarity = std::max(complementarity,
+            lambda[k].cwiseProduct(eta).cwiseAbs().maxCoeff());
+        min_lambda = std::min(min_lambda, lambda[k].minCoeff());
+        min_eta = std::min(min_eta, eta.minCoeff());
+      }
+    }
+    out << "{\"max_dynamics_residual\":"; JsonNumber(out, dynamics);
+    out << ",\"max_physical_complementarity_product\":"; JsonNumber(out, complementarity);
+    out << ",\"min_physical_lambda\":"; JsonNumber(out, min_lambda);
+    out << ",\"min_physical_eta\":"; JsonNumber(out, min_eta);
+    out << '}';
+  };
+  out << ",\"nominal_residuals\":"; residuals(trial.nominal_qp_states, nominal);
+  out << ",\"trial_residuals\":"; residuals(trial.trial_qp_states, trial.selected);
+  out << ",\"max_planar_displacement\":"; JsonNumber(out, displacement);
+  out << ",\"large_departure_over_0_05m\":" << (displacement > 0.05 ? "true" : "false")
+      << ",\"consensus_residual\":null,\"trial_qp_stages\":[";
+  for (std::size_t k = 0; k < trial.trial_report.qp_stages.size(); ++k) {
+    if (k) out << ',';
+    const auto& stage = trial.trial_report.qp_stages[k];
+    out << "{\"index\":" << stage.admm_iteration << ",\"final\":" << (stage.is_final ? "true" : "false")
+        << ",\"underlying_qp_success\":" << (stage.underlying_solver_success ? "true" : "false")
+        << ",\"outcome\":" << static_cast<int>(stage.outcome) << '}';
+  }
+  out << "]}\n";
+#pragma omp critical
+  { CostLogger::Get().innertrial << out.str() << std::flush; }
+}
+
 // ---------------------------------------------------------------------------
 // OPTIONAL inner-QP obstacle-cost extension (NOT the frozen baseline).
-// Env-gated so that with the default (mode "none") the generated QP and all
-// controller behavior are byte-identical to the baseline. Two obstacle models:
+// With the default mode "none", candidate construction and the single nominal
+// solve retain the original mathematical problem. Two obstacle models:
 //   - "exponential_psd"    : local PSD-quadratic of w*exp(-d/sigma)
 //   - "inverse_square_psd" : local PSD-quadratic of k_inv/(d+eps_inv)^2
 // The RANKING obstacle potential is selected separately ("exponential" |
@@ -181,6 +382,7 @@ enum class ObsRank { kExp, kInvSq };
 struct ObsExtConfig {
   ObsInner inner = ObsInner::kNone;
   ObsRank rank = ObsRank::kExp;
+  double inner_scale = 1.0;  // Independent from task and outer obstacle weights.
   double trust = 0.05;      // trust radius (m) — monitored/logged
   double eps_rho = 1e-8;    // numerical epsilon in rho_bar = sqrt(r.r + eps^2)
   double d_ref = 0.05;      // reciprocal-square calibration clearance
@@ -726,6 +928,15 @@ inline ObsExtConfig& ObsCfg() {
       std::string s(im);
       if (s == "exponential_psd") c.inner = ObsInner::kExpPsd;
       else if (s == "inverse_square_psd") c.inner = ObsInner::kInvSqPsd;
+      else if (s != "none") throw std::invalid_argument("Unsupported SAMPLING_C3_INNER_OBS_MODE");
+    }
+    if (const char* scale = std::getenv("SAMPLING_C3_INNER_OBS_SCALE")) {
+      char* end = nullptr;
+      c.inner_scale = std::strtod(scale, &end);
+      if (end == scale || *end != '\0' || !std::isfinite(c.inner_scale) ||
+          c.inner_scale < 0) {
+        throw std::invalid_argument("SAMPLING_C3_INNER_OBS_SCALE must be finite and nonnegative");
+      }
     }
     const char* rm = std::getenv("SAMPLING_C3_RANK_OBS_MODE");
     if (rm && std::string(rm) == "inverse_square") c.rank = ObsRank::kInvSq;
@@ -741,6 +952,9 @@ inline ObsExtConfig& ObsCfg() {
     }
     const char* np = std::getenv("SAMPLING_C3_OBJ_NONPEN");
     if (np && std::string(np) == "1") c.nonpen = true;
+    if (c.inner == ObsInner::kExpPsd && c.nonpen) {
+      throw std::invalid_argument("exponential_psd cannot be combined with legacy nonpenetration constraints");
+    }
     const char* ns = std::getenv("SAMPLING_C3_OBS_SLOTS");
     if (ns) c.n_obs_slots = std::max(1, std::atoi(ns));
     const char* rt = std::getenv("SAMPLING_C3_REPOSITION_SCORE_MODE");
@@ -2027,6 +2241,33 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
 
   route_dv.assign(num_total_samples, std::numeric_limits<double>::quiet_NaN());
 
+  const bool run_inner_obstacle_trial = systems::ShouldRunInnerObstacleTrial(
+      ObsCfg().inner == ObsInner::kExpPsd, ObsCfg().inner_scale,
+      controller_params_.scenario_params.obstacles.size());
+  std::array<int, 2> inner_xy{{-1, -1}};
+  std::vector<systems::DiscObstacle> inner_obstacles;
+  if (run_inner_obstacle_trial) {
+    if (sampling_c3_options_.projection_type != "C3+" ||
+        controller_params_.num_objects != 1 ||
+        controller_params_.base_names.size() != 1) {
+      throw std::invalid_argument("Inner disc cost supports one target free body with C3+");
+    }
+    const auto& target_body = plant_.GetBodyByName(controller_params_.base_names[0]);
+    if (!target_body.is_floating_base_body() || !target_body.has_quaternion_dofs()) {
+      throw std::invalid_argument("Inner disc cost requires a quaternion floating target body");
+    }
+    const int q_start = target_body.floating_positions_start();
+    inner_xy = {{q_start + 4, q_start + 5}};
+    const auto& scene = controller_params_.scenario_params;
+    for (const auto& obstacle : scene.obstacles) {
+      if (obstacle.size() != 3) {
+        throw std::invalid_argument("Inner disc obstacle must contain exactly center x, y, radius");
+      }
+      inner_obstacles.push_back({Eigen::Vector2d(obstacle[0], obstacle[1]),
+          obstacle[2], scene.obstacle_cost_weight, scene.obstacle_cost_decay});
+    }
+  }
+
   // Parallelize over computing C3 costs for each sample.
   auto c3_start = std::chrono::high_resolution_clock::now();
 #pragma omp parallel for num_threads(num_threads_to_use_)
@@ -2072,38 +2313,27 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
     }
 
     C3::CostMatrices c3_costmat(Q_, R_, G_, U_);
-    if (sampling_c3_options_.projection_type == "MIQP") {
-      test_c3_object = std::make_shared<C3MIQP>(test_system, c3_costmat,
+    int construction_count = 0;
+    auto make_candidate = [&]() -> std::shared_ptr<C3> {
+      std::shared_ptr<C3> candidate;
+      if (sampling_c3_options_.projection_type == "MIQP") {
+        candidate = std::make_shared<C3MIQP>(test_system, c3_costmat,
+                                                  x_desired, c3_options);
+      } else if (sampling_c3_options_.projection_type == "QP") {
+        candidate = std::make_shared<C3QP>(test_system, c3_costmat,
                                                 x_desired, c3_options);
-    } else if (sampling_c3_options_.projection_type == "QP") {
-      test_c3_object = std::make_shared<C3QP>(test_system, c3_costmat,
-                                              x_desired, c3_options);
-    } else if (sampling_c3_options_.projection_type == "C3+") {
-      test_c3_object = std::make_shared<C3Plus>(test_system, c3_costmat,
-                                                x_desired, c3_options);
-    }  // Unknown projection types are rejected in the initialization.
+      } else if (sampling_c3_options_.projection_type == "C3+") {
+        candidate = std::make_shared<C3Plus>(test_system, c3_costmat,
+                                                  x_desired, c3_options);
+      }  // Unknown projection types are rejected in the initialization.
 
-    if (!sampling_c3_options_.include_walls) {
-      // Set actor bounds.
-      for (int i = 0; i < sampling_c3_options_.workspace_limits.size(); ++i) {
-        Eigen::RowVectorXd A = VectorXd::Zero(n_x_);
-        A.segment(0, 3) =
-            sampling_c3_options_.workspace_limits[i].segment(0, 3);
-        test_c3_object->AddLinearConstraint(
-            A,
-            sampling_c3_options_.workspace_limits[i][3] -
-                sampling_c3_options_.workspace_margins,
-            sampling_c3_options_.workspace_limits[i][4] +
-                sampling_c3_options_.workspace_margins,
-            c3::ConstraintVariable::STATE);
-      }
-      // Set object bounds
-      for (int i = 0; i < sampling_c3_options_.workspace_limits.size(); ++i) {
-        for (int j = 0; j < controller_params_.num_objects; j++) {
+      if (!sampling_c3_options_.include_walls) {
+        // Set actor bounds.
+        for (int i = 0; i < sampling_c3_options_.workspace_limits.size(); ++i) {
           Eigen::RowVectorXd A = VectorXd::Zero(n_x_);
-          A.segment(7 + 7 * j, 3) =
+          A.segment(0, 3) =
               sampling_c3_options_.workspace_limits[i].segment(0, 3);
-          test_c3_object->AddLinearConstraint(
+          candidate->AddLinearConstraint(
               A,
               sampling_c3_options_.workspace_limits[i][3] -
                   sampling_c3_options_.workspace_margins,
@@ -2111,44 +2341,83 @@ drake::systems::EventStatus SamplingC3Controller::ComputePlan(
                   sampling_c3_options_.workspace_margins,
               c3::ConstraintVariable::STATE);
         }
+        // Set object bounds
+        for (int i = 0; i < sampling_c3_options_.workspace_limits.size(); ++i) {
+          for (int j = 0; j < controller_params_.num_objects; j++) {
+            Eigen::RowVectorXd A = VectorXd::Zero(n_x_);
+            A.segment(7 + 7 * j, 3) =
+                sampling_c3_options_.workspace_limits[i].segment(0, 3);
+            candidate->AddLinearConstraint(
+                A,
+                sampling_c3_options_.workspace_limits[i][3] -
+                    sampling_c3_options_.workspace_margins,
+                sampling_c3_options_.workspace_limits[i][4] +
+                    sampling_c3_options_.workspace_margins,
+                c3::ConstraintVariable::STATE);
+          }
+        }
       }
-    }
 
-    // Add constraint on end-effector velocities
-    for (int i : vector<int>({0, 1, 2})) {
-      Eigen::RowVectorXd A = VectorXd::Zero(n_x_);
-      A(n_q_ + i) = 1.0;
-      test_c3_object->AddLinearConstraint(
-          A, sampling_c3_options_.ee_velocity_limits[0],
-          sampling_c3_options_.ee_velocity_limits[1],
-          c3::ConstraintVariable::STATE);
-    }
+      // Add constraint on end-effector velocities
+      for (int i : vector<int>({0, 1, 2})) {
+        Eigen::RowVectorXd A = VectorXd::Zero(n_x_);
+        A(n_q_ + i) = 1.0;
+        candidate->AddLinearConstraint(
+            A, sampling_c3_options_.ee_velocity_limits[0],
+            sampling_c3_options_.ee_velocity_limits[1],
+            c3::ConstraintVariable::STATE);
+      }
 
-    // Add force constraints
-    for (int i : vector<int>({0, 1})) {
-      Eigen::RowVectorXd A = VectorXd::Zero(n_u_);
-      A(i) = 1.0;
-      test_c3_object->AddLinearConstraint(
-          A, sampling_c3_options_.u_horizontal_limits[0],
-          sampling_c3_options_.u_horizontal_limits[1],
-          c3::ConstraintVariable::INPUT);
-    }
-    for (int i : vector<int>({2})) {
-      Eigen::RowVectorXd A = VectorXd::Zero(n_u_);
-      A(i) = 1.0;
-      test_c3_object->AddLinearConstraint(
-          A, sampling_c3_options_.u_vertical_limits[0],
-          sampling_c3_options_.u_vertical_limits[1],
-          c3::ConstraintVariable::INPUT);
-    }
+      // Add force constraints
+      for (int i : vector<int>({0, 1})) {
+        Eigen::RowVectorXd A = VectorXd::Zero(n_u_);
+        A(i) = 1.0;
+        candidate->AddLinearConstraint(
+            A, sampling_c3_options_.u_horizontal_limits[0],
+            sampling_c3_options_.u_horizontal_limits[1],
+            c3::ConstraintVariable::INPUT);
+      }
+      for (int i : vector<int>({2})) {
+        Eigen::RowVectorXd A = VectorXd::Zero(n_u_);
+        A(i) = 1.0;
+        candidate->AddLinearConstraint(
+            A, sampling_c3_options_.u_vertical_limits[0],
+            sampling_c3_options_.u_vertical_limits[1],
+            c3::ConstraintVariable::INPUT);
+      }
 
-    // Solve C3, store resulting object and cost.
-    test_c3_object->SetSolverOptions(solver_options_);
+      candidate->SetSolverOptions(solver_options_);
+      if (CostLogger::Get().active()) {
+        const int event = CostLogger::Get().event_id;
+        const int pass = construction_count;
+        candidate->SetQPObserver([event, i, pass](int stage, bool final,
+            const drake::solvers::MathematicalProgram& program) {
+          LogInnerConsumedQP(event, i, pass, stage, final, program);
+        });
+      }
+      ++construction_count;
+      return candidate;
+    };
+    test_c3_object = make_candidate();
     test_c3_object->Solve(test_state);  // PASS 1 (nominal, obstacle-blind)
+
+    if (run_inner_obstacle_trial) {
+      const auto nominal = test_c3_object;
+      const auto trial = systems::RunInnerObstacleTrial(
+          nominal, make_candidate, test_state, inner_xy, inner_obstacles,
+          ObsCfg().inner_scale);
+      test_c3_object = trial.selected;
+      if (!trial.fallback_reason.empty()) {
+        drake::log()->warn("Inner obstacle candidate {} retained nominal: {}", i,
+                           trial.fallback_reason);
+      }
+      LogInnerTrial(CostLogger::Get().event_id, i, test_state, inner_xy,
+                    inner_obstacles, ObsCfg().inner_scale, nominal, test_system, trial);
+    }
 
     // ---- OPTIONAL inner-QP obstacle-aware refinement (env-gated; PASS 2) ----
     // With mode "none" this whole block is skipped -> identical to baseline.
-    if ((ObsCfg().inner != ObsInner::kNone || ObsCfg().nonpen) &&
+    if ((ObsCfg().inner == ObsInner::kInvSqPsd || ObsCfg().nonpen) &&
         !ObsCfg().lcs_contact &&
         controller_params_.scenario_params.obstacle_cost_weight > 0.0 &&
         !controller_params_.scenario_params.obstacles.empty()) {
